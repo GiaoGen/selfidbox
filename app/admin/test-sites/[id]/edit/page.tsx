@@ -24,8 +24,14 @@ export default async function EditTestSitePage({
 
   async function handleUpdate(data: TestSiteFormData) {
     "use server";
-    await updateTestSite(id, data);
-    redirect("/admin/test-sites");
+    try {
+      console.log("UPDATE TEST SITE PAYLOAD", { id, ...data });
+      await updateTestSite(id, data);
+      redirect("/admin/test-sites");
+    } catch (error) {
+      console.error("UPDATE TEST SITE ACTION ERROR", error);
+      return { success: false as const, error };
+    }
   }
 
   const initial: Partial<TestSiteFormData> = {

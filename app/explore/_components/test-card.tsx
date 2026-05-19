@@ -14,43 +14,39 @@ export function TestCard({ site }: { site: TestSite }) {
   return (
     <Link
       href={`/test-sites/${site.id}`}
-      className={`group flex min-h-[280px] flex-col justify-between rounded-[28px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.08)] transition-transform duration-200 hover:-translate-y-1 sm:p-6 ${accentClasses[site.accent]}`}
+      className={`group block rounded-[24px] p-4 shadow-[0_8px_30px_rgba(10,10,10,0.06)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_14px_40px_rgba(10,10,10,0.10)] active:scale-[0.98] sm:p-5 ${accentClasses[site.accent]}`}
     >
-      <div className="space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <span className="rounded-full bg-white/28 px-3 py-1 text-xs font-semibold">
-            {site.categoryLabel}
-          </span>
-          <span className="rounded-full bg-black/10 px-3 py-1 text-xs font-semibold">
-            {site.estimatedMinutes} min
-          </span>
-        </div>
-        <div className="space-y-2">
-          <h3 className="text-2xl font-semibold leading-tight tracking-[-0.02em]">
-            {site.name}
-          </h3>
-          <p className="text-sm leading-6 opacity-85">{site.description}</p>
-        </div>
+      {/* Top row: category + time */}
+      <div className="flex items-center justify-between gap-3">
+        <span className="rounded-full bg-white/25 px-2.5 py-0.5 text-xs font-semibold">
+          {site.categoryLabel}
+        </span>
+        <span className="text-xs font-semibold opacity-70">
+          {site.estimatedMinutes} min
+        </span>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex flex-wrap gap-2">
-          {site.tags.map((tag) => (
+      {/* Title + description */}
+      <h3 className="mt-3 text-lg font-semibold leading-tight tracking-[-0.01em] sm:text-xl">
+        {site.name}
+      </h3>
+      <p className="mt-1.5 line-clamp-2 text-sm leading-6 opacity-80">
+        {site.description}
+      </p>
+
+      {/* Tags */}
+      {site.tags.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {site.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-white/28 px-3 py-1 text-xs font-semibold"
+              className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-medium"
             >
               #{tag}
             </span>
           ))}
         </div>
-        <div className="flex items-center justify-between gap-3 border-t border-current/18 pt-4 text-sm font-semibold">
-          <span>{site.supportsEmailReport ? "支持邮箱报告" : "网页结果"}</span>
-          <span className="transition-transform group-hover:translate-x-1">
-            查看详情
-          </span>
-        </div>
-      </div>
+      )}
     </Link>
   );
 }

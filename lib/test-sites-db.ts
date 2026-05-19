@@ -34,6 +34,8 @@ export interface TestSiteRow {
   accent: string | null;
   popularity: string | null;
   best_for: string | null;
+  created_at: string;
+  popularity_score: number | null;
   category: CategoryRow | null;
 }
 
@@ -91,6 +93,9 @@ export function mapTestSite(row: TestSiteRow): TestSite {
       ? (row.accent as TestAccent)
       : deriveAccent(row.slug || row.id),
     bestFor: row.best_for ?? undefined,
+    featured: row.featured,
+    created_at: row.created_at,
+    popularity_score: row.popularity_score ?? undefined,
   };
 }
 
@@ -201,4 +206,95 @@ export async function getTestSitesByCategory(categorySlug: string) {
   }
 
   return { category: category as CategoryRow, sites: (sites as TestSiteRow[]) ?? [] };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Click tracking                                                     */
+/* ------------------------------------------------------------------ */
+
+function computePopularityScore(clickCount: number, createdAt: string) {
+  const created = new Date(createdAt);
+  const ageDays = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24);
+  return clickCount / Math.pow(ageDays + 2, 0.8);
+}
+
+export async function updateTestSitePopularity(testSiteId: string) {
+  const { data: site, error } = await supabase
+    .from("test_sites")
+    .select("click_count, created_at")
+    .eq("id", testSiteId)
+    .single();
+
+  if (error || !site) {
+    console.error("updateTestSitePopularity: site not found", { testSiteId, error });
+    return { success: false as const, error };
+  }
+
+  const clickCount = site.click_count ?? 0;
+  const score = computePopularityScore(clickCount, site.created_at);
+
+  const { error: updateError } = await supabase
+    .from("test_sites")
+    .update({ popularity_score: score })
+    .eq("id", testSiteId);
+
+  if (updateError) {
+    console.error("updateTestSitePopularity: update error", updateError);
+    return { success: false as const, error: updateError };
+  }
+
+  const created = new Date(site.created_at);
+  const ageDays = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24);
+
+  console.log("updateTestSitePopularity:", {
+    testSiteId,
+    click_count: clickCount,
+    age_days: Math.round(ageDays * 10) / 10,
+    popularity_score: Math.round(score * 100) / 100,
+  });
+
+  return { success: true as const, score };
+}
+
+export async function recordTestSiteClick(slug: string) {
+  const { data: site, error: findError } = await supabase
+    .from("test_sites")
+    .select("id, click_count, created_at")
+    .eq("slug", slug)
+    .single();
+
+  if (findError || !site) {
+    console.error("recordTestSiteClick: site not found", { slug, error: findError });
+    return { success: false as const, error: findError };
+  }
+
+  const newClickCount = (site.click_count ?? 0) + 1;
+  const popularityScore = computePopularityScore(newClickCount, site.created_at);
+
+  const [{ error: insertError }, { error: updateError }] = await Promise.all([
+    supabase.from("test_site_clicks").insert({ test_site_id: site.id }),
+    supabase
+      .from("test_sites")
+      .update({
+        click_count: newClickCount,
+        popularity_score: popularityScore,
+      })
+      .eq("id", site.id),
+  ]);
+
+  if (insertError) {
+    console.error("recordTestSiteClick: insert error", insertError);
+  }
+  if (updateError) {
+    console.error("recordTestSiteClick: update error", updateError);
+    return { success: false as const, error: updateError };
+  }
+
+  console.log("recordTestSiteClick:", {
+    slug,
+    click_count: newClickCount,
+    popularity_score: Math.round(popularityScore * 100) / 100,
+  });
+
+  return { success: true as const };
 }

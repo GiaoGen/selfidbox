@@ -22,6 +22,9 @@ export type TestSite = {
   popularity?: string;
   accent: TestAccent;
   bestFor?: string;
+  featured?: boolean;
+  created_at?: string;
+  popularity_score?: number;
 };
 
 export const importEmail = "demo@selfidbox.com";

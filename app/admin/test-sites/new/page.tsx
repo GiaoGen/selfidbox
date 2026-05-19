@@ -8,8 +8,14 @@ export default async function NewTestSitePage() {
 
   async function handleCreate(data: TestSiteFormData) {
     "use server";
-    await createTestSite(data);
-    redirect("/admin/test-sites");
+    try {
+      console.log("CREATE TEST SITE PAYLOAD", data);
+      await createTestSite(data);
+      redirect("/admin/test-sites");
+    } catch (error) {
+      console.error("CREATE TEST SITE ACTION ERROR", error);
+      return { success: false as const, error };
+    }
   }
 
   return (

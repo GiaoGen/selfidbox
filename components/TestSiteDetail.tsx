@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ImportEmailBox } from "@/components/ImportEmailBox";
 import { RelatedTestSites } from "@/components/RelatedTestSites";
+import { ExternalTestButton } from "@/components/test-sites/ExternalTestButton";
 import type { TestSite } from "@/lib/test-sites";
 
 const accentClasses: Record<TestSite["accent"], string> = {
@@ -85,14 +86,10 @@ export function TestSiteDetail({
           </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <a
-              href={site.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-14 items-center justify-center rounded-[20px] bg-[var(--ink)] px-6 text-base font-semibold text-white"
-            >
-              去做这个测试
-            </a>
+            <ExternalTestButton
+              testSiteId={site.id}
+              url={site.url}
+            />
             <a
               href={site.sourceUrl}
               target="_blank"

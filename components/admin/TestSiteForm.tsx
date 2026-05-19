@@ -148,7 +148,7 @@ export function TestSiteForm({
 }: {
   initial?: Partial<TestSiteFormData>;
   categories: { id: string; name: string }[];
-  onSubmit: (data: TestSiteFormData) => Promise<void>;
+  onSubmit: (data: TestSiteFormData) => Promise<{ success: boolean; error?: unknown }>;
   submitLabel?: string;
 }) {
   const [form, setForm] = useState<TestSiteFormData>({ ...empty, ...initial });
@@ -173,7 +173,10 @@ export function TestSiteForm({
 
     setSaving(true);
     try {
-      await onSubmit(form);
+      const result = await onSubmit(form);
+      if (!result.success) {
+        setError(JSON.stringify(result.error, null, 2));
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "保存失败");
     } finally {
