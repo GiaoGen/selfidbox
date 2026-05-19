@@ -58,6 +58,12 @@ export default function ProfilePage() {
             SelfIDBox
           </Link>
           <Link
+            href="/create"
+            className="rounded-full px-4 py-2 text-sm font-semibold"
+          >
+            Quiz Studio
+          </Link>
+          <Link
             href="/profile"
             className="rounded-full bg-[var(--ink)] px-4 py-2 text-sm font-semibold text-white"
           >

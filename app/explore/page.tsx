@@ -1,8 +1,13 @@
 import Link from "next/link";
-import { categories, testSites } from "@/lib/test-sites";
+import {
+  getCategories,
+  getPublishedTestSites,
+  mapCategory,
+  mapTestSite,
+  type ExploreCategory,
+} from "@/lib/test-sites-db";
+import type { TestSite } from "@/lib/test-sites";
 import { TestCard } from "./_components/test-card";
-
-const hotTests = testSites.slice(0, 6);
 
 const accentBackground: Record<string, string> = {
   pink: "bg-[#ff4d8b] text-white",
@@ -13,7 +18,24 @@ const accentBackground: Record<string, string> = {
   mint: "bg-[#a4d4c5] text-[#0a0a0a]",
 };
 
-export default function ExplorePage() {
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="flex min-h-[200px] items-center justify-center rounded-[28px] bg-[var(--surface-card)] p-8">
+      <p className="text-base text-[var(--muted)]">{message}</p>
+    </div>
+  );
+}
+
+export default async function ExplorePage() {
+  const [categoryRows, siteRows] = await Promise.all([
+    getCategories(),
+    getPublishedTestSites(),
+  ]);
+
+  const categories: ExploreCategory[] = categoryRows.map(mapCategory);
+  const testSites: TestSite[] = siteRows.map(mapTestSite);
+  const hotTests = testSites.slice(0, 6);
+
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <section className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
@@ -30,6 +52,12 @@ export default function ExplorePage() {
               className="rounded-full px-4 py-2 text-sm font-semibold"
             >
               个人图谱
+            </Link>
+            <Link
+              href="/create"
+              className="rounded-full px-4 py-2 text-sm font-semibold"
+            >
+              Quiz Studio
             </Link>
             <Link
               href="/explore/fun"
@@ -95,24 +123,29 @@ export default function ExplorePage() {
               </h2>
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                href={category.href}
-                className={`min-h-44 rounded-[28px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.08)] ${accentBackground[category.accent]}`}
-              >
-                <div className="flex h-full flex-col justify-between gap-6">
-                  <h3 className="text-2xl font-semibold tracking-[-0.02em]">
-                    {category.label}
-                  </h3>
-                  <p className="text-sm leading-6 opacity-85">
-                    {category.description}
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
+
+          {categories.length === 0 ? (
+            <EmptyState message="暂无分类数据" />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-3">
+              {categories.map((cat) => (
+                <Link
+                  key={cat.id}
+                  href={cat.href}
+                  className={`min-h-44 rounded-[28px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.08)] ${accentBackground[cat.accent]}`}
+                >
+                  <div className="flex h-full flex-col justify-between gap-6">
+                    <h3 className="text-2xl font-semibold tracking-[-0.02em]">
+                      {cat.label}
+                    </h3>
+                    <p className="text-sm leading-6 opacity-85">
+                      {cat.description}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="space-y-4">
@@ -124,11 +157,16 @@ export default function ExplorePage() {
               热门测试卡片
             </h2>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {hotTests.map((site) => (
-              <TestCard key={site.id} site={site} />
-            ))}
-          </div>
+
+          {hotTests.length === 0 ? (
+            <EmptyState message="暂无测试数据" />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {hotTests.map((site) => (
+                <TestCard key={site.id} site={site} />
+              ))}
+            </div>
+          )}
         </section>
       </section>
     </main>

@@ -1,9 +1,12 @@
-export type TestCategory = "personality" | "career" | "fun";
+export type TestCategory = string;
 
 export type TestDifficulty = "轻松" | "标准" | "深入";
 
+export type TestAccent = "pink" | "teal" | "lavender" | "peach" | "ochre" | "mint";
+
 export type TestSite = {
   id: string;
+  slug?: string;
   name: string;
   category: TestCategory;
   categoryLabel: string;
@@ -16,9 +19,9 @@ export type TestSite = {
   sourceName: string;
   sourceUrl: string;
   url: string;
-  popularity: string;
-  accent: "pink" | "teal" | "lavender" | "peach" | "ochre" | "mint";
-  bestFor: string;
+  popularity?: string;
+  accent: TestAccent;
+  bestFor?: string;
 };
 
 export const importEmail = "demo@selfidbox.com";

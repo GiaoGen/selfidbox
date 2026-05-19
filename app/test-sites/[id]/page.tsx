@@ -1,17 +1,11 @@
 import { notFound } from "next/navigation";
 import { TestSiteDetail } from "@/components/TestSiteDetail";
 import {
-  getRelatedTestSites,
-  getTestSite,
-  importEmail,
-  testSites,
-} from "@/lib/test-sites";
-
-export const dynamicParams = false;
-
-export function generateStaticParams() {
-  return testSites.map((site) => ({ id: site.id }));
-}
+  getTestSiteBySlug,
+  getTestSitesByCategory,
+  mapTestSite,
+} from "@/lib/test-sites-db";
+import { importEmail } from "@/lib/test-sites";
 
 export default async function TestSitePage({
   params,
@@ -19,16 +13,24 @@ export default async function TestSitePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const site = getTestSite(id);
+  const row = await getTestSiteBySlug(id);
 
-  if (!site) {
+  if (!row) {
     notFound();
   }
+
+  const site = mapTestSite(row);
+
+  const { sites: relatedRows } = await getTestSitesByCategory(site.category);
+  const relatedSites = relatedRows
+    .filter((r) => (r.slug || r.id) !== id)
+    .slice(0, 3)
+    .map(mapTestSite);
 
   return (
     <TestSiteDetail
       site={site}
-      relatedSites={getRelatedTestSites(site, 3)}
+      relatedSites={relatedSites}
       importEmail={importEmail}
     />
   );
