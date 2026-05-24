@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { TopNavbar } from "@/components/layout/TopNavbar";
 import { QuizMetaCard } from "@/components/quiz-engine/QuizMetaCard";
 import { ResultCard } from "@/components/quiz-engine/ResultCard";
 import { FactorList } from "@/components/quiz-engine/FactorList";
@@ -34,29 +34,7 @@ export default function CreatePage() {
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        {/* Nav */}
-        <nav className="flex items-center justify-between rounded-full bg-[var(--surface-soft)] p-2">
-          <Link
-            href="/explore"
-            className="rounded-full px-4 py-2 text-sm font-semibold"
-          >
-            SelfIDBox
-          </Link>
-          <div className="flex items-center gap-1">
-            <Link
-              href="/profile"
-              className="rounded-full px-4 py-2 text-sm font-semibold"
-            >
-              个人图谱
-            </Link>
-            <Link
-              href="/create"
-              className="rounded-full bg-[var(--ink)] px-4 py-2 text-sm font-semibold text-white"
-            >
-              AI Quiz Studio
-            </Link>
-          </div>
-        </nav>
+        <TopNavbar />
 
         {/* Hero */}
         <section className="overflow-hidden rounded-[36px] bg-[linear-gradient(135deg,#1a3a3a_0%,#b8a4ed_40%,#ffb084_85%)] p-6 text-white shadow-[0_18px_50px_rgba(10,10,10,0.1)] sm:p-10">

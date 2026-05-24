@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { getUserProfile } from "@/lib/user-profile-db";
 import { ProfileRadar, type RadarPoint } from "@/components/ProfileRadar";
 import { ProfileInteractions } from "@/components/profile/ProfileInteractions";
 import { ScreenshotReportUploader } from "@/components/profile/ScreenshotReportUploader";
+import { TopNavbar } from "@/components/layout/TopNavbar";
 
 // TODO: replace DEV_USER_ID with Supabase Auth user id
 const DEV_USER_ID = "b64cd3ef-2982-429e-b546-585d156774b6";
@@ -84,26 +84,7 @@ export default async function ProfilePage() {
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
-        <nav className="flex items-center justify-between rounded-full bg-[var(--surface-soft)] p-2">
-          <Link
-            href="/explore"
-            className="rounded-full px-4 py-2 text-sm font-semibold"
-          >
-            SelfIDBox
-          </Link>
-          <Link
-            href="/create"
-            className="rounded-full px-4 py-2 text-sm font-semibold"
-          >
-            Quiz Studio
-          </Link>
-          <Link
-            href="/profile"
-            className="rounded-full bg-[var(--ink)] px-4 py-2 text-sm font-semibold text-white"
-          >
-            Profile
-          </Link>
-        </nav>
+        <TopNavbar />
 
         {hasProfile ? (
           <ProfileInteractions

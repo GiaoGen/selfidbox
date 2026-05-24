@@ -3,7 +3,9 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Search } from "lucide-react";
 import type { TestSite } from "@/lib/test-sites";
+import { TopNavbar } from "@/components/layout/TopNavbar";
 import { TrendingCarousel } from "./TrendingCarousel";
 import { TrendingCard } from "./TrendingCard";
 import { TestCard } from "@/app/explore/_components/test-card";
@@ -50,15 +52,6 @@ function searchSites(sites: TestSite[], query: string): TestSite[] {
 /* ------------------------------------------------------------------ */
 /*  Icons                                                              */
 /* ------------------------------------------------------------------ */
-
-function SearchIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
-  );
-}
 
 function StarIcon() {
   return (
@@ -163,69 +156,49 @@ export function ExploreClient({
       {/*  Nav bar + search dropdown                                        */}
       {/* ================================================================ */}
       <div className="relative">
-        <nav className="relative z-10 flex items-center rounded-full bg-[var(--surface-soft)] p-2">
-          {searching ? (
-            <>
+        {searching ? (
+          <nav className="relative z-10 flex items-center rounded-full bg-[var(--surface-soft)] p-2">
+            <button
+              type="button"
+              onClick={exitSearch}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--muted)] transition hover:bg-white hover:text-[var(--ink)]"
+              aria-label="返回"
+            >
+              ←
+            </button>
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Escape") exitSearch(); }}
+              placeholder="搜索测试名称、标签、分类..."
+              className="min-w-0 flex-1 bg-transparent px-2 text-sm outline-none placeholder:text-[var(--muted)]"
+            />
+            {query && (
               <button
                 type="button"
-                onClick={exitSearch}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--muted)] transition hover:bg-white hover:text-[var(--ink)]"
-                aria-label="返回"
+                onClick={() => setQuery("")}
+                className="shrink-0 rounded-full px-2 text-xs text-[var(--muted)] hover:text-[var(--ink)]"
               >
-                ←
+                清除
               </button>
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Escape") exitSearch(); }}
-                placeholder="搜索测试名称、标签、分类..."
-                className="min-w-0 flex-1 bg-transparent px-2 text-sm outline-none placeholder:text-[var(--muted)]"
-              />
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  className="shrink-0 rounded-full px-2 text-xs text-[var(--muted)] hover:text-[var(--ink)]"
-                >
-                  清除
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              <Link
-                href="/explore"
-                className="rounded-full px-4 py-2 text-sm font-semibold"
+            )}
+          </nav>
+        ) : (
+          <TopNavbar
+            rightSlot={
+              <button
+                type="button"
+                onClick={enterSearch}
+                className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--ink)] shadow-[0_2px_10px_rgba(10,10,10,0.05)] transition hover:bg-[var(--surface-strong)]"
+                aria-label="搜索"
               >
-                SelfIDBox
-              </Link>
-              <div className="flex items-center gap-1">
-                <Link
-                  href="/profile"
-                  className="rounded-full px-4 py-2 text-sm font-semibold"
-                >
-                  个人图谱
-                </Link>
-                <Link
-                  href="/create"
-                  className="rounded-full px-4 py-2 text-sm font-semibold"
-                >
-                  Quiz Studio
-                </Link>
-                <button
-                  type="button"
-                  onClick={enterSearch}
-                  className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--ink)] shadow-[0_2px_10px_rgba(10,10,10,0.05)] transition hover:bg-[var(--surface-strong)]"
-                  aria-label="搜索"
-                >
-                  <SearchIcon />
-                  <span className="hidden sm:inline">搜索</span>
-                </button>
-              </div>
-            </>
-          )}
-        </nav>
+                <Search size={16} />
+                <span className="hidden sm:inline">搜索</span>
+              </button>
+            }
+          />
+        )}
 
         {/* ---- Search dropdown ---- */}
         {showDropdown && (

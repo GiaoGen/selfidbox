@@ -166,6 +166,10 @@ Last updated: 2026-05-24
 
 ## 10. Recent Changes
 
+### 2026-05-24 (4)
+
+- **Global unified TopNavbar** — Installed `lucide-react`. Created `components/layout/TopNavbar.tsx`: client component using `usePathname()` for active state detection. Three nav items: SelfIDBox (brand), 个人图谱 (Radar icon), Quiz Studio (WandSparkles icon). Active pill uses subtle `bg-white` + box-shadow, inactive items are muted with `hover:bg-white/60`. Icons always visible, labels hidden on mobile (`hidden sm:inline`). Accepts optional `rightSlot` prop for page-specific actions. Integrated into `/profile`, `/create`, and `/explore` (via ExploreClient). Explore search mode still uses its own dedicated search bar; normal mode renders TopNavbar with a search button as rightSlot. Removed all duplicate inline nav markup from the three pages.
+
 ### 2026-05-24 (3)
 
 - **Supabase query hardening + caching** — Created `lib/supabase-timeout.ts`: `withTimeout<T>(fn, fallback, label, timeoutMs)` wraps any async query with `Promise.race` + 8s default timeout, returns fallback on timeout/error, logs `[label] timeout` or `[label] failed` with redacted messages, swallows late rejections. Created `lib/cache.ts`: in-memory TTL cache + helper factories (`listQuery`, `singleQuery`, `keyedSingleQuery`) that layer cache→timeout correctly (errors never cached). Updated all read queries:
