@@ -1,5 +1,7 @@
 import { supabase } from "./supabase";
 import type { TestSite, TestAccent } from "./test-sites";
+import { listQuery, keyedSingleQuery } from "./cache";
+import { withTimeout } from "./supabase-timeout";
 
 /* ------------------------------------------------------------------ */
 /*  Supabase row shapes                                                */
@@ -123,89 +125,89 @@ export function mapCategory(row: CategoryRow): ExploreCategory {
 /*  Supabase queries                                                   */
 /* ------------------------------------------------------------------ */
 
-export async function getCategories() {
-  const { data, error } = await supabase
-    .from("test_categories")
-    .select("*")
-    .eq("status", "published")
-    .order("sort_order", { ascending: true });
+export const getCategories = listQuery(
+  "getCategories",
+  async () => {
+    const { data, error } = await supabase
+      .from("test_categories")
+      .select("*")
+      .eq("status", "published")
+      .order("sort_order", { ascending: true });
 
-  if (error) {
-    console.error("getCategories error:", error);
-    return [];
-  }
+    if (error) throw error;
+    return (data as CategoryRow[]) ?? [];
+  },
+  600, // 10 min
+);
 
-  return (data as CategoryRow[]) ?? [];
-}
+export const getPublishedTestSites = listQuery(
+  "getPublishedTestSites",
+  async () => {
+    const { data, error } = await supabase
+      .from("test_sites")
+      .select(`
+        *,
+        category:test_categories(*)
+      `)
+      .eq("status", "published")
+      .order("featured", { ascending: false })
+      .order("sort_order", { ascending: true });
 
-export async function getPublishedTestSites() {
-  const { data, error } = await supabase
-    .from("test_sites")
-    .select(`
-      *,
-      category:test_categories(*)
-    `)
-    .eq("status", "published")
-    .order("featured", { ascending: false })
-    .order("sort_order", { ascending: true });
+    if (error) throw error;
+    return (data as TestSiteRow[]) ?? [];
+  },
+  60, // 1 min
+);
 
-  if (error) {
-    console.error("getPublishedTestSites error:", error);
-    return [];
-  }
+export const getTestSiteBySlug = keyedSingleQuery(
+  "getTestSiteBySlug",
+  async (slug: string) => {
+    const { data, error } = await supabase
+      .from("test_sites")
+      .select(`
+        *,
+        category:test_categories(*)
+      `)
+      .eq("slug", slug)
+      .eq("status", "published")
+      .single();
 
-  return (data as TestSiteRow[]) ?? [];
-}
-
-export async function getTestSiteBySlug(slug: string) {
-  const { data, error } = await supabase
-    .from("test_sites")
-    .select(`
-      *,
-      category:test_categories(*)
-    `)
-    .eq("slug", slug)
-    .eq("status", "published")
-    .single();
-
-  if (error) {
-    console.error("getTestSiteBySlug error:", error);
-    return null;
-  }
-
-  return data as TestSiteRow | null;
-}
+    if (error) throw error;
+    return data as TestSiteRow | null;
+  },
+  60, // 1 min
+);
 
 export async function getTestSitesByCategory(categorySlug: string) {
-  const { data: category, error: categoryError } = await supabase
-    .from("test_categories")
-    .select("id, slug, name, description")
-    .eq("slug", categorySlug)
-    .eq("status", "published")
-    .single();
+  return withTimeout(
+    async () => {
+      const { data: category, error: categoryError } = await supabase
+        .from("test_categories")
+        .select("id, slug, name, description")
+        .eq("slug", categorySlug)
+        .eq("status", "published")
+        .single();
 
-  if (categoryError || !category) {
-    console.error("get category error:", categoryError);
-    return { category: null, sites: [] as TestSiteRow[] };
-  }
+      if (categoryError) throw categoryError;
+      if (!category) return { category: null, sites: [] as TestSiteRow[] };
 
-  const { data: sites, error: sitesError } = await supabase
-    .from("test_sites")
-    .select(`
-      *,
-      category:test_categories(*)
-    `)
-    .eq("category_id", (category as CategoryRow).id)
-    .eq("status", "published")
-    .order("featured", { ascending: false })
-    .order("sort_order", { ascending: true });
+      const { data: sites, error: sitesError } = await supabase
+        .from("test_sites")
+        .select(`
+          *,
+          category:test_categories(*)
+        `)
+        .eq("category_id", (category as CategoryRow).id)
+        .eq("status", "published")
+        .order("featured", { ascending: false })
+        .order("sort_order", { ascending: true });
 
-  if (sitesError) {
-    console.error("get sites by category error:", sitesError);
-    return { category: category as CategoryRow, sites: [] as TestSiteRow[] };
-  }
-
-  return { category: category as CategoryRow, sites: (sites as TestSiteRow[]) ?? [] };
+      if (sitesError) throw sitesError;
+      return { category: category as CategoryRow, sites: (sites as TestSiteRow[]) ?? [] };
+    },
+    { category: null, sites: [] as TestSiteRow[] },
+    "getTestSitesByCategory",
+  );
 }
 
 /* ------------------------------------------------------------------ */

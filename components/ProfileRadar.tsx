@@ -63,6 +63,7 @@ function dataPathD(
 }
 
 function clamp(t: number) {
+  if (!Number.isFinite(t)) return 0;
   return Math.max(0, Math.min(1, t));
 }
 
@@ -74,8 +75,8 @@ function clamp(t: number) {
 const SIZE = 400;
 const CX = 200;
 const CY = 205;
-const RADIUS = 142; // 数据最大半径
-const LABEL_OFFSET = 26; // 维度标签外移距离
+const RADIUS = 115;
+const LABEL_OFFSET = 36;
 const GRID_LEVELS = 5; // 0, 25, 50, 75, 100 → 4 圈可见环
 
 export function ProfileRadar({

@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { withTimeout } from "./supabase-timeout";
 
 /* ------------------------------------------------------------------ */
 /*  Row types (extends existing with admin-only fields)                */
@@ -46,32 +47,36 @@ export interface AdminTestSiteRow {
 /* ------------------------------------------------------------------ */
 
 export async function getAdminCategories(): Promise<AdminCategoryRow[]> {
-  const { data, error } = await supabase
-    .from("test_categories")
-    .select("*")
-    .order("sort_order", { ascending: true });
+  return withTimeout(
+    async () => {
+      const { data, error } = await supabase
+        .from("test_categories")
+        .select("*")
+        .order("sort_order", { ascending: true });
 
-  if (error) {
-    console.error("getAdminCategories error:", error);
-    return [];
-  }
-
-  return (data as AdminCategoryRow[]) ?? [];
+      if (error) throw error;
+      return (data as AdminCategoryRow[]) ?? [];
+    },
+    [],
+    "getAdminCategories",
+  );
 }
 
 export async function getAdminCategoryById(id: string): Promise<AdminCategoryRow | null> {
-  const { data, error } = await supabase
-    .from("test_categories")
-    .select("*")
-    .eq("id", id)
-    .single();
+  return withTimeout(
+    async () => {
+      const { data, error } = await supabase
+        .from("test_categories")
+        .select("*")
+        .eq("id", id)
+        .single();
 
-  if (error) {
-    console.error("getAdminCategoryById error:", error);
-    return null;
-  }
-
-  return data as AdminCategoryRow | null;
+      if (error) throw error;
+      return data as AdminCategoryRow | null;
+    },
+    null,
+    "getAdminCategoryById",
+  );
 }
 
 export async function createCategory(
@@ -124,46 +129,50 @@ export interface TestSiteFilters {
 export async function getAdminTestSites(
   filters?: TestSiteFilters
 ): Promise<AdminTestSiteRow[]> {
-  let query = supabase
-    .from("test_sites")
-    .select("*, category:test_categories(*)")
-    .order("sort_order", { ascending: true });
+  return withTimeout(
+    async () => {
+      let query = supabase
+        .from("test_sites")
+        .select("*, category:test_categories(*)")
+        .order("sort_order", { ascending: true });
 
-  if (filters?.search) {
-    query = query.ilike("name", `%${filters.search}%`);
-  }
-  if (filters?.categoryId) {
-    query = query.eq("category_id", filters.categoryId);
-  }
-  if (filters?.status) {
-    query = query.eq("status", filters.status);
-  }
+      if (filters?.search) {
+        query = query.ilike("name", `%${filters.search}%`);
+      }
+      if (filters?.categoryId) {
+        query = query.eq("category_id", filters.categoryId);
+      }
+      if (filters?.status) {
+        query = query.eq("status", filters.status);
+      }
 
-  const { data, error } = await query;
+      const { data, error } = await query;
 
-  if (error) {
-    console.error("getAdminTestSites error:", error);
-    return [];
-  }
-
-  return (data as AdminTestSiteRow[]) ?? [];
+      if (error) throw error;
+      return (data as AdminTestSiteRow[]) ?? [];
+    },
+    [],
+    "getAdminTestSites",
+  );
 }
 
 export async function getAdminTestSiteById(
   id: string
 ): Promise<AdminTestSiteRow | null> {
-  const { data, error } = await supabase
-    .from("test_sites")
-    .select("*, category:test_categories(*)")
-    .eq("id", id)
-    .single();
+  return withTimeout(
+    async () => {
+      const { data, error } = await supabase
+        .from("test_sites")
+        .select("*, category:test_categories(*)")
+        .eq("id", id)
+        .single();
 
-  if (error) {
-    console.error("getAdminTestSiteById error:", error);
-    return null;
-  }
-
-  return data as AdminTestSiteRow | null;
+      if (error) throw error;
+      return data as AdminTestSiteRow | null;
+    },
+    null,
+    "getAdminTestSiteById",
+  );
 }
 
 export async function createTestSite(
@@ -208,34 +217,39 @@ export async function deleteTestSite(id: string) {
 /* ------------------------------------------------------------------ */
 
 export async function getAdminStats() {
-  const { data: sites, error } = await supabase
-    .from("test_sites")
-    .select("status");
+  return withTimeout(
+    async () => {
+      const { data: sites, error } = await supabase
+        .from("test_sites")
+        .select("status");
 
-  if (error) {
-    console.error("getAdminStats error:", error);
-    return { total: 0, published: 0, draft: 0, archived: 0 };
-  }
+      if (error) throw error;
 
-  const total = sites.length;
-  const published = sites.filter((s) => s.status === "published").length;
-  const draft = sites.filter((s) => s.status === "draft").length;
-  const archived = sites.filter((s) => s.status === "archived").length;
+      const total = sites.length;
+      const published = sites.filter((s) => s.status === "published").length;
+      const draft = sites.filter((s) => s.status === "draft").length;
+      const archived = sites.filter((s) => s.status === "archived").length;
 
-  return { total, published, draft, archived };
+      return { total, published, draft, archived };
+    },
+    { total: 0, published: 0, draft: 0, archived: 0 },
+    "getAdminStats",
+  );
 }
 
 export async function getRecentTestSites(limit = 5): Promise<AdminTestSiteRow[]> {
-  const { data, error } = await supabase
-    .from("test_sites")
-    .select("*, category:test_categories(*)")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  return withTimeout(
+    async () => {
+      const { data, error } = await supabase
+        .from("test_sites")
+        .select("*, category:test_categories(*)")
+        .order("created_at", { ascending: false })
+        .limit(limit);
 
-  if (error) {
-    console.error("getRecentTestSites error:", error);
-    return [];
-  }
-
-  return (data as AdminTestSiteRow[]) ?? [];
+      if (error) throw error;
+      return (data as AdminTestSiteRow[]) ?? [];
+    },
+    [],
+    "getRecentTestSites",
+  );
 }

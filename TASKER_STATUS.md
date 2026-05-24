@@ -1,6 +1,6 @@
 # TASKER STATUS
 
-Last updated: 2026-05-19
+Last updated: 2026-05-24
 
 ---
 
@@ -165,6 +165,27 @@ Last updated: 2026-05-19
 ---
 
 ## 10. Recent Changes
+
+### 2026-05-24 (3)
+
+- **Supabase query hardening + caching** — Created `lib/supabase-timeout.ts`: `withTimeout<T>(fn, fallback, label, timeoutMs)` wraps any async query with `Promise.race` + 8s default timeout, returns fallback on timeout/error, logs `[label] timeout` or `[label] failed` with redacted messages, swallows late rejections. Created `lib/cache.ts`: in-memory TTL cache + helper factories (`listQuery`, `singleQuery`, `keyedSingleQuery`) that layer cache→timeout correctly (errors never cached). Updated all read queries:
+  - **test-sites-db.ts**: `getCategories` — 8s timeout, 600s cache. `getPublishedTestSites` — 8s timeout, 60s cache. `getTestSiteBySlug` — 8s timeout, 60s cache, per-slug key. `getTestSitesByCategory` — 8s timeout, inline wrapped.
+  - **user-profile-db.ts**: `getUserProfile` — 8s timeout, **5s cache** (short: OCR→refresh must see new data). Per-userId cache key.
+  - **admin-db.ts**: All 6 read functions (`getAdminCategories`, `getAdminCategoryById`, `getAdminTestSites`, `getAdminTestSiteById`, `getAdminStats`, `getRecentTestSites`) — 8s timeout, **no cache**. CRUD writes unchanged.
+- **Timeout prevents 50s hangs**: `Promise.race` returns fallback after 8s, even if undici ConnectTimeout eventually fires. No page throws 500 on Supabase downtime.
+
+### 2026-05-24 (2)
+
+- **/profile UI refinement** — Removed personality tags from ProfileSummary card (tags prop, rendering, deriveTags function all deleted). Moved ScreenshotReportUploader into DataSourceModal as a toggleable inline section ("上传测评截图" button); uploader no longer occupies standalone page area when profile exists (empty state still shows it). Radar chart titles changed to Chinese ("核心人格" / "社会表达") and subtitle kept in Chinese. All 16 dimension labels mapped from English DB keys to Chinese via `DIM_LABELS` dictionary. Radar SVG resized: RADIUS 142→115, LABEL_OFFSET 26→36, giving Chinese labels more breathing room and preventing edge clipping. Radar layout changed from 2-column grid to single-column stack. Deleted bottom "AI-style summary" card (summary already in top card). Removed `tags` prop from ProfileInteractions.
+
+### 2026-05-24
+
+- **Screenshot OCR upload on /profile** — Created `POST /api/screenshot-report` Next.js API route, proxies multipart/form-data to local OCR API (`http://127.0.0.1:8000/screenshot-report`), keeps `OCR_API_KEY` server-side only. Created `components/profile/ScreenshotReportUploader.tsx` client component: file selection with image preview, upload with loading state, success display (test type, main result, OCR confidence), duplicate detection ("这张截图已经上传过"), error handling with retry. Uses dev-mode hardcoded `DEV_USER_ID` with TODO for Supabase Auth. Added to `/profile` page right below the ProfileSummary card. "刷新个人图谱" button calls `router.refresh()`, "查看报告列表" opens existing DataSourceModal. New env vars: `OCR_API_BASE_URL`, `OCR_API_KEY` (no `NEXT_PUBLIC_` prefix).
+- **/profile wired to real Supabase data** — Created `lib/user-profile-db.ts` with `getUserProfile(userId)` querying `user_profiles` table via `.eq("user_id", userId).single()`. Rewrote `/profile` page from client component with mock data to async server component fetching real `user_profiles`. JSONB `core_vector`/`social_vector` converted to `RadarPoint[]` via `toRadarPoints()`. Tags derived from top 4 core_vector dimensions. Empty state ("还没有人格图谱") with upload CTA when no profile row exists. Created `components/profile/ProfileInteractions.tsx` client boundary for DataSourceModal open/close state. Removed all mock profile data from page.
+
+### 2026-05-21
+
+- **Profile page optimization** — Simplified `ProfileSummary`: removed "融合画像" (archetype) sidebar card and "SelfID 不是单一测评结果……" note block. Added "数据来源" button at card bottom. Created `DataSourceModal` component: overlay popup with mock data entries (date, test name, results), scrollable, auto-wrap, gradient style matching profile card. Removed bottom "数据来源" VectorCard grid and "About SelfID" footer section. Profile page converted to client component for modal state.
 
 ### 2026-05-19
 
