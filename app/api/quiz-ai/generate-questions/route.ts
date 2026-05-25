@@ -1,0 +1,361 @@
+import { NextRequest, NextResponse } from "next/server";
+
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+const DEEPSEEK_CHAT_URL = "https://api.deepseek.com/v1/chat/completions";
+
+const SYSTEM_PROMPT = `You are a personality quiz designer building a vector-space quiz engine.
+
+HOW THIS WORKS:
+- The quiz does NOT score points toward specific results.
+- Instead, each option has "factor_effects" — small integer deltas (-3 to +3) that shift the user's position on personality dimensions.
+- After answering all questions, the user's accumulated factor values form a "user vector."
+- This vector is compared (Euclidean distance) to pre-defined "result vectors" to find the closest match.
+
+QUESTION RULES:
+- Scenario-based: everyday situations with vivid imagery.
+- Easy to choose: no overthinking required.
+- Share-friendly: questions and options feel fun and shareable.
+- NOT exam-like, NOT medical, NOT clinical, NOT deeply private.
+- Written in natural Chinese.
+- Each question should probe different combinations of factors.
+
+OPTION EFFECT RULES:
+- Each option must affect 1–3 factors.
+- Effects are small integers from -3 to +3.
+- Design options so different choices push the user vector in different directions.
+- Use the reference result_vectors to understand what "directions" make sense, but do NOT mention result names in questions/options.
+
+COVERAGE RULE:
+- Every factor must be covered by at least one option across the entire question set.
+
+OUTPUT RULES:
+- Output ONLY valid JSON. No markdown, no code fences, no explanation.
+- Labels must be sequential uppercase letters: A, B, C, D...
+
+Output format:
+{
+  "questions": [
+    {
+      "text": "你更喜欢哪种夜晚？",
+      "description": "",
+      "options": [
+        {
+          "label": "A",
+          "text": "一个人听雨写东西",
+          "factor_effects": {
+            "sensitivity": 2,
+            "imagination": 2,
+            "expressiveness": -1
+          }
+        }
+      ]
+    }
+  ]
+}`;
+
+export async function POST(request: NextRequest) {
+  if (!DEEPSEEK_API_KEY) {
+    return NextResponse.json(
+      { error: "DeepSeek API key not configured" },
+      { status: 500 },
+    );
+  }
+
+  let body: {
+    title?: string;
+    hook?: string;
+    quiz_type?: string;
+    audience?: string[];
+    tone?: string[];
+    results?: { key: string; name: string; description: string; traits: string[] }[];
+    factors?: { key: string; name: string; description?: string }[];
+    result_vectors?: Record<string, Record<string, number>>;
+    question_count?: number;
+    options_per_question?: number;
+  };
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const {
+    title,
+    hook,
+    quiz_type,
+    audience,
+    tone,
+    results,
+    factors,
+    result_vectors,
+    question_count = 8,
+    options_per_question = 4,
+  } = body;
+
+  if (!title || typeof title !== "string") {
+    return NextResponse.json({ error: "title is required" }, { status: 400 });
+  }
+  if (!results || !Array.isArray(results) || results.length < 2) {
+    return NextResponse.json(
+      { error: "results array with at least 2 items is required" },
+      { status: 400 },
+    );
+  }
+  if (!factors || !Array.isArray(factors) || factors.length < 2) {
+    return NextResponse.json(
+      { error: "factors array with at least 2 items is required" },
+      { status: 400 },
+    );
+  }
+
+  const qc = typeof question_count === "number" ? question_count : 8;
+  const opq = typeof options_per_question === "number" ? options_per_question : 4;
+
+  if (qc < 3 || qc > 20) {
+    return NextResponse.json(
+      { error: "question_count must be between 3 and 20" },
+      { status: 400 },
+    );
+  }
+  if (opq < 2 || opq > 6) {
+    return NextResponse.json(
+      { error: "options_per_question must be between 2 and 6" },
+      { status: 400 },
+    );
+  }
+
+  const audienceStr = audience?.length ? audience.join("、") : "一般大众";
+  const toneStr = tone?.length ? tone.join("、") : "中性";
+  const hookStr = hook ?? "";
+  const typeStr = quiz_type ?? "personality";
+
+  const resultsText = results
+    .map(
+      (r) =>
+        `- ${r.name}（${r.key}）：${r.description} 特质：[${(r.traits ?? []).join("、")}]`,
+    )
+    .join("\n");
+
+  const factorsText = factors
+    .map((f) => `- ${f.key}（${f.name}）：${f.description ?? ""}`)
+    .join("\n");
+
+  // Summarize result vectors as reference
+  let vectorsText = "无";
+  if (result_vectors) {
+    const lines: string[] = [];
+    for (const [rk, vals] of Object.entries(result_vectors)) {
+      const r = results.find((r) => r.key === rk);
+      const name = r?.name ?? rk;
+      const highlights = Object.entries(vals)
+        .filter(([, v]) => v >= 80)
+        .map(([k]) => k)
+        .join("、");
+      const lows = Object.entries(vals)
+        .filter(([, v]) => v <= 30)
+        .map(([k]) => k)
+        .join("、");
+      lines.push(
+        `- ${name}（${rk}）：高=[${highlights || "无"}] 低=[${lows || "无"}]`,
+      );
+    }
+    vectorsText = lines.join("\n") || "无";
+  }
+
+  const labels = Array.from({ length: opq }, (_, i) =>
+    String.fromCharCode(65 + i),
+  ).join("/");
+
+  const factorKeys = factors.map((f) => f.key);
+
+  const userMessage = `设计一套人格测试题目。
+
+测试标题：${title}
+测试副标题：${hookStr}
+测试类型：${typeStr}
+目标受众：${audienceStr}
+语气风格：${toneStr}
+题目数量：${qc} 题
+每题选项：${opq} 个（标签：${labels}）
+
+结果人格：
+${resultsText}
+
+因子维度：
+${factorsText}
+
+各结果在高/低因子上的参考（仅作设计参考，请勿在题目中提及结果名称）：
+${vectorsText}
+
+可用的 factor_effects key：${factorKeys.join(", ")}
+
+要求：
+- 每题各选项的 factor_effects 必须使用以上 factor keys
+- 每个 option 影响 1-3 个因子
+- 值在 -3 到 +3 之间
+- 不同选项应推动不同方向
+- 所有 ${factorKeys.length} 个因子在整个题目集中都要有涉及
+- 题目要场景化、有画面感、容易选、适合分享`;
+
+  try {
+    const dsResponse = await fetch(DEEPSEEK_CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userMessage },
+        ],
+        temperature: 0.85,
+        max_tokens: 8192,
+      }),
+    });
+
+    if (!dsResponse.ok) {
+      const errText = await dsResponse.text().catch(() => "");
+      console.error("[quiz-ai:questions] DeepSeek API error", dsResponse.status, errText);
+      return NextResponse.json(
+        { error: `DeepSeek API returned ${dsResponse.status}` },
+        { status: 502 },
+      );
+    }
+
+    const dsData = await dsResponse.json();
+    const rawContent: string = dsData?.choices?.[0]?.message?.content ?? "";
+
+    if (!rawContent) {
+      console.error("[quiz-ai:questions] Empty response", dsData);
+      return NextResponse.json(
+        { error: "AI returned empty response" },
+        { status: 502 },
+      );
+    }
+
+    let jsonStr = rawContent.trim();
+    if (jsonStr.startsWith("```")) {
+      const fenceEnd = jsonStr.indexOf("\n");
+      jsonStr = jsonStr.slice(fenceEnd + 1);
+      if (jsonStr.endsWith("```")) {
+        jsonStr = jsonStr.slice(0, -3).trim();
+      }
+    }
+
+    let parsed: { questions?: unknown[] };
+
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      console.error("[quiz-ai:questions] Failed to parse JSON", jsonStr.slice(0, 500));
+      return NextResponse.json(
+        { error: "AI returned invalid JSON" },
+        { status: 502 },
+      );
+    }
+
+    if (!parsed.questions || !Array.isArray(parsed.questions)) {
+      return NextResponse.json(
+        { error: "AI response missing questions array" },
+        { status: 502 },
+      );
+    }
+
+    const factorKeySet = new Set(factorKeys);
+
+    for (let qi = 0; qi < parsed.questions.length; qi++) {
+      const q = parsed.questions[qi];
+      if (!q || typeof q !== "object") {
+        return NextResponse.json(
+          { error: `Question ${qi} is not an object` },
+          { status: 502 },
+        );
+      }
+      const qObj = q as Record<string, unknown>;
+      if (!qObj.text || typeof qObj.text !== "string") {
+        return NextResponse.json(
+          { error: `Question ${qi} missing valid text` },
+          { status: 502 },
+        );
+      }
+      if (!Array.isArray(qObj.options)) {
+        return NextResponse.json(
+          { error: `Question ${qi} missing options array` },
+          { status: 502 },
+        );
+      }
+
+      for (let oi = 0; oi < (qObj.options as unknown[]).length; oi++) {
+        const opt = (qObj.options as unknown[])[oi];
+        if (!opt || typeof opt !== "object") {
+          return NextResponse.json(
+            { error: `Question ${qi} option ${oi} is not an object` },
+            { status: 502 },
+          );
+        }
+        const oObj = opt as Record<string, unknown>;
+        if (!oObj.label || typeof oObj.label !== "string") {
+          return NextResponse.json(
+            { error: `Question ${qi} option ${oi} missing valid label` },
+            { status: 502 },
+          );
+        }
+        if (!oObj.text || typeof oObj.text !== "string") {
+          return NextResponse.json(
+            { error: `Question ${qi} option ${oi} missing valid text` },
+            { status: 502 },
+          );
+        }
+        if (!oObj.factor_effects || typeof oObj.factor_effects !== "object") {
+          return NextResponse.json(
+            { error: `Question ${qi} option ${oi} missing valid factor_effects` },
+            { status: 502 },
+          );
+        }
+
+        const effects = oObj.factor_effects as Record<string, unknown>;
+        let effectCount = 0;
+
+        for (const [key, val] of Object.entries(effects)) {
+          if (!factorKeySet.has(key)) {
+            return NextResponse.json(
+              { error: `Question ${qi} option ${oi} uses unknown factor key "${key}"` },
+              { status: 502 },
+            );
+          }
+          if (typeof val !== "number" || val < -3 || val > 3 || !Number.isInteger(val)) {
+            return NextResponse.json(
+              { error: `Question ${qi} option ${oi} has invalid effect value for "${key}": ${val}` },
+              { status: 502 },
+            );
+          }
+          effectCount++;
+        }
+
+        if (effectCount === 0) {
+          return NextResponse.json(
+            { error: `Question ${qi} option ${oi} has no factor_effects` },
+            { status: 502 },
+          );
+        }
+        if (effectCount > 3) {
+          return NextResponse.json(
+            { error: `Question ${qi} option ${oi} has more than 3 factor_effects` },
+            { status: 502 },
+          );
+        }
+      }
+    }
+
+    return NextResponse.json({ questions: parsed.questions });
+  } catch (err) {
+    console.error("[quiz-ai:questions] Unexpected error", err);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}

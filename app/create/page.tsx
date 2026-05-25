@@ -73,6 +73,12 @@ export default function CreatePage() {
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [aiFactorsLoading, setAiFactorsLoading] = useState(false);
+  const [aiFactorsError, setAiFactorsError] = useState("");
+  const [aiVectorsLoading, setAiVectorsLoading] = useState(false);
+  const [aiVectorsError, setAiVectorsError] = useState("");
+  const [aiQuestionsLoading, setAiQuestionsLoading] = useState(false);
+  const [aiQuestionsError, setAiQuestionsError] = useState("");
 
   /* ---- Meta ---- */
 
@@ -264,6 +270,216 @@ export default function CreatePage() {
     }
   }
 
+  /* ---- AI Generate Factors ---- */
+
+  async function handleGenerateFactors() {
+    setAiFactorsLoading(true);
+    setAiFactorsError("");
+
+    try {
+      const res = await fetch("/api/quiz-ai/generate-factors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: quiz.meta.title,
+          hook: quiz.meta.hook,
+          quiz_type: quiz.meta.quiz_type,
+          audience: quiz.meta.audience
+            .split("/")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          tone: quiz.meta.tone
+            .split("/")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          results: quiz.results.map((r) => ({
+            key: r.id,
+            name: r.name,
+            subtitle: r.subtitle ?? "",
+            description: r.description,
+            traits: r.traits,
+          })),
+          factor_count: 5,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setAiFactorsError(data.error ?? "AI 生成失败，请重试");
+        return;
+      }
+
+      const aiFactors = data.factors as {
+        key: string;
+        name: string;
+        description?: string;
+      }[];
+
+      const newFactors: Factor[] = aiFactors.map((f) => ({
+        id: f.key,
+        name: f.name,
+        nameEn: f.description ?? "",
+      }));
+
+      const newKeys = new Set(newFactors.map((f) => f.id));
+
+      setQuiz((prev) => ({
+        ...prev,
+        factors: newFactors,
+        resultVectors: prev.resultVectors.map((rv) => {
+          const nextValues: Record<string, number> = {};
+          for (const key of newKeys) {
+            nextValues[key] = rv.values[key] ?? 50;
+          }
+          return { ...rv, values: nextValues };
+        }),
+      }));
+    } catch {
+      setAiFactorsError("网络错误，请检查连接后重试");
+    } finally {
+      setAiFactorsLoading(false);
+    }
+  }
+
+  /* ---- AI Generate Result Vectors ---- */
+
+  async function handleGenerateResultVectors() {
+    setAiVectorsLoading(true);
+    setAiVectorsError("");
+
+    try {
+      const res = await fetch("/api/quiz-ai/generate-result-vectors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: quiz.meta.title,
+          hook: quiz.meta.hook,
+          quiz_type: quiz.meta.quiz_type,
+          audience: quiz.meta.audience
+            .split("/")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          tone: quiz.meta.tone
+            .split("/")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          results: quiz.results.map((r) => ({
+            key: r.id,
+            name: r.name,
+            subtitle: r.subtitle ?? "",
+            description: r.description,
+            traits: r.traits,
+          })),
+          factors: quiz.factors.map((f) => ({
+            key: f.id,
+            name: f.name,
+            description: f.nameEn ?? "",
+          })),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setAiVectorsError(data.error ?? "AI 生成失败，请重试");
+        return;
+      }
+
+      const vectors = data.result_vectors as Record<string, Record<string, number>>;
+
+      setQuiz((prev) => ({
+        ...prev,
+        resultVectors: prev.results.map((r) => ({
+          resultId: r.id,
+          values: vectors[r.id] ?? prev.resultVectors.find((rv) => rv.resultId === r.id)?.values ?? {},
+        })),
+      }));
+    } catch {
+      setAiVectorsError("网络错误，请检查连接后重试");
+    } finally {
+      setAiVectorsLoading(false);
+    }
+  }
+
+  /* ---- AI Generate Questions ---- */
+
+  async function handleGenerateQuestions() {
+    setAiQuestionsLoading(true);
+    setAiQuestionsError("");
+
+    try {
+      const res = await fetch("/api/quiz-ai/generate-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: quiz.meta.title,
+          hook: quiz.meta.hook,
+          quiz_type: quiz.meta.quiz_type,
+          audience: quiz.meta.audience
+            .split("/")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          tone: quiz.meta.tone
+            .split("/")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          results: quiz.results.map((r) => ({
+            key: r.id,
+            name: r.name,
+            subtitle: r.subtitle ?? "",
+            description: r.description,
+            traits: r.traits,
+          })),
+          factors: quiz.factors.map((f) => ({
+            key: f.id,
+            name: f.name,
+            description: f.nameEn ?? "",
+          })),
+          result_vectors: Object.fromEntries(
+            quiz.resultVectors.map((rv) => [rv.resultId, rv.values]),
+          ),
+          question_count: 8,
+          options_per_question: 4,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setAiQuestionsError(data.error ?? "AI 生成失败，请重试");
+        return;
+      }
+
+      const aiQuestions = data.questions as {
+        text: string;
+        description?: string;
+        options: {
+          label: string;
+          text: string;
+          factor_effects: Record<string, number>;
+        }[];
+      }[];
+
+      setQuiz((prev) => ({
+        ...prev,
+        questions: aiQuestions.map((q, qi) => ({
+          id: `q_${Date.now()}_${qi}`,
+          text: q.text,
+          options: q.options.map((opt) => ({
+            label: opt.label,
+            text: opt.text,
+            effects: opt.factor_effects,
+          })),
+        })),
+      }));
+    } catch {
+      setAiQuestionsError("网络错误，请检查连接后重试");
+    } finally {
+      setAiQuestionsLoading(false);
+    }
+  }
+
   /* ---- Render ---- */
 
   const { meta, results, factors, resultVectors, questions } = quiz;
@@ -360,7 +576,46 @@ export default function CreatePage() {
 
         {/* Step 3: Factors */}
         <section className="space-y-4">
-          <StepLabel num={3} label="Factors" />
+          <div className="flex items-center justify-between">
+            <StepLabel num={3} label="Factors" />
+            <button
+              type="button"
+              onClick={handleGenerateFactors}
+              disabled={aiFactorsLoading}
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
+            >
+              {aiFactorsLoading ? (
+                <>
+                  <svg
+                    className="h-3.5 w-3.5 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  AI 生成中...
+                </>
+              ) : (
+                "AI 生成影响因子"
+              )}
+            </button>
+          </div>
+          {aiFactorsError && (
+            <p className="text-sm text-red-600">{aiFactorsError}</p>
+          )}
           <FactorList
             factors={factors}
             onChange={updateFactor}
@@ -371,7 +626,46 @@ export default function CreatePage() {
 
         {/* Step 4: Result Vectors */}
         <section className="space-y-4">
-          <StepLabel num={4} label="Result Vectors" />
+          <div className="flex items-center justify-between">
+            <StepLabel num={4} label="Result Vectors" />
+            <button
+              type="button"
+              onClick={handleGenerateResultVectors}
+              disabled={aiVectorsLoading}
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
+            >
+              {aiVectorsLoading ? (
+                <>
+                  <svg
+                    className="h-3.5 w-3.5 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  AI 生成中...
+                </>
+              ) : (
+                "AI 设置结果向量"
+              )}
+            </button>
+          </div>
+          {aiVectorsError && (
+            <p className="text-sm text-red-600">{aiVectorsError}</p>
+          )}
           <p className="text-base leading-7 text-[var(--body)]">
             为每个结果在每个因子维度上设定 0-100 的位置，构成该结果的人格向量。
           </p>
@@ -405,14 +699,53 @@ export default function CreatePage() {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <StepLabel num={6} label="Questions + Option Effects" />
-            <button
-              type="button"
-              onClick={addQuestion}
-              className="inline-flex h-9 items-center gap-1 rounded-full bg-[var(--ink)]/6 px-4 text-sm font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12"
-            >
-              + 添加题目
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleGenerateQuestions}
+                disabled={aiQuestionsLoading}
+                className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
+              >
+                {aiQuestionsLoading ? (
+                  <>
+                    <svg
+                      className="h-3.5 w-3.5 animate-spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                    AI 生成中...
+                  </>
+                ) : (
+                  "AI 生成题目"
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={addQuestion}
+                className="inline-flex h-9 items-center gap-1 rounded-full bg-[var(--ink)]/6 px-4 text-sm font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12"
+              >
+                + 添加
+              </button>
+            </div>
           </div>
+          {aiQuestionsError && (
+            <p className="text-sm text-red-600">{aiQuestionsError}</p>
+          )}
           <p className="text-base leading-7 text-[var(--body)]">
             每道题的每个选项都会在特定因子上产生增量效果，用户的最终向量是所有选项效果的累加。
           </p>

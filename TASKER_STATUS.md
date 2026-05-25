@@ -42,6 +42,9 @@ Last updated: 2026-05-25
 | 18 | `/admin/categories/new` | `app/admin/categories/new/page.tsx` | Static | **Done (Supabase)** | Create form: slug, name, description, icon, sort_order, status. |
 | 19 | `/admin/categories/[id]/edit` | `app/admin/categories/[id]/edit/page.tsx` | Dynamic | **Done (Supabase)** | Edit form: pre-filled from DB. |
 | 20 | `/api/quiz-ai/generate-results` | `app/api/quiz-ai/generate-results/route.ts` | API | **Done** | POST — calls DeepSeek, returns structured personality results JSON. Key kept server-side. |
+| 21 | `/api/quiz-ai/generate-factors` | `app/api/quiz-ai/generate-factors/route.ts` | API | **Done** | POST — calls DeepSeek with results context, returns factor dimensions to differentiate results. |
+| 22 | `/api/quiz-ai/generate-result-vectors` | `app/api/quiz-ai/generate-result-vectors/route.ts` | API | **Done** | POST — calls DeepSeek with results + factors, returns 0-100 vector values per result × factor. |
+| 23 | `/api/quiz-ai/generate-questions` | `app/api/quiz-ai/generate-questions/route.ts` | API | **Done** | POST — calls DeepSeek with results + factors + vectors, generates scenario-based questions with factor_effects options. |
 
 ---
 
@@ -177,6 +180,18 @@ Last updated: 2026-05-25
 ---
 
 ## 10. Recent Changes
+
+### 2026-05-25 (6)
+
+- **Quiz Studio AI Copilot — Questions 生成** — 新增 `app/api/quiz-ai/generate-questions/route.ts`：POST 端点，接收 quiz meta + results + factors + result_vectors + question_count + options_per_question，生成场景化的向量空间测试题目。每个 option 通过 factor_effects（-3~+3，1-3 个因子）间接推动用户向量，而非直接加分到 result。题目要求场景化、有画面感、易选择、适合分享，不医疗化。完整校验：factor keys 合法性、值范围、effect 数量、labels 格式。`/create` 页面 Questions 模块新增 "AI 生成题目" 按钮（与 "+ 添加" 并列），生成后 Coverage Validator 自动重新检查因子覆盖。
+
+### 2026-05-25 (5)
+
+- **Quiz Studio AI Copilot — Result Vectors 生成** — 新增 `app/api/quiz-ai/generate-result-vectors/route.ts`：POST 端点，接收 quiz meta + results + factors，为每个 result × factor 组合分配 0-100 人格向量值。AI 根据 result traits/description + factor 含义合理分配：核心特征 80-95、非匹配 10-30、中性 40-60，结果间有明显区分度。完整校验所有 result key × factor key 存在且值在 0-100。`/create` 页面 Result Vectors 模块新增 "AI 设置结果向量" 按钮，生成后自动更新 sliders（用户仍可手动调整），Distance Validator 自动基于新向量重新计算。
+
+### 2026-05-25 (4)
+
+- **Quiz Studio AI Copilot — Factors 生成** — 新增 `app/api/quiz-ai/generate-factors/route.ts`：POST 端点，服务端调用 DeepSeek，接收 quiz meta + results 上下文 + factor_count，返回严格 JSON 格式的因子维度列表（key/name/description）。API 将已有 results 传给 AI，确保生成的 factors 能有效区分各个结果人格。`/create` 页面 Factors 模块新增 "AI 生成影响因子" 按钮（与 Results 按钮同款渐变风格）。生成后自动重建 resultVectors：保留同名 key 的值，新 key 默认 50，移除旧 key。
 
 ### 2026-05-25 (3)
 
