@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useLayoutEffect } from "react";
 
 type Props = {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  block?: boolean;
 };
 
 export function InlineEditableInput({
@@ -14,42 +15,58 @@ export function InlineEditableInput({
   onChange,
   placeholder = "",
   className = "",
+  block = false,
 }: Props) {
   const ref = useRef<HTMLInputElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
   const [font, setFont] = useState("inherit");
 
-  // Auto-width: sync input width to text content
-  useEffect(() => {
+  const syncWidth = () => {
     if (measureRef.current && ref.current) {
       const w = measureRef.current.offsetWidth;
       ref.current.style.width = `${Math.max(w + 16, 60)}px`;
       setFont(getComputedStyle(ref.current).font);
     }
+  };
+
+  // Run synchronously after DOM mutations to avoid flicker
+  useLayoutEffect(() => {
+    syncWidth();
+  });
+
+  // Re-measure on value change
+  useEffect(() => {
+    syncWidth();
   }, [value]);
 
   const base =
-    "bg-transparent border-b border-current/10 hover:border-current/25 focus:border-current/30 focus:outline-none rounded-sm px-1 py-0.5 transition-all duration-150 placeholder:text-current/20 min-w-[60px]";
+    "bg-transparent border-b border-current/10 hover:border-current/25 focus:border-current/30 focus:outline-none rounded-sm px-1 py-0.5 transition-all duration-150 placeholder:text-current/20";
+
+  const wrapperClass = block
+    ? "relative flex w-full"
+    : "relative inline-flex items-center";
 
   return (
-    <span className="relative inline-flex items-center">
+    <span className={wrapperClass}>
       <input
         ref={ref}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`${base} ${className}`}
-        style={{ width: "auto" }}
+        className={`${base} ${className} ${block ? "w-full" : "min-w-[60px]"}`}
+        style={block ? undefined : { width: "auto" }}
       />
-      <span
-        ref={measureRef}
-        aria-hidden
-        className="pointer-events-none absolute -left-[9999px] whitespace-pre px-1 py-0.5"
-        style={{ font }}
-      >
-        {value || placeholder || " "}
-      </span>
+      {!block && (
+        <span
+          ref={measureRef}
+          aria-hidden
+          className="pointer-events-none absolute -left-[9999px] whitespace-pre px-1 py-0.5"
+          style={{ font }}
+        >
+          {value || placeholder || " "}
+        </span>
+      )}
     </span>
   );
 }

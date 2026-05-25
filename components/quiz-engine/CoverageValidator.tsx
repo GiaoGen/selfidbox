@@ -12,9 +12,9 @@ export function CoverageValidator({
 
   return (
     <section className="rounded-[32px] bg-[var(--surface-card)] p-6 sm:p-8">
-      <p className="text-sm font-semibold text-[var(--muted)]">Step 7</p>
-      <h2 className="mt-1 text-3xl font-semibold tracking-[-0.03em]">
-        Question Coverage Validator
+      <p className="text-sm font-semibold text-[var(--muted)]">7</p>
+      <h2 className="mt-1 text-xl font-semibold tracking-[-0.02em]">
+        题目覆盖检查
       </h2>
       <p className="mt-2 text-base leading-7 text-[var(--body)]">
         检查每个影响因子是否被至少一道题目的选项所测量。

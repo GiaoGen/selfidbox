@@ -19,6 +19,7 @@ export function QuizMetaCard({ meta, onChange }: Props) {
 
       {isEditing ? (
         <InlineEditableInput
+          block
           value={meta.title}
           onChange={(v) => update({ title: v })}
           placeholder="输入测试标题"

@@ -15,9 +15,9 @@ export function DistanceValidator({
 
   return (
     <section className="rounded-[32px] bg-[var(--surface-card)] p-6 sm:p-8">
-      <p className="text-sm font-semibold text-[var(--muted)]">Step 5</p>
-      <h2 className="mt-1 text-3xl font-semibold tracking-[-0.03em]">
-        Result Distance Validator
+      <p className="text-sm font-semibold text-[var(--muted)]">5</p>
+      <h2 className="mt-1 text-xl font-semibold tracking-[-0.02em]">
+        结果区分度检查
       </h2>
       <p className="mt-2 text-base leading-7 text-[var(--body)]">
         基于欧氏距离计算结果向量之间的相似程度。相似度 &gt; {threshold}% 表示两个人格位置较接近。

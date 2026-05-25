@@ -99,10 +99,11 @@ export function QuestionEffectsCard({
 
       {isEditing ? (
         <InlineEditableInput
+          block
           value={question.text}
           onChange={(v) => update({ ...question, text: v })}
           placeholder="题目文字"
-          className="mt-3 text-lg font-semibold leading-7 text-[var(--ink)] w-full"
+          className="mt-3 text-lg font-semibold leading-7 text-[var(--ink)]"
         />
       ) : (
         <p className="mt-3 text-lg font-semibold leading-7 text-[var(--ink)]">
@@ -124,10 +125,11 @@ export function QuestionEffectsCard({
                 {isEditing ? (
                   <div className="space-y-2">
                     <InlineEditableInput
+                      block
                       value={option.text}
                       onChange={(v) => updateOption(oIndex, { text: v })}
                       placeholder="选项文字"
-                      className="text-sm font-semibold text-[var(--ink)] w-full"
+                      className="text-sm font-semibold text-[var(--ink)]"
                     />
                     <div className="flex flex-wrap items-center gap-2">
                       {factors.map((f) => {

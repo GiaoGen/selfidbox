@@ -37,29 +37,30 @@ export function ResultCard({ result, index, onChange, onDelete }: Props) {
         </button>
       )}
 
-      <p className="text-sm font-semibold opacity-70">Result {index + 1}</p>
-
-      {isEditing ? (
-        <InlineEditableInput
-          value={result.name}
-          onChange={(v) => update({ ...result, name: v })}
-          placeholder="结果名称"
-          className="mt-2 text-2xl font-semibold tracking-[-0.02em]"
-        />
-      ) : (
-        <h3 className="mt-2 text-2xl font-semibold tracking-[-0.02em]">{result.name}</h3>
-      )}
-
+      {/* subtitle in place of old result number */}
       {isEditing ? (
         <InlineEditableInput
           value={result.subtitle ?? ""}
           onChange={(v) => update({ ...result, subtitle: v })}
-          placeholder="副标题（可选）"
-          className="mt-1 text-sm font-medium opacity-60"
+          placeholder="副标题"
+          className="text-xs font-semibold opacity-50"
         />
       ) : result.subtitle ? (
-        <p className="mt-1 text-sm font-medium opacity-60">{result.subtitle}</p>
+        <p className="text-xs font-semibold opacity-50">{result.subtitle}</p>
       ) : null}
+
+      {/* name — wider and more prominent */}
+      {isEditing ? (
+        <InlineEditableInput
+          block
+          value={result.name}
+          onChange={(v) => update({ ...result, name: v })}
+          placeholder="结果名称"
+          className="mt-1 text-2xl font-semibold tracking-[-0.02em]"
+        />
+      ) : (
+        <h3 className="mt-1 text-2xl font-semibold tracking-[-0.02em]">{result.name}</h3>
+      )}
 
       {isEditing ? (
         <InlineEditableTextarea
@@ -96,7 +97,7 @@ export function ResultCard({ result, index, onChange, onDelete }: Props) {
             value={result.shareText ?? ""}
             onChange={(v) => update({ ...result, shareText: v })}
             placeholder="分享文案（可选）"
-            className="mt-0.5 w-full text-xs opacity-50"
+            className="w-full text-xs opacity-50"
           />
         </div>
       )}

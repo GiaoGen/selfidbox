@@ -51,10 +51,10 @@ function defaultVector(factors: Factor[]): Record<string, number> {
 function StepLabel({ num, label }: { num: number; label: string }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-sm font-semibold text-white">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-sm font-semibold text-white">
         {num}
       </span>
-      <h2 className="text-3xl font-semibold tracking-[-0.03em]">{label}</h2>
+      <h2 className="text-xl font-semibold tracking-[-0.02em]">{label}</h2>
     </div>
   );
 }
@@ -546,20 +546,58 @@ export default function CreatePage() {
 
         {/* Step 1: Quiz Meta */}
         <section className="space-y-4">
-          <StepLabel num={1} label="Quiz Meta" />
+          <StepLabel num={1} label="测试基础信息" />
           <QuizMetaCard meta={meta} onChange={updateMeta} />
         </section>
 
         {/* Step 2: Results */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <StepLabel num={2} label="Results" />
-            <div className="flex items-center gap-2">
-              <CountSelector
-                options={[4, 6, 8]}
-                value={resultCount}
-                onChange={setResultCount}
-              />
+            <StepLabel num={2} label="结果人格" />
+            <button
+              type="button"
+              onClick={handleGenerateResults}
+              disabled={aiLoading}
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
+            >
+              {aiLoading ? (
+                <>
+                  <svg
+                    className="h-3.5 w-3.5 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  AI 生成中...
+                </>
+              ) : (
+                "AI 生成"
+              )}
+            </button>
+          </div>
+          <div className="border-t border-[var(--ink)]/5 pt-4 pl-3">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                <CountSelector
+                  options={[4, 6, 8]}
+                  value={resultCount}
+                  onChange={setResultCount}
+                />
+              </div>
               <button
                 type="button"
                 onClick={addResult}
@@ -567,51 +605,14 @@ export default function CreatePage() {
               >
                 + 添加
               </button>
-              <button
-                type="button"
-                onClick={handleGenerateResults}
-                disabled={aiLoading}
-                className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
-              >
-                {aiLoading ? (
-                  <>
-                    <svg
-                      className="h-3.5 w-3.5 animate-spin"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      />
-                    </svg>
-                    AI 生成中...
-                  </>
-                ) : (
-                  "AI 生成结果人格"
-                )}
-              </button>
             </div>
           </div>
-          <p className="text-base leading-7 text-[var(--body)]">
-            定义测试可能产生的结果人格，每个结果有独立的名称、描述和特质标签。
-          </p>
-          {aiError && <p className="text-sm text-red-600">{aiError}</p>}
-          {results.length === 0 && (
-            <p className="py-8 text-center text-sm text-[var(--muted)]">
-              还没有结果人格。点击 "AI 生成结果人格" 或 "+ 添加" 手动创建。
+          <div className="rounded-2xl bg-[var(--surface-card)] px-5 py-4 shadow-[0_8px_30px_rgba(10,10,10,0.04)]">
+            <p className="text-sm leading-6 text-[var(--body)]">
+              定义测试可能产生的结果人格，每个结果有独立的名称、描述和特质标签。
             </p>
-          )}
+          </div>
+          {aiError && <p className="text-sm text-red-600">{aiError}</p>}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {results.map((result, i) => (
               <ResultCard
@@ -628,56 +629,53 @@ export default function CreatePage() {
         {/* Step 3: Factors */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <StepLabel num={3} label="Factors" />
-            <div className="flex items-center gap-2">
+            <StepLabel num={3} label="影响因子" />
+            <button
+              type="button"
+              onClick={handleGenerateFactors}
+              disabled={aiFactorsLoading}
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
+            >
+              {aiFactorsLoading ? (
+                <>
+                  <svg
+                    className="h-3.5 w-3.5 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  AI 生成中...
+                </>
+              ) : (
+                "AI 生成"
+              )}
+            </button>
+          </div>
+          <div className="border-t border-[var(--ink)]/5 pt-4 pl-3">
+            <div className="flex flex-wrap items-center gap-2">
               <CountSelector
                 options={[4, 5, 6, 8]}
                 value={factorCount}
                 onChange={setFactorCount}
               />
-              <button
-                type="button"
-                onClick={handleGenerateFactors}
-                disabled={aiFactorsLoading}
-                className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
-              >
-                {aiFactorsLoading ? (
-                  <>
-                    <svg
-                      className="h-3.5 w-3.5 animate-spin"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      />
-                    </svg>
-                    AI 生成中...
-                  </>
-                ) : (
-                  "AI 生成影响因子"
-                )}
-              </button>
             </div>
           </div>
           {aiFactorsError && (
             <p className="text-sm text-red-600">{aiFactorsError}</p>
-          )}
-          {factors.length === 0 && (
-            <p className="py-8 text-center text-sm text-[var(--muted)]">
-              还没有影响因子。点击 "AI 生成影响因子" 或编辑内容后手动添加。
-            </p>
           )}
           <FactorList
             factors={factors}
@@ -690,7 +688,7 @@ export default function CreatePage() {
         {/* Step 4: Result Vectors */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <StepLabel num={4} label="Result Vectors" />
+            <StepLabel num={4} label="结果向量" />
             <button
               type="button"
               onClick={handleGenerateResultVectors}
@@ -722,21 +720,19 @@ export default function CreatePage() {
                   AI 生成中...
                 </>
               ) : (
-                "AI 设置结果向量"
+                "AI 生成"
               )}
             </button>
           </div>
+          <div className="border-t border-[var(--ink)]/5 pt-4 pl-3" />
           {aiVectorsError && (
             <p className="text-sm text-red-600">{aiVectorsError}</p>
           )}
-          <p className="text-base leading-7 text-[var(--body)]">
-            为每个结果在每个因子维度上设定 0-100 的位置，构成该结果的人格向量。
-          </p>
-          {resultVectors.length === 0 && (
-            <p className="py-8 text-center text-sm text-[var(--muted)]">
-              还没有结果向量。先生成 Results 和 Factors，然后点击 "AI 设置结果向量"。
+          <div className="rounded-2xl bg-[var(--surface-card)] px-5 py-4 shadow-[0_8px_30px_rgba(10,10,10,0.04)]">
+            <p className="text-sm leading-6 text-[var(--body)]">
+              为每个结果在每个因子维度上设定 0-100 的位置，构成该结果的人格向量。
             </p>
-          )}
+          </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {resultVectors.map((rv, i) => {
               const result = results.find((r) => r.id === rv.resultId);
@@ -766,54 +762,58 @@ export default function CreatePage() {
         {/* Step 6: Questions + Option Effects */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <StepLabel num={6} label="Questions + Option Effects" />
-            <div className="flex items-center gap-2">
-              <CountSelector
-                options={[6, 8, 10, 12]}
-                value={questionCount}
-                onChange={setQuestionCount}
-              />
-              <span className="text-xs text-[var(--muted)]">题</span>
-              <CountSelector
-                options={[3, 4]}
-                value={optionsPerQuestion}
-                onChange={setOptionsPerQuestion}
-              />
-              <span className="text-xs text-[var(--muted)]">选</span>
-              <button
-                type="button"
-                onClick={handleGenerateQuestions}
-                disabled={aiQuestionsLoading}
-                className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
-              >
-                {aiQuestionsLoading ? (
-                  <>
-                    <svg
-                      className="h-3.5 w-3.5 animate-spin"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      />
-                    </svg>
-                    AI 生成中...
-                  </>
-                ) : (
-                  "AI 生成题目"
-                )}
-              </button>
+            <StepLabel num={6} label="题目与选项影响" />
+            <button
+              type="button"
+              onClick={handleGenerateQuestions}
+              disabled={aiQuestionsLoading}
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
+            >
+              {aiQuestionsLoading ? (
+                <>
+                  <svg
+                    className="h-3.5 w-3.5 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  AI 生成中...
+                </>
+              ) : (
+                "AI 生成"
+              )}
+            </button>
+          </div>
+          <div className="border-t border-[var(--ink)]/5 pt-4 pl-3">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                <CountSelector
+                  options={[6, 8, 10, 12]}
+                  value={questionCount}
+                  onChange={setQuestionCount}
+                />
+                <span className="text-xs text-[var(--muted)]">题</span>
+                <CountSelector
+                  options={[3, 4]}
+                  value={optionsPerQuestion}
+                  onChange={setOptionsPerQuestion}
+                />
+                <span className="text-xs text-[var(--muted)]">选</span>
+              </div>
               <button
                 type="button"
                 onClick={() => {
@@ -829,14 +829,11 @@ export default function CreatePage() {
           {aiQuestionsError && (
             <p className="text-sm text-red-600">{aiQuestionsError}</p>
           )}
-          <p className="text-base leading-7 text-[var(--body)]">
-            每道题的每个选项都会在特定因子上产生增量效果，用户的最终向量是所有选项效果的累加。
-          </p>
-          {questions.length === 0 && (
-            <p className="py-8 text-center text-sm text-[var(--muted)]">
-              还没有题目。点击 "AI 生成题目" 或 "+ 添加" 手动创建。
+          <div className="rounded-2xl bg-[var(--surface-card)] px-5 py-4 shadow-[0_8px_30px_rgba(10,10,10,0.04)]">
+            <p className="text-sm leading-6 text-[var(--body)]">
+              每道题的每个选项都会在特定因子上产生增量效果，用户的最终向量是所有选项效果的累加。
             </p>
-          )}
+          </div>
 
           {questions.length > 0 && (
             <>
