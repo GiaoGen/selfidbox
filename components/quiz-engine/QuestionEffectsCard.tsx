@@ -1,5 +1,6 @@
 "use client";
 
+import { Pin, PinOff } from "lucide-react";
 import type { Question, Factor } from "@/lib/mock-quiz-engine";
 import type { OptionEffect } from "@/lib/mock-quiz-engine";
 import { InlineEditableInput } from "@/components/quiz-studio/InlineEditableInput";
@@ -27,7 +28,11 @@ type Props = {
   index: number;
   onChange?: (question: Question) => void;
   onDelete?: () => void;
+  onTogglePin?: () => void;
 };
+
+const btnBase = "flex h-7 w-7 items-center justify-center rounded-full transition-all";
+const btnVisible = "bg-black/8 text-[var(--ink)]/60 hover:bg-black/16 hover:text-[var(--ink)]";
 
 export function QuestionEffectsCard({
   question,
@@ -35,9 +40,11 @@ export function QuestionEffectsCard({
   index,
   onChange,
   onDelete,
+  onTogglePin,
 }: Props) {
   const isEditing = !!onChange;
   const update = onChange ?? (() => {});
+  const pinned = question.isPinned;
 
   function updateOption(
     oIndex: number,
@@ -79,16 +86,37 @@ export function QuestionEffectsCard({
   }
 
   return (
-    <div className="rounded-[24px] bg-[var(--surface-card)] p-5 sm:p-6 group/qcard relative">
-      {onDelete && (
-        <button
-          type="button"
-          onClick={onDelete}
-          className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--ink)]/8 text-sm leading-none opacity-0 transition-opacity group-hover/qcard:opacity-100 hover:bg-[var(--ink)]/16"
-        >
-          ×
-        </button>
-      )}
+    <div
+      className={`rounded-[24px] bg-[var(--surface-card)] p-5 sm:p-6 group/qcard relative transition-shadow ${
+        pinned ? "ring-2 ring-[var(--ink)]/10 shadow-[0_0_16px_rgba(10,10,10,0.05)]" : ""
+      }`}
+    >
+      <div className="absolute right-4 top-4 flex items-center gap-0.5">
+        {onTogglePin && (
+          <button
+            type="button"
+            onClick={onTogglePin}
+            className={`${btnBase} ${
+              pinned
+                ? "bg-[var(--ink)]/12 text-[var(--ink)]"
+                : btnVisible
+            }`}
+            title={pinned ? "取消固定" : "固定此题"}
+          >
+            {pinned ? <Pin size={14} fill="currentColor" /> : <PinOff size={14} />}
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className={`${btnBase} ${btnVisible}`}
+            title="删除"
+          >
+            ×
+          </button>
+        )}
+      </div>
 
       <div className="flex items-center gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-sm font-semibold text-white">
@@ -184,7 +212,8 @@ export function QuestionEffectsCard({
               <button
                 type="button"
                 onClick={() => deleteOption(oIndex)}
-                className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--ink)]/8 text-[0.6rem] leading-none opacity-0 transition-opacity group-hover/opt:opacity-100 hover:bg-[var(--ink)]/16"
+                className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-black/8 text-[var(--ink)]/60 hover:bg-black/16 hover:text-[var(--ink)] transition-all"
+                title="删除选项"
               >
                 ×
               </button>

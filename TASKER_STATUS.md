@@ -181,6 +181,18 @@ Last updated: 2026-05-25
 
 ## 10. Recent Changes
 
+### 2026-05-25 (10)
+
+- **全模块 Pin 系统 + Icon Visibility 统一修复** — ① 类型扩展：`Factor`、`ResultVector`、`Question` 接口全部新增 `isPinned: boolean` 字段（默认 `false`），mock 数据同步。② **Factors Pin**：`FactorList` 每个 factor pill 右侧新增 Pin/PinOff icon，pinned 状态加 `ring-2 + shadow`。`handleGenerateFactors()` 保留 pinned factors，只向 AI 请求 `factorCount - pinned.length` 个新因子，`pinned_factors`（含 key/name）传给 API，响应后 merged（pinned 在前，new 在后）。`generate-factors` API：接收 `pinned_factors`，SYSTEM_PROMPT 新增 PINNED FACTORS 规则，user prompt 显式列出并禁止语义重复，`factor_count` 下限从 3 降为 1。③ **Result Vectors Pin**：`ResultVectorCard` header 区域新增 Pin/PinOff icon。`handleGenerateResultVectors()` 收集 pinned vectors，只向 AI 发送 unpinned results，`pinned_vectors`（含 key/name/values）传给 API 作参考，响应后 pinned vectors 原样保留，new vectors 使用 AI 返回值。`generate-result-vectors` API：接收 `pinned_vectors` 作参考（不生成），SYSTEM_PROMPT 新增 PINNED VECTORS 规则，`results` 下限降为 1。④ **Questions Pin**：`QuestionEffectsCard` 右上角新增 Pin/PinOff icon（与删除 × 并列）。`handleGenerateQuestions()` 保留 pinned questions，只请求 `questionCount - pinned.length` 个新题，`pinned_questions`（含 text）传给 API。`generate-questions` API：接收 `pinned_questions`，SYSTEM_PROMPT 新增 PINNED QUESTIONS 规则（不生成场景/主题高度相似的题目），`question_count` 下限从 3 降为 1。⑤ **Icon Visibility 统一修复**：所有组件 icon 从 `opacity-0 group-hover:opacity-100` 改为始终可见。Colored cards（ResultCard）：`bg-white/20 hover:bg-white/35 text-current/80`。Surface cards（FactorList、ResultVectorCard、QuestionEffectsCard）：`bg-black/8 hover:bg-black/16 text-[var(--ink)]/60 hover:text-[var(--ink)]`。Pinned 状态 icon：`bg-[var(--ink)]/12 text-[var(--ink)]`（surface）或 `bg-white/30 text-current`（colored）。删除 × 和 Pin 按钮始终 visible。⑥ 新增 callbacks：`toggleFactorPin`、`toggleResultVectorPin`、`toggleQuestionPin`。
+- **涉及文件**: `lib/mock-quiz-engine.ts`（3 个 type + mock 数据）、`components/quiz-engine/ResultCard.tsx`（icon 修复）、`components/quiz-engine/FactorList.tsx`（Pin UI + icon 修复）、`components/quiz-engine/ResultVectorCard.tsx`（Pin UI + icon 修复）、`components/quiz-engine/QuestionEffectsCard.tsx`（Pin UI + icon 修复）、`app/create/page.tsx`（所有 module 的 pin 逻辑 + 3 个 toggle callbacks）、`app/api/quiz-ai/generate-factors/route.ts`（pinned_factors + prompt）、`app/api/quiz-ai/generate-result-vectors/route.ts`（pinned_vectors + prompt）、`app/api/quiz-ai/generate-questions/route.ts`（pinned_questions + prompt）
+- **验证**: `tsc --noEmit` 零错误，`npm run build` 22 页生成成功（~2.5s compile），`npm run lint` 仅预存 debug 文件报错（无关）
+
+### 2026-05-25 (9)
+
+- **Results Pin 系统** — 用户可以固定（pin）喜欢的结果人格卡片。① `Result` 接口新增 `isPinned: boolean` 字段（默认 `false`），`mapAIResults()` 同步默认值。② `ResultCard` 右上角新增 Pin/PinOff 图标（`lucide-react`）：unpinned 时 hover 才显示半透明 PinOff，pinned 后始终显示 filled Pin + 白底高亮，卡片增加 `ring-2 ring-white/40` 边框 + `box-shadow` 柔光效果。③ AI 生成逻辑改造：`handleGenerateResults()` 收集所有 `isPinned=true` 的结果 → 发送 `pinned_results`（含 key/name/traits）到 API → 只请求 `resultCount - pinned.length` 个新结果 → 响应后拼接 pinned + new → pinned 结果保留原 vector（不重置为默认 50），new 结果用 defaultVector。④ `generate-results` API 更新：接收 `pinned_results` 参数，SYSTEM_PROMPT 新增 PINNED RESULTS 规则（不重复 key、不生成语义相似结果、保持人格区分度），user prompt 显式列出已固定结果并强调避免重复。⑤ `togglePin()` callback 通过 useCallback 切换单条结果的 isPinned。
+- **涉及文件**: `lib/mock-quiz-engine.ts`（类型+映射+mock数据）、`components/quiz-engine/ResultCard.tsx`（Pin UI）、`app/create/page.tsx`（togglePin + AI 逻辑）、`app/api/quiz-ai/generate-results/route.ts`（pinned_results 接收+prompt 升级）
+- **范围限制**: 本轮仅 Results 模块。Factors / Questions / Vectors 等模块暂不涉及 pin。
+
 ### 2026-05-25 (8)
 
 - **Questions 单题分页** — Questions + Option Effects 模块从全量列表改为单题聚焦视图。新增 `questionIndex` state + 导航栏：← 上一题 / 下一题 → 按钮（首/末题自动 disabled），中间数字圆点指示器（可点击跳转，当前题高亮 ink 色）。添加题目自动跳转到新题，删除当前题后智能切到合理索引（不越界）。AI 生成题目后自动回到第 1 题。Coverage Validator 和保存逻辑仍然基于全部 questions。

@@ -12,6 +12,11 @@ Rules:
 - Factors should be specific and concrete, not vague or overlapping.
 - All text in Chinese except "key" which must be English snake_case.
 
+PINNED FACTORS: Some factors may already be fixed (pinned) by the user. You will receive a list of pinned factors. You MUST:
+- NOT generate any factor with the same key as a pinned factor.
+- NOT generate factors that are semantically overlapping with pinned factors (e.g. if "敏感度" is pinned, do not generate "情绪感知力" which means the same thing).
+- Ensure every new factor measures a genuinely different dimension from all pinned factors.
+
 Output format:
 {
   "factors": [
@@ -39,6 +44,7 @@ export async function POST(request: NextRequest) {
     tone?: string[];
     results?: { key: string; name: string; description: string; traits: string[] }[];
     factor_count?: number;
+    pinned_factors?: { key: string; name: string }[];
   };
 
   try {
@@ -47,22 +53,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { title, hook, quiz_type, audience, tone, results, factor_count } = body;
+  const { title, hook, quiz_type, audience, tone, results, factor_count, pinned_factors } = body;
 
   if (!title || typeof title !== "string") {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
   }
-  if (!results || !Array.isArray(results) || results.length < 2) {
+  if (!results || !Array.isArray(results) || results.length < 1) {
     return NextResponse.json(
-      { error: "results array with at least 2 items is required" },
+      { error: "results array with at least 1 item is required" },
       { status: 400 },
     );
   }
 
   const count = factor_count && typeof factor_count === "number" ? factor_count : 5;
-  if (count < 3 || count > 8) {
+  if (count < 1 || count > 8) {
     return NextResponse.json(
-      { error: "factor_count must be between 3 and 8" },
+      { error: "factor_count must be between 1 and 8" },
       { status: 400 },
     );
   }
@@ -78,6 +84,13 @@ export async function POST(request: NextRequest) {
     )
     .join("\n");
 
+  let pinnedSection = "";
+  if (pinned_factors && pinned_factors.length > 0) {
+    pinnedSection = `\n以下因子已经被用户固定，千万不要重复或生成语义重复的因子：\n${pinned_factors
+      .map((p) => `- ${p.name}（key: ${p.key}）`)
+      .join("\n")}\n`;
+  }
+
   const userMessage = `设计一个人格测试的因子维度。
 
 测试标题：${title}
@@ -89,8 +102,8 @@ export async function POST(request: NextRequest) {
 
 已有的结果人格：
 ${resultsSummary}
-
-请设计 ${count} 个能够有效区分这些结果人格的因子维度。每个因子必须能够产生足够的区分度——不能让所有结果在同一因子上看起来一样。`;
+${pinnedSection}
+请设计 ${count} 个能够有效区分这些结果人格的因子维度。${pinned_factors?.length ? "新生成的因子必须与上述固定因子有明确区分度，不能语义重复。" : ""}每个因子必须能够产生足够的区分度——不能让所有结果在同一因子上看起来一样。`;
 
   try {
     const dsResponse = await fetch(DEEPSEEK_CHAT_URL, {

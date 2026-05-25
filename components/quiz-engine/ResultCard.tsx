@@ -1,5 +1,6 @@
 "use client";
 
+import { Pin, PinOff } from "lucide-react";
 import type { Result } from "@/lib/mock-quiz-engine";
 import { InlineEditableInput } from "@/components/quiz-studio/InlineEditableInput";
 import { InlineEditableTextarea } from "@/components/quiz-studio/InlineEditableTextarea";
@@ -18,26 +19,52 @@ type Props = {
   index: number;
   onChange?: (result: Result) => void;
   onDelete?: () => void;
+  onTogglePin?: () => void;
 };
 
-export function ResultCard({ result, index, onChange, onDelete }: Props) {
+export function ResultCard({ result, index, onChange, onDelete, onTogglePin }: Props) {
   const color = COLORS[index % COLORS.length];
   const isEditing = !!onChange;
   const update = onChange ?? (() => {});
+  const pinned = result.isPinned;
+
+  const btnBase = "flex h-7 w-7 items-center justify-center rounded-full transition-all";
+  const btnVisible = "bg-white/20 text-current/80 hover:bg-white/35 hover:text-current";
 
   return (
-    <article className={`rounded-[28px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.07)] ${color} relative group/card`}>
-      {onDelete && (
-        <button
-          type="button"
-          onClick={onDelete}
-          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-current/15 text-sm leading-none opacity-0 transition-opacity group-hover/card:opacity-100 hover:bg-current/25"
-        >
-          ×
-        </button>
-      )}
+    <article
+      className={`rounded-[28px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.07)] ${color} relative group/card transition-shadow ${
+        pinned ? "ring-2 ring-white/40 shadow-[0_0_24px_rgba(255,255,255,0.18)]" : ""
+      }`}
+    >
+      <div className="absolute right-3 top-3 flex items-center gap-0.5">
+        {onTogglePin && (
+          <button
+            type="button"
+            onClick={onTogglePin}
+            className={`${btnBase} ${
+              pinned
+                ? "bg-white/30 text-current"
+                : btnVisible
+            }`}
+            title={pinned ? "取消固定" : "固定此结果"}
+          >
+            {pinned ? <Pin size={14} fill="currentColor" /> : <PinOff size={14} />}
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className={`${btnBase} ${btnVisible}`}
+            title="删除"
+          >
+            ×
+          </button>
+        )}
+      </div>
 
-      {/* subtitle in place of old result number */}
+      {/* subtitle */}
       {isEditing ? (
         <InlineEditableInput
           value={result.subtitle ?? ""}
@@ -49,7 +76,7 @@ export function ResultCard({ result, index, onChange, onDelete }: Props) {
         <p className="text-xs font-semibold opacity-50">{result.subtitle}</p>
       ) : null}
 
-      {/* name — wider and more prominent */}
+      {/* name */}
       {isEditing ? (
         <InlineEditableInput
           block

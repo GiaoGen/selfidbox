@@ -28,6 +28,8 @@ OPTION EFFECT RULES:
 COVERAGE RULE:
 - Every factor must be covered by at least one option across the entire question set.
 
+PINNED QUESTIONS: Some questions may already be fixed (pinned) by the user. You will receive their text as reference. Do NOT generate questions that are highly similar in scenario or theme to pinned questions (e.g. if "你更喜欢哪种夜晚？" is pinned, do not generate "晚上你喜欢做什么？").
+
 OUTPUT RULES:
 - Output ONLY valid JSON. No markdown, no code fences, no explanation.
 - Labels must be sequential uppercase letters: A, B, C, D...
@@ -72,6 +74,7 @@ export async function POST(request: NextRequest) {
     result_vectors?: Record<string, Record<string, number>>;
     question_count?: number;
     options_per_question?: number;
+    pinned_questions?: { text: string }[];
   };
 
   try {
@@ -91,6 +94,7 @@ export async function POST(request: NextRequest) {
     result_vectors,
     question_count = 8,
     options_per_question = 4,
+    pinned_questions,
   } = body;
 
   if (!title || typeof title !== "string") {
@@ -112,9 +116,9 @@ export async function POST(request: NextRequest) {
   const qc = typeof question_count === "number" ? question_count : 8;
   const opq = typeof options_per_question === "number" ? options_per_question : 4;
 
-  if (qc < 3 || qc > 20) {
+  if (qc < 1 || qc > 20) {
     return NextResponse.json(
-      { error: "question_count must be between 3 and 20" },
+      { error: "question_count must be between 1 and 20" },
       { status: 400 },
     );
   }
@@ -169,6 +173,13 @@ export async function POST(request: NextRequest) {
 
   const factorKeys = factors.map((f) => f.key);
 
+  let pinnedSection = "";
+  if (pinned_questions && pinned_questions.length > 0) {
+    pinnedSection = `\n以下题目已经被用户固定，千万不要生成场景或主题高度相似的题目：\n${pinned_questions
+      .map((p) => `- "${p.text}"`)
+      .join("\n")}\n`;
+  }
+
   const userMessage = `设计一套人格测试题目。
 
 测试标题：${title}
@@ -189,14 +200,16 @@ ${factorsText}
 ${vectorsText}
 
 可用的 factor_effects key：${factorKeys.join(", ")}
-
+${pinnedSection}
 要求：
 - 每题各选项的 factor_effects 必须使用以上 factor keys
 - 每个 option 影响 1-3 个因子
 - 值在 -3 到 +3 之间
 - 不同选项应推动不同方向
 - 所有 ${factorKeys.length} 个因子在整个题目集中都要有涉及
-- 题目要场景化、有画面感、容易选、适合分享`;
+- 题目要场景化、有画面感、容易选、适合分享${
+    pinned_questions?.length ? "\n- 不要生成与上述固定题目高度相似的新题目" : ""
+  }`;
 
   try {
     const dsResponse = await fetch(DEEPSEEK_CHAT_URL, {

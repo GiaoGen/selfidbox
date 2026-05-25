@@ -146,6 +146,15 @@ export default function CreatePage() {
     });
   }, []);
 
+  const togglePin = useCallback((index: number) => {
+    setQuiz((prev) => ({
+      ...prev,
+      results: prev.results.map((r, i) =>
+        i === index ? { ...r, isPinned: !r.isPinned } : r,
+      ),
+    }));
+  }, []);
+
   const addResult = useCallback(() => {
     setQuiz((prev) => {
       const id = `result_${Date.now()}`;
@@ -153,11 +162,11 @@ export default function CreatePage() {
         ...prev,
         results: [
           ...prev.results,
-          { id, name: "新结果", description: "", traits: [] },
+          { id, name: "新结果", description: "", traits: [], isPinned: false },
         ],
         resultVectors: [
           ...prev.resultVectors,
-          { resultId: id, values: defaultVector(prev.factors) },
+          { resultId: id, values: defaultVector(prev.factors), isPinned: false },
         ],
       };
     });
@@ -177,7 +186,7 @@ export default function CreatePage() {
       const id = `factor_${Date.now()}`;
       return {
         ...prev,
-        factors: [...prev.factors, { id, name: "新因子", nameEn: "" }],
+        factors: [...prev.factors, { id, name: "新因子", nameEn: "", isPinned: false }],
         resultVectors: prev.resultVectors.map((rv) => ({
           ...rv,
           values: { ...rv.values, [id]: 50 },
@@ -202,6 +211,15 @@ export default function CreatePage() {
     });
   }, []);
 
+  const toggleFactorPin = useCallback((index: number) => {
+    setQuiz((prev) => ({
+      ...prev,
+      factors: prev.factors.map((f, i) =>
+        i === index ? { ...f, isPinned: !f.isPinned } : f,
+      ),
+    }));
+  }, []);
+
   /* ---- Result Vectors ---- */
 
   const updateResultVectorValue = useCallback(
@@ -217,6 +235,15 @@ export default function CreatePage() {
     },
     [],
   );
+
+  const toggleResultVectorPin = useCallback((resultId: string) => {
+    setQuiz((prev) => ({
+      ...prev,
+      resultVectors: prev.resultVectors.map((rv) =>
+        rv.resultId === resultId ? { ...rv, isPinned: !rv.isPinned } : rv,
+      ),
+    }));
+  }, []);
 
   /* ---- Questions ---- */
 
@@ -235,6 +262,7 @@ export default function CreatePage() {
         {
           id: `q_${Date.now()}`,
           text: "新题目",
+          isPinned: false,
           options: [
             {
               label: "A",
@@ -259,11 +287,23 @@ export default function CreatePage() {
     }));
   }, []);
 
+  const toggleQuestionPin = useCallback((index: number) => {
+    setQuiz((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q, i) =>
+        i === index ? { ...q, isPinned: !q.isPinned } : q,
+      ),
+    }));
+  }, []);
+
   /* ---- AI Generate Results ---- */
 
   async function handleGenerateResults() {
     setAiLoading(true);
     setAiError("");
+
+    const pinnedResults = quiz.results.filter((r) => r.isPinned);
+    const remaining = Math.max(1, resultCount - pinnedResults.length);
 
     try {
       const res = await fetch("/api/quiz-ai/generate-results", {
@@ -281,7 +321,12 @@ export default function CreatePage() {
             .split("/")
             .map((s) => s.trim())
             .filter(Boolean),
-          result_count: resultCount,
+          result_count: remaining,
+          pinned_results: pinnedResults.map((r) => ({
+            key: r.id,
+            name: r.name,
+            traits: r.traits,
+          })),
         }),
       });
 
@@ -295,14 +340,23 @@ export default function CreatePage() {
       const aiResults = data.results as AIResult[];
       const newResults = mapAIResults(aiResults);
 
-      setQuiz((prev) => ({
-        ...prev,
-        results: newResults,
-        resultVectors: newResults.map((r) => ({
-          resultId: r.id,
-          values: defaultVector(prev.factors),
-        })),
-      }));
+      setQuiz((prev) => {
+        const merged = [...pinnedResults, ...newResults];
+        const pinnedIds = new Set(pinnedResults.map((r) => r.id));
+        return {
+          ...prev,
+          results: merged,
+          resultVectors: merged.map((r) => {
+            const existing = prev.resultVectors.find((rv) => rv.resultId === r.id);
+            const keepExisting = pinnedIds.has(r.id) && existing != null;
+            return {
+              resultId: r.id,
+              values: keepExisting ? existing.values : defaultVector(prev.factors),
+              isPinned: keepExisting ? existing.isPinned : false,
+            };
+          }),
+        };
+      });
     } catch {
       setAiError("网络错误，请检查连接后重试");
     } finally {
@@ -315,6 +369,9 @@ export default function CreatePage() {
   async function handleGenerateFactors() {
     setAiFactorsLoading(true);
     setAiFactorsError("");
+
+    const pinnedFactors = quiz.factors.filter((f) => f.isPinned);
+    const remaining = Math.max(1, factorCount - pinnedFactors.length);
 
     try {
       const res = await fetch("/api/quiz-ai/generate-factors", {
@@ -339,7 +396,11 @@ export default function CreatePage() {
             description: r.description,
             traits: r.traits,
           })),
-          factor_count: factorCount,
+          factor_count: remaining,
+          pinned_factors: pinnedFactors.map((f) => ({
+            key: f.id,
+            name: f.name,
+          })),
         }),
       });
 
@@ -360,16 +421,18 @@ export default function CreatePage() {
         id: f.key,
         name: f.name,
         nameEn: f.description ?? "",
+        isPinned: false,
       }));
 
-      const newKeys = new Set(newFactors.map((f) => f.id));
+      const merged = [...pinnedFactors, ...newFactors];
+      const allKeys = new Set(merged.map((f) => f.id));
 
       setQuiz((prev) => ({
         ...prev,
-        factors: newFactors,
+        factors: merged,
         resultVectors: prev.resultVectors.map((rv) => {
           const nextValues: Record<string, number> = {};
-          for (const key of newKeys) {
+          for (const key of allKeys) {
             nextValues[key] = rv.values[key] ?? 50;
           }
           return { ...rv, values: nextValues };
@@ -388,6 +451,10 @@ export default function CreatePage() {
     setAiVectorsLoading(true);
     setAiVectorsError("");
 
+    const pinnedVectors = quiz.resultVectors.filter((rv) => rv.isPinned);
+    const pinnedResultIds = new Set(pinnedVectors.map((rv) => rv.resultId));
+    const unpinnedResults = quiz.results.filter((r) => !pinnedResultIds.has(r.id));
+
     try {
       const res = await fetch("/api/quiz-ai/generate-result-vectors", {
         method: "POST",
@@ -404,7 +471,7 @@ export default function CreatePage() {
             .split("/")
             .map((s) => s.trim())
             .filter(Boolean),
-          results: quiz.results.map((r) => ({
+          results: unpinnedResults.map((r) => ({
             key: r.id,
             name: r.name,
             subtitle: r.subtitle ?? "",
@@ -416,6 +483,10 @@ export default function CreatePage() {
             name: f.name,
             description: f.nameEn ?? "",
           })),
+          pinned_vectors: pinnedVectors.map((rv) => {
+            const r = quiz.results.find((x) => x.id === rv.resultId);
+            return { key: rv.resultId, name: r?.name ?? rv.resultId, values: rv.values };
+          }),
         }),
       });
 
@@ -426,14 +497,19 @@ export default function CreatePage() {
         return;
       }
 
-      const vectors = data.result_vectors as Record<string, Record<string, number>>;
+      const newVectors = data.result_vectors as Record<string, Record<string, number>>;
 
       setQuiz((prev) => ({
         ...prev,
-        resultVectors: prev.results.map((r) => ({
-          resultId: r.id,
-          values: vectors[r.id] ?? prev.resultVectors.find((rv) => rv.resultId === r.id)?.values ?? {},
-        })),
+        resultVectors: prev.results.map((r) => {
+          const pinned = pinnedVectors.find((pv) => pv.resultId === r.id);
+          if (pinned) return pinned;
+          return {
+            resultId: r.id,
+            values: newVectors[r.id] ?? prev.resultVectors.find((rv) => rv.resultId === r.id)?.values ?? defaultVector(prev.factors),
+            isPinned: false,
+          };
+        }),
       }));
     } catch {
       setAiVectorsError("网络错误，请检查连接后重试");
@@ -447,6 +523,9 @@ export default function CreatePage() {
   async function handleGenerateQuestions() {
     setAiQuestionsLoading(true);
     setAiQuestionsError("");
+
+    const pinnedQuestions = quiz.questions.filter((q) => q.isPinned);
+    const remaining = Math.max(1, questionCount - pinnedQuestions.length);
 
     try {
       const res = await fetch("/api/quiz-ai/generate-questions", {
@@ -479,8 +558,11 @@ export default function CreatePage() {
           result_vectors: Object.fromEntries(
             quiz.resultVectors.map((rv) => [rv.resultId, rv.values]),
           ),
-          question_count: questionCount,
+          question_count: remaining,
           options_per_question: optionsPerQuestion,
+          pinned_questions: pinnedQuestions.map((q) => ({
+            text: q.text,
+          })),
         }),
       });
 
@@ -501,17 +583,20 @@ export default function CreatePage() {
         }[];
       }[];
 
+      const newQuestions: Question[] = aiQuestions.map((q, qi) => ({
+        id: `q_${Date.now()}_${qi}`,
+        text: q.text,
+        isPinned: false,
+        options: q.options.map((opt) => ({
+          label: opt.label,
+          text: opt.text,
+          effects: opt.factor_effects,
+        })),
+      }));
+
       setQuiz((prev) => ({
         ...prev,
-        questions: aiQuestions.map((q, qi) => ({
-          id: `q_${Date.now()}_${qi}`,
-          text: q.text,
-          options: q.options.map((opt) => ({
-            label: opt.label,
-            text: opt.text,
-            effects: opt.factor_effects,
-          })),
-        })),
+        questions: [...pinnedQuestions, ...newQuestions],
       }));
       setQuestionIndex(0);
     } catch {
@@ -621,6 +706,7 @@ export default function CreatePage() {
                 index={i}
                 onChange={(r) => updateResult(i, r)}
                 onDelete={results.length > 1 ? () => deleteResult(i) : undefined}
+                onTogglePin={() => togglePin(i)}
               />
             ))}
           </div>
@@ -682,6 +768,7 @@ export default function CreatePage() {
             onChange={updateFactor}
             onAdd={addFactor}
             onDelete={factors.length > 1 ? deleteFactor : undefined}
+            onTogglePin={toggleFactorPin}
           />
         </section>
 
@@ -747,6 +834,7 @@ export default function CreatePage() {
                   onValueChange={(factorId, value) =>
                     updateResultVectorValue(rv.resultId, factorId, value)
                   }
+                  onTogglePin={() => toggleResultVectorPin(rv.resultId)}
                 />
               );
             })}
@@ -894,6 +982,7 @@ export default function CreatePage() {
                       }
                     : undefined
                 }
+                onTogglePin={() => toggleQuestionPin(questionIndex)}
               />
             </>
           )}

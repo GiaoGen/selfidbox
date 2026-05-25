@@ -12,6 +12,12 @@ Rules:
 - Traits should be 3-5 Chinese adjectives.
 - All text must be in Chinese except the "key" field which must be English snake_case.
 
+PINNED RESULTS: Some results may already be fixed (pinned) by the user. You will receive a list of pinned results. You MUST:
+- NOT generate any result with the same key as a pinned result.
+- NOT generate results that are semantically similar or thematically overlapping with pinned results (e.g. if "旧钢琴" is pinned, do not generate "老风琴" or "古典钢琴").
+- Ensure every new result is clearly differentiated from ALL pinned results in personality type, metaphor, and emotional tone.
+- The total personality space should feel diverse and well-distributed.
+
 Output format:
 {
   "results": [
@@ -41,6 +47,7 @@ export async function POST(request: NextRequest) {
     audience?: string[];
     tone?: string[];
     result_count?: number;
+    pinned_results?: { key: string; name: string; traits: string[] }[];
   };
 
   try {
@@ -49,14 +56,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { title, hook, quiz_type, audience, tone, result_count } = body;
+  const { title, hook, quiz_type, audience, tone, result_count, pinned_results } = body;
 
   if (!title || typeof title !== "string") {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
   }
-  if (!result_count || typeof result_count !== "number" || result_count < 2 || result_count > 8) {
+  if (!result_count || typeof result_count !== "number" || result_count < 1 || result_count > 8) {
     return NextResponse.json(
-      { error: "result_count must be between 2 and 8" },
+      { error: "result_count must be between 1 and 8" },
       { status: 400 },
     );
   }
@@ -66,6 +73,13 @@ export async function POST(request: NextRequest) {
   const hookStr = hook || "";
   const typeStr = quiz_type || "personality";
 
+  let pinnedSection = "";
+  if (pinned_results && pinned_results.length > 0) {
+    pinnedSection = `\n以下结果人格已经被用户固定，千万不要重复或生成语义相似的结果：\n${pinned_results
+      .map((p) => `- ${p.name}（key: ${p.key}，特质：${p.traits.join("、")}）`)
+      .join("\n")}\n`;
+  }
+
   const userMessage = `设计一个人格测试的结果类型。
 
 测试标题：${title}
@@ -74,8 +88,8 @@ export async function POST(request: NextRequest) {
 目标受众：${audienceStr}
 语气风格：${toneStr}
 结果数量：${result_count} 个
-
-请生成 ${result_count} 个有明显区分度的人格结果。每个结果的 key 使用英文 snake_case。`;
+${pinnedSection}
+请生成 ${result_count} 个有明显区分度的人格结果。${pinned_results?.length ? "新生成的结果必须与上述固定结果有明显区分度，不能重复或高度相似。" : ""}每个结果的 key 使用英文 snake_case。`;
 
   try {
     const dsResponse = await fetch(DEEPSEEK_CHAT_URL, {

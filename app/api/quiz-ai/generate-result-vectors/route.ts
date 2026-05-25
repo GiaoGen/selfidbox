@@ -15,6 +15,8 @@ Rules:
 - Results must be clearly differentiated — do NOT give all results similar values.
 - Avoid extremes (0 or 100) unless absolutely certain.
 
+PINNED VECTORS: Some result vectors may already be fixed (pinned) by the user. You will receive their existing values as reference. Do NOT regenerate vectors for pinned results — only for the unpinned results listed in the prompt.
+
 Output format:
 {
   "result_vectors": {
@@ -45,6 +47,7 @@ export async function POST(request: NextRequest) {
     tone?: string[];
     results?: { key: string; name: string; description: string; traits: string[] }[];
     factors?: { key: string; name: string; description?: string }[];
+    pinned_vectors?: { key: string; name: string; values: Record<string, number> }[];
   };
 
   try {
@@ -53,14 +56,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { title, hook, quiz_type, audience, tone, results, factors } = body;
+  const { title, hook, quiz_type, audience, tone, results, factors, pinned_vectors } = body;
 
   if (!title || typeof title !== "string") {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
   }
-  if (!results || !Array.isArray(results) || results.length < 2) {
+  if (!results || !Array.isArray(results) || results.length < 1) {
     return NextResponse.json(
-      { error: "results array with at least 2 items is required" },
+      { error: "results array with at least 1 item is required" },
       { status: 400 },
     );
   }
@@ -85,6 +88,17 @@ export async function POST(request: NextRequest) {
     .map((f) => `- ${f.key}（${f.name}）：${f.description ?? ""}`)
     .join("\n");
 
+  let pinnedText = "";
+  if (pinned_vectors && pinned_vectors.length > 0) {
+    pinnedText = `\n以下结果向量已经被用户固定，不需要生成：\n${pinned_vectors
+      .map((p) => {
+        const highs = Object.entries(p.values).filter(([, v]) => v >= 80).map(([k]) => k).join("、") || "无";
+        const lows = Object.entries(p.values).filter(([, v]) => v <= 30).map(([k]) => k).join("、") || "无";
+        return `- ${p.name}（${p.key}）：高=[${highs}] 低=[${lows}]（已固定）`;
+      })
+      .join("\n")}\n`;
+  }
+
   const userMessage = `为测试的人格结果分配向量值。
 
 测试标题：${title}
@@ -93,13 +107,13 @@ export async function POST(request: NextRequest) {
 目标受众：${audienceStr}
 语气风格：${toneStr}
 
-结果人格：
+待生成向量的结果人格：
 ${resultsText}
 
 因子维度：
 ${factorsText}
-
-请为每个结果在每个因子上分配 0-100 的值。记住：
+${pinnedText}
+请为以上每个结果在每个因子上分配 0-100 的值。记住：
 - 核心匹配的特征高到 80-95
 - 明显不符合的特征低到 10-30
 - 中性特征 40-60
