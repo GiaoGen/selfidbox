@@ -10,14 +10,7 @@ import { DistanceValidator } from "@/components/quiz-engine/DistanceValidator";
 import { QuestionEffectsCard } from "@/components/quiz-engine/QuestionEffectsCard";
 import { CoverageValidator } from "@/components/quiz-engine/CoverageValidator";
 import { SaveQuizButton } from "@/components/quiz-engine/SaveQuizButton";
-import {
-  quizMeta,
-  results as initialResults,
-  factors as initialFactors,
-  resultVectors as initialVectors,
-  questions as initialQuestions,
-  mapAIResults,
-} from "@/lib/mock-quiz-engine";
+import { mapAIResults } from "@/lib/mock-quiz-engine";
 import type {
   QuizMeta,
   Result,
@@ -39,6 +32,14 @@ interface QuizState {
   questions: Question[];
 }
 
+const emptyMeta: QuizMeta = {
+  title: "",
+  hook: "",
+  quiz_type: "personality",
+  audience: "",
+  tone: "",
+};
+
 function defaultVector(factors: Factor[]): Record<string, number> {
   return Object.fromEntries(factors.map((f) => [f.id, 50]));
 }
@@ -59,16 +60,49 @@ function StepLabel({ num, label }: { num: number; label: string }) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Count selector pill                                                */
+/* ------------------------------------------------------------------ */
+
+function CountSelector({
+  options,
+  value,
+  onChange,
+}: {
+  options: number[];
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <span className="inline-flex items-center gap-0.5 rounded-full bg-[var(--ink)]/6 p-0.5 text-xs">
+      {options.map((n) => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => onChange(n)}
+          className={`rounded-full px-2 py-0.5 font-semibold transition-all ${
+            value === n
+              ? "bg-white text-[var(--ink)] shadow-sm"
+              : "text-[var(--muted)] hover:text-[var(--ink)]"
+          }`}
+        >
+          {n}
+        </button>
+      ))}
+    </span>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */
 
 export default function CreatePage() {
   const [quiz, setQuiz] = useState<QuizState>({
-    meta: quizMeta,
-    results: initialResults,
-    factors: initialFactors,
-    resultVectors: initialVectors,
-    questions: initialQuestions,
+    meta: emptyMeta,
+    results: [],
+    factors: [],
+    resultVectors: [],
+    questions: [],
   });
 
   const [aiLoading, setAiLoading] = useState(false);
@@ -79,6 +113,12 @@ export default function CreatePage() {
   const [aiVectorsError, setAiVectorsError] = useState("");
   const [aiQuestionsLoading, setAiQuestionsLoading] = useState(false);
   const [aiQuestionsError, setAiQuestionsError] = useState("");
+
+  const [resultCount, setResultCount] = useState(6);
+  const [factorCount, setFactorCount] = useState(5);
+  const [questionCount, setQuestionCount] = useState(8);
+  const [optionsPerQuestion, setOptionsPerQuestion] = useState(4);
+  const [questionIndex, setQuestionIndex] = useState(0);
 
   /* ---- Meta ---- */
 
@@ -241,7 +281,7 @@ export default function CreatePage() {
             .split("/")
             .map((s) => s.trim())
             .filter(Boolean),
-          result_count: 5,
+          result_count: resultCount,
         }),
       });
 
@@ -299,7 +339,7 @@ export default function CreatePage() {
             description: r.description,
             traits: r.traits,
           })),
-          factor_count: 5,
+          factor_count: factorCount,
         }),
       });
 
@@ -439,8 +479,8 @@ export default function CreatePage() {
           result_vectors: Object.fromEntries(
             quiz.resultVectors.map((rv) => [rv.resultId, rv.values]),
           ),
-          question_count: 8,
-          options_per_question: 4,
+          question_count: questionCount,
+          options_per_question: optionsPerQuestion,
         }),
       });
 
@@ -473,6 +513,7 @@ export default function CreatePage() {
           })),
         })),
       }));
+      setQuestionIndex(0);
     } catch {
       setAiQuestionsError("网络错误，请检查连接后重试");
     } finally {
@@ -514,12 +555,17 @@ export default function CreatePage() {
           <div className="flex items-center justify-between">
             <StepLabel num={2} label="Results" />
             <div className="flex items-center gap-2">
+              <CountSelector
+                options={[4, 6, 8]}
+                value={resultCount}
+                onChange={setResultCount}
+              />
               <button
                 type="button"
                 onClick={addResult}
                 className="inline-flex h-9 items-center gap-1 rounded-full bg-[var(--ink)]/6 px-4 text-sm font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12"
               >
-                + 添加结果
+                + 添加
               </button>
               <button
                 type="button"
@@ -561,6 +607,11 @@ export default function CreatePage() {
             定义测试可能产生的结果人格，每个结果有独立的名称、描述和特质标签。
           </p>
           {aiError && <p className="text-sm text-red-600">{aiError}</p>}
+          {results.length === 0 && (
+            <p className="py-8 text-center text-sm text-[var(--muted)]">
+              还没有结果人格。点击 "AI 生成结果人格" 或 "+ 添加" 手动创建。
+            </p>
+          )}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {results.map((result, i) => (
               <ResultCard
@@ -578,43 +629,55 @@ export default function CreatePage() {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <StepLabel num={3} label="Factors" />
-            <button
-              type="button"
-              onClick={handleGenerateFactors}
-              disabled={aiFactorsLoading}
-              className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
-            >
-              {aiFactorsLoading ? (
-                <>
-                  <svg
-                    className="h-3.5 w-3.5 animate-spin"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                  AI 生成中...
-                </>
-              ) : (
-                "AI 生成影响因子"
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <CountSelector
+                options={[4, 5, 6, 8]}
+                value={factorCount}
+                onChange={setFactorCount}
+              />
+              <button
+                type="button"
+                onClick={handleGenerateFactors}
+                disabled={aiFactorsLoading}
+                className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
+              >
+                {aiFactorsLoading ? (
+                  <>
+                    <svg
+                      className="h-3.5 w-3.5 animate-spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                    AI 生成中...
+                  </>
+                ) : (
+                  "AI 生成影响因子"
+                )}
+              </button>
+            </div>
           </div>
           {aiFactorsError && (
             <p className="text-sm text-red-600">{aiFactorsError}</p>
+          )}
+          {factors.length === 0 && (
+            <p className="py-8 text-center text-sm text-[var(--muted)]">
+              还没有影响因子。点击 "AI 生成影响因子" 或编辑内容后手动添加。
+            </p>
           )}
           <FactorList
             factors={factors}
@@ -669,6 +732,11 @@ export default function CreatePage() {
           <p className="text-base leading-7 text-[var(--body)]">
             为每个结果在每个因子维度上设定 0-100 的位置，构成该结果的人格向量。
           </p>
+          {resultVectors.length === 0 && (
+            <p className="py-8 text-center text-sm text-[var(--muted)]">
+              还没有结果向量。先生成 Results 和 Factors，然后点击 "AI 设置结果向量"。
+            </p>
+          )}
           <div className="grid gap-4 lg:grid-cols-2">
             {resultVectors.map((rv, i) => {
               const result = results.find((r) => r.id === rv.resultId);
@@ -700,6 +768,18 @@ export default function CreatePage() {
           <div className="flex items-center justify-between">
             <StepLabel num={6} label="Questions + Option Effects" />
             <div className="flex items-center gap-2">
+              <CountSelector
+                options={[6, 8, 10, 12]}
+                value={questionCount}
+                onChange={setQuestionCount}
+              />
+              <span className="text-xs text-[var(--muted)]">题</span>
+              <CountSelector
+                options={[3, 4]}
+                value={optionsPerQuestion}
+                onChange={setOptionsPerQuestion}
+              />
+              <span className="text-xs text-[var(--muted)]">选</span>
               <button
                 type="button"
                 onClick={handleGenerateQuestions}
@@ -736,7 +816,10 @@ export default function CreatePage() {
               </button>
               <button
                 type="button"
-                onClick={addQuestion}
+                onClick={() => {
+                  addQuestion();
+                  setQuestionIndex(questions.length);
+                }}
                 className="inline-flex h-9 items-center gap-1 rounded-full bg-[var(--ink)]/6 px-4 text-sm font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12"
               >
                 + 添加
@@ -749,22 +832,74 @@ export default function CreatePage() {
           <p className="text-base leading-7 text-[var(--body)]">
             每道题的每个选项都会在特定因子上产生增量效果，用户的最终向量是所有选项效果的累加。
           </p>
-          <div className="grid gap-4 lg:grid-cols-2">
-            {questions.map((q, i) => (
+          {questions.length === 0 && (
+            <p className="py-8 text-center text-sm text-[var(--muted)]">
+              还没有题目。点击 "AI 生成题目" 或 "+ 添加" 手动创建。
+            </p>
+          )}
+
+          {questions.length > 0 && (
+            <>
+              {/* Navigation */}
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setQuestionIndex((i) => Math.max(0, i - 1))}
+                  disabled={questionIndex === 0}
+                  className="inline-flex h-8 items-center gap-1 rounded-full bg-[var(--ink)]/6 px-3 text-xs font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12 disabled:opacity-30"
+                >
+                  ← 上一题
+                </button>
+
+                <div className="flex items-center gap-1.5">
+                  {questions.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setQuestionIndex(i)}
+                      className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-all ${
+                        i === questionIndex
+                          ? "bg-[var(--ink)] text-white shadow-sm"
+                          : "bg-[var(--ink)]/6 text-[var(--muted)] hover:bg-[var(--ink)]/12 hover:text-[var(--ink)]"
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setQuestionIndex((i) => Math.min(questions.length - 1, i + 1))
+                  }
+                  disabled={questionIndex >= questions.length - 1}
+                  className="inline-flex h-8 items-center gap-1 rounded-full bg-[var(--ink)]/6 px-3 text-xs font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12 disabled:opacity-30"
+                >
+                  下一题 →
+                </button>
+              </div>
+
+              {/* Current question */}
               <QuestionEffectsCard
-                key={q.id}
-                question={q}
+                key={questions[questionIndex]?.id}
+                question={questions[questionIndex]}
                 factors={factors}
-                index={i}
-                onChange={(updated) => updateQuestion(i, updated)}
+                index={questionIndex}
+                onChange={(updated) => updateQuestion(questionIndex, updated)}
                 onDelete={
                   questions.length > 1
-                    ? () => deleteQuestion(i)
+                    ? () => {
+                        deleteQuestion(questionIndex);
+                        setQuestionIndex((i) =>
+                          Math.max(0, Math.min(i, questions.length - 2)),
+                        );
+                      }
                     : undefined
                 }
               />
-            ))}
-          </div>
+            </>
+          )}
         </section>
 
         {/* Step 7: Coverage Validator */}

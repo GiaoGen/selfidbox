@@ -181,6 +181,14 @@ Last updated: 2026-05-25
 
 ## 10. Recent Changes
 
+### 2026-05-25 (8)
+
+- **Questions 单题分页** — Questions + Option Effects 模块从全量列表改为单题聚焦视图。新增 `questionIndex` state + 导航栏：← 上一题 / 下一题 → 按钮（首/末题自动 disabled），中间数字圆点指示器（可点击跳转，当前题高亮 ink 色）。添加题目自动跳转到新题，删除当前题后智能切到合理索引（不越界）。AI 生成题目后自动回到第 1 题。Coverage Validator 和保存逻辑仍然基于全部 questions。
+
+### 2026-05-25 (7)
+
+- **Quiz Studio 第一轮优化** — ① `/create` 初始状态改为空白（移除 mock 数据预填），各模块显示空状态提示引导用户使用 AI 生成或手动添加。② Quiz Meta 卡片移除底部 type/audience/tone 标签区，只保留 title + hook 编辑。③ Results/Factors/Questions 三个 AI 模块增加 `CountSelector` pill 选择器：Results 可选 4/6/8 个结果（默认 6），Factors 可选 4/5/6/8 个因子（默认 5），Questions 可选 6/8/10/12 题 × 3/4 选项（默认 8题/4选）。④ Factor 卡片隐藏英文 nameEn 和 key 编辑区，只显示中文名称。
+
 ### 2026-05-25 (6)
 
 - **Quiz Studio AI Copilot — Questions 生成** — 新增 `app/api/quiz-ai/generate-questions/route.ts`：POST 端点，接收 quiz meta + results + factors + result_vectors + question_count + options_per_question，生成场景化的向量空间测试题目。每个 option 通过 factor_effects（-3~+3，1-3 个因子）间接推动用户向量，而非直接加分到 result。题目要求场景化、有画面感、易选择、适合分享，不医疗化。完整校验：factor keys 合法性、值范围、effect 数量、labels 格式。`/create` 页面 Questions 模块新增 "AI 生成题目" 按钮（与 "+ 添加" 并列），生成后 Coverage Validator 自动重新检查因子覆盖。

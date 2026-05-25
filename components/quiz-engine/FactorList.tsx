@@ -26,26 +26,14 @@ export function FactorList({ factors, onChange, onAdd, onDelete }: Props) {
             className="group/factor relative inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-strong)] px-4 py-2 text-sm font-semibold text-[var(--ink)]"
           >
             {isEditing ? (
-              <>
-                <InlineEditableInput
-                  value={f.name}
-                  onChange={(v) => onChange(i, { ...f, name: v })}
-                  placeholder="名称"
-                  className="text-sm font-semibold"
-                />
-                <span className="text-xs opacity-30">·</span>
-                <InlineEditableInput
-                  value={f.id}
-                  onChange={(v) => onChange(i, { ...f, id: v })}
-                  placeholder="key"
-                  className="w-16 text-xs opacity-40"
-                />
-              </>
+              <InlineEditableInput
+                value={f.name}
+                onChange={(v) => onChange(i, { ...f, name: v })}
+                placeholder="因子名称"
+                className="text-sm font-semibold"
+              />
             ) : (
-              <>
-                {f.name}
-                <span className="ml-1.5 text-[var(--muted)] font-normal">{f.nameEn}</span>
-              </>
+              f.name
             )}
             {onDelete && factors.length > 1 && (
               <button
