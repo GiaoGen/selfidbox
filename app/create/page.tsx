@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useCallback } from "react";
 import { TopNavbar } from "@/components/layout/TopNavbar";
 import { QuizMetaCard } from "@/components/quiz-engine/QuizMetaCard";
 import { ResultCard } from "@/components/quiz-engine/ResultCard";
@@ -6,18 +9,43 @@ import { ResultVectorCard } from "@/components/quiz-engine/ResultVectorCard";
 import { DistanceValidator } from "@/components/quiz-engine/DistanceValidator";
 import { QuestionEffectsCard } from "@/components/quiz-engine/QuestionEffectsCard";
 import { CoverageValidator } from "@/components/quiz-engine/CoverageValidator";
-import { SimilarityRanking } from "@/components/quiz-engine/SimilarityRanking";
-import { FinalResultPreview } from "@/components/quiz-engine/FinalResultPreview";
+import { SaveQuizButton } from "@/components/quiz-engine/SaveQuizButton";
 import {
   quizMeta,
-  results,
-  factors,
-  resultVectors,
-  questions,
-  mockUserVector,
-  finalResultInterpretation,
-  finalResultSubtitle,
+  results as initialResults,
+  factors as initialFactors,
+  resultVectors as initialVectors,
+  questions as initialQuestions,
+  mapAIResults,
 } from "@/lib/mock-quiz-engine";
+import type {
+  QuizMeta,
+  Result,
+  Factor,
+  ResultVector,
+  Question,
+  AIResult,
+} from "@/lib/mock-quiz-engine";
+
+/* ------------------------------------------------------------------ */
+/*  State type                                                         */
+/* ------------------------------------------------------------------ */
+
+interface QuizState {
+  meta: QuizMeta;
+  results: Result[];
+  factors: Factor[];
+  resultVectors: ResultVector[];
+  questions: Question[];
+}
+
+function defaultVector(factors: Factor[]): Record<string, number> {
+  return Object.fromEntries(factors.map((f) => [f.id, 50]));
+}
+
+/* ------------------------------------------------------------------ */
+/*  Step label                                                         */
+/* ------------------------------------------------------------------ */
 
 function StepLabel({ num, label }: { num: number; label: string }) {
   return (
@@ -30,7 +58,216 @@ function StepLabel({ num, label }: { num: number; label: string }) {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  Page                                                               */
+/* ------------------------------------------------------------------ */
+
 export default function CreatePage() {
+  const [quiz, setQuiz] = useState<QuizState>({
+    meta: quizMeta,
+    results: initialResults,
+    factors: initialFactors,
+    resultVectors: initialVectors,
+    questions: initialQuestions,
+  });
+
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  /* ---- Meta ---- */
+
+  const updateMeta = useCallback((patch: Partial<QuizMeta>) => {
+    setQuiz((prev) => ({ ...prev, meta: { ...prev.meta, ...patch } }));
+  }, []);
+
+  /* ---- Results ---- */
+
+  const updateResult = useCallback((index: number, result: Result) => {
+    setQuiz((prev) => ({
+      ...prev,
+      results: prev.results.map((r, i) => (i === index ? result : r)),
+    }));
+  }, []);
+
+  const deleteResult = useCallback((index: number) => {
+    setQuiz((prev) => {
+      const id = prev.results[index]?.id;
+      return {
+        ...prev,
+        results: prev.results.filter((_, i) => i !== index),
+        resultVectors: prev.resultVectors.filter((rv) => rv.resultId !== id),
+      };
+    });
+  }, []);
+
+  const addResult = useCallback(() => {
+    setQuiz((prev) => {
+      const id = `result_${Date.now()}`;
+      return {
+        ...prev,
+        results: [
+          ...prev.results,
+          { id, name: "新结果", description: "", traits: [] },
+        ],
+        resultVectors: [
+          ...prev.resultVectors,
+          { resultId: id, values: defaultVector(prev.factors) },
+        ],
+      };
+    });
+  }, []);
+
+  /* ---- Factors ---- */
+
+  const updateFactor = useCallback((index: number, factor: Factor) => {
+    setQuiz((prev) => ({
+      ...prev,
+      factors: prev.factors.map((f, i) => (i === index ? factor : f)),
+    }));
+  }, []);
+
+  const addFactor = useCallback(() => {
+    setQuiz((prev) => {
+      const id = `factor_${Date.now()}`;
+      return {
+        ...prev,
+        factors: [...prev.factors, { id, name: "新因子", nameEn: "" }],
+        resultVectors: prev.resultVectors.map((rv) => ({
+          ...rv,
+          values: { ...rv.values, [id]: 50 },
+        })),
+      };
+    });
+  }, []);
+
+  const deleteFactor = useCallback((index: number) => {
+    setQuiz((prev) => {
+      const id = prev.factors[index]?.id;
+      if (!id) return prev;
+      return {
+        ...prev,
+        factors: prev.factors.filter((_, i) => i !== index),
+        resultVectors: prev.resultVectors.map((rv) => {
+          const next = { ...rv.values };
+          delete next[id];
+          return { ...rv, values: next };
+        }),
+      };
+    });
+  }, []);
+
+  /* ---- Result Vectors ---- */
+
+  const updateResultVectorValue = useCallback(
+    (resultId: string, factorId: string, value: number) => {
+      setQuiz((prev) => ({
+        ...prev,
+        resultVectors: prev.resultVectors.map((rv) =>
+          rv.resultId === resultId
+            ? { ...rv, values: { ...rv.values, [factorId]: value } }
+            : rv,
+        ),
+      }));
+    },
+    [],
+  );
+
+  /* ---- Questions ---- */
+
+  const updateQuestion = useCallback((index: number, question: Question) => {
+    setQuiz((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q, i) => (i === index ? question : q)),
+    }));
+  }, []);
+
+  const addQuestion = useCallback(() => {
+    setQuiz((prev) => ({
+      ...prev,
+      questions: [
+        ...prev.questions,
+        {
+          id: `q_${Date.now()}`,
+          text: "新题目",
+          options: [
+            {
+              label: "A",
+              text: "",
+              effects: Object.fromEntries(prev.factors.map((f) => [f.id, 0])),
+            },
+            {
+              label: "B",
+              text: "",
+              effects: Object.fromEntries(prev.factors.map((f) => [f.id, 0])),
+            },
+          ],
+        },
+      ],
+    }));
+  }, []);
+
+  const deleteQuestion = useCallback((index: number) => {
+    setQuiz((prev) => ({
+      ...prev,
+      questions: prev.questions.filter((_, i) => i !== index),
+    }));
+  }, []);
+
+  /* ---- AI Generate Results ---- */
+
+  async function handleGenerateResults() {
+    setAiLoading(true);
+    setAiError("");
+
+    try {
+      const res = await fetch("/api/quiz-ai/generate-results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: quiz.meta.title,
+          hook: quiz.meta.hook,
+          quiz_type: quiz.meta.quiz_type,
+          audience: quiz.meta.audience
+            .split("/")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          tone: quiz.meta.tone
+            .split("/")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          result_count: 5,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setAiError(data.error ?? "AI 生成失败，请重试");
+        return;
+      }
+
+      const aiResults = data.results as AIResult[];
+      const newResults = mapAIResults(aiResults);
+
+      setQuiz((prev) => ({
+        ...prev,
+        results: newResults,
+        resultVectors: newResults.map((r) => ({
+          resultId: r.id,
+          values: defaultVector(prev.factors),
+        })),
+      }));
+    } catch {
+      setAiError("网络错误，请检查连接后重试");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  /* ---- Render ---- */
+
+  const { meta, results, factors, resultVectors, questions } = quiz;
+
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -53,18 +290,70 @@ export default function CreatePage() {
         {/* Step 1: Quiz Meta */}
         <section className="space-y-4">
           <StepLabel num={1} label="Quiz Meta" />
-          <QuizMetaCard meta={quizMeta} />
+          <QuizMetaCard meta={meta} onChange={updateMeta} />
         </section>
 
         {/* Step 2: Results */}
         <section className="space-y-4">
-          <StepLabel num={2} label="Results" />
+          <div className="flex items-center justify-between">
+            <StepLabel num={2} label="Results" />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={addResult}
+                className="inline-flex h-9 items-center gap-1 rounded-full bg-[var(--ink)]/6 px-4 text-sm font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12"
+              >
+                + 添加结果
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateResults}
+                disabled={aiLoading}
+                className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
+              >
+                {aiLoading ? (
+                  <>
+                    <svg
+                      className="h-3.5 w-3.5 animate-spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                    AI 生成中...
+                  </>
+                ) : (
+                  "AI 生成结果人格"
+                )}
+              </button>
+            </div>
+          </div>
           <p className="text-base leading-7 text-[var(--body)]">
             定义测试可能产生的结果人格，每个结果有独立的名称、描述和特质标签。
           </p>
+          {aiError && <p className="text-sm text-red-600">{aiError}</p>}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {results.map((result, i) => (
-              <ResultCard key={result.id} result={result} index={i} />
+              <ResultCard
+                key={result.id}
+                result={result}
+                index={i}
+                onChange={(r) => updateResult(i, r)}
+                onDelete={results.length > 1 ? () => deleteResult(i) : undefined}
+              />
             ))}
           </div>
         </section>
@@ -72,7 +361,12 @@ export default function CreatePage() {
         {/* Step 3: Factors */}
         <section className="space-y-4">
           <StepLabel num={3} label="Factors" />
-          <FactorList factors={factors} />
+          <FactorList
+            factors={factors}
+            onChange={updateFactor}
+            onAdd={addFactor}
+            onDelete={factors.length > 1 ? deleteFactor : undefined}
+          />
         </section>
 
         {/* Step 4: Result Vectors */}
@@ -82,15 +376,22 @@ export default function CreatePage() {
             为每个结果在每个因子维度上设定 0-100 的位置，构成该结果的人格向量。
           </p>
           <div className="grid gap-4 lg:grid-cols-2">
-            {resultVectors.map((rv, i) => (
-              <ResultVectorCard
-                key={rv.resultId}
-                result={results.find((r) => r.id === rv.resultId)!}
-                vector={rv}
-                factors={factors}
-                index={i}
-              />
-            ))}
+            {resultVectors.map((rv, i) => {
+              const result = results.find((r) => r.id === rv.resultId);
+              if (!result) return null;
+              return (
+                <ResultVectorCard
+                  key={rv.resultId}
+                  result={result}
+                  vector={rv}
+                  factors={factors}
+                  index={i}
+                  onValueChange={(factorId, value) =>
+                    updateResultVectorValue(rv.resultId, factorId, value)
+                  }
+                />
+              );
+            })}
           </div>
         </section>
 
@@ -102,7 +403,16 @@ export default function CreatePage() {
 
         {/* Step 6: Questions + Option Effects */}
         <section className="space-y-4">
-          <StepLabel num={6} label="Questions + Option Effects" />
+          <div className="flex items-center justify-between">
+            <StepLabel num={6} label="Questions + Option Effects" />
+            <button
+              type="button"
+              onClick={addQuestion}
+              className="inline-flex h-9 items-center gap-1 rounded-full bg-[var(--ink)]/6 px-4 text-sm font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12"
+            >
+              + 添加题目
+            </button>
+          </div>
           <p className="text-base leading-7 text-[var(--body)]">
             每道题的每个选项都会在特定因子上产生增量效果，用户的最终向量是所有选项效果的累加。
           </p>
@@ -113,6 +423,12 @@ export default function CreatePage() {
                 question={q}
                 factors={factors}
                 index={i}
+                onChange={(updated) => updateQuestion(i, updated)}
+                onDelete={
+                  questions.length > 1
+                    ? () => deleteQuestion(i)
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -121,23 +437,18 @@ export default function CreatePage() {
         {/* Step 7: Coverage Validator */}
         <CoverageValidator questions={questions} factors={factors} />
 
-        {/* Step 8: Mock User Result */}
-        <SimilarityRanking
-          userVector={mockUserVector}
-          resultVectors={resultVectors}
-          results={results}
-          factors={factors}
-        />
-
-        {/* Step 9: Final Result Preview */}
-        <FinalResultPreview
-          result={results[0]}
-          similarity={86}
-          subtitle={finalResultSubtitle}
-          interpretation={finalResultInterpretation.main}
-          secondaryNote={finalResultInterpretation.secondary}
-          secondaryResult={results[2]}
-        />
+        {/* Save */}
+        <section className="flex justify-center pb-16 pt-8">
+          <SaveQuizButton
+            quiz={{
+              meta,
+              results,
+              factors,
+              resultVectors,
+              questions,
+            }}
+          />
+        </section>
       </div>
     </main>
   );

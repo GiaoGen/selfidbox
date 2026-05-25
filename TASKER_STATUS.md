@@ -1,6 +1,6 @@
 # TASKER STATUS
 
-Last updated: 2026-05-24
+Last updated: 2026-05-25
 
 ---
 
@@ -29,7 +29,7 @@ Last updated: 2026-05-24
 | 5 | `/explore/fun` | `app/explore/fun/page.tsx` | Static | **Done (mock)** | Delegates to `CategoryPage`. |
 | 6 | `/test-sites/[id]` | `app/test-sites/[id]/page.tsx` | Dynamic | **Done (Supabase)** | Fetches via `getTestSiteBySlug()`. Uses `mapTestSite()` adapter. `notFound()` on miss. Related sites from `getTestSitesByCategory()`. Has `loading.tsx`. |
 | 7 | `/profile` | `app/profile/page.tsx` | Static | **Done (mock)** | Personal graph. 2 custom SVG radar charts + summary + AI card + source cards. All data hardcoded inline. |
-| 8 | `/create` | `app/create/page.tsx` | Static | **Prototype (mock)** | AI Quiz Studio — 9-step static walkthrough. All data from `lib/mock-quiz-engine.ts`. |
+| 8 | `/create` | `app/create/page.tsx` | Client | **Done (Editable Quiz Builder)** | AI Quiz Studio — 7 editable sections with unified quiz state. Inline editing with fusion glass UI — no form borders. AI Copilot on Results. Save to Supabase. |
 | 9 | `/inbox` | `app/inbox/page.tsx` | Static | **STUB** | Placeholder: "人格报告收件箱准备中" |
 | 10 | `/q/[id]` | `app/q/[id]/page.tsx` | Dynamic | **STUB** | Placeholder: "测试答题页准备中" |
 | 11 | `/r/[id]` | `app/r/[id]/page.tsx` | Dynamic | **STUB** | Placeholder: "测试结果页准备中" |
@@ -41,6 +41,7 @@ Last updated: 2026-05-24
 | 17 | `/admin/categories` | `app/admin/categories/page.tsx` | Static | **Done (Supabase)** | Category table with edit/delete actions. |
 | 18 | `/admin/categories/new` | `app/admin/categories/new/page.tsx` | Static | **Done (Supabase)** | Create form: slug, name, description, icon, sort_order, status. |
 | 19 | `/admin/categories/[id]/edit` | `app/admin/categories/[id]/edit/page.tsx` | Dynamic | **Done (Supabase)** | Edit form: pre-filled from DB. |
+| 20 | `/api/quiz-ai/generate-results` | `app/api/quiz-ai/generate-results/route.ts` | API | **Done** | POST — calls DeepSeek, returns structured personality results JSON. Key kept server-side. |
 
 ---
 
@@ -57,21 +58,31 @@ Last updated: 2026-05-24
 | `ProfileRadar` | `components/ProfileRadar.tsx` | Server | **Custom SVG N-sided radar chart** | `data: RadarPoint[]` prop — hardcoded in profile page |
 | `VectorCard` | `components/VectorCard.tsx` | Server | Colored stat card (5 accent tones) | Props — hardcoded in profile page |
 
-### 3.2 Quiz Engine Components (`components/quiz-engine/`)
+### 3.2 Quiz Studio Components (`components/quiz-studio/`)
+
+| Component | Purpose |
+|---|---|
+| `InlineEditableInput` | Transparent inline input, auto-width via hidden measure span, `currentColor` adapts to card bg |
+| `InlineEditableTextarea` | Transparent textarea with auto-resize, same glass fusion style |
+| `EditableChipList` | Inline chip pills with add/delete, Enter to commit |
+| `EditableSlider` | Custom 0-100 slider with pointer capture, track + thumb, card-integrated style |
+
+### 3.3 Quiz Engine Components (`components/quiz-engine/`)
 
 | Component | Purpose | Data source |
 |---|---|---|
-| `QuizMetaCard` | Gradient hero: quiz title, hook, type, audience, tone | `meta: QuizMeta` (mock) |
-| `ResultCard` | Result card with name, description, traits (colored by index) | `result: Result` (mock) |
-| `FactorList` | Cream card listing factor names + English pills | `factors: Factor[]` (mock) |
-| `ResultVectorCard` | Vector bar chart per factor with accent border | `result, vector, factors` (mock) |
-| `QuestionEffectsCard` | Question + options with effect deltas as colored pills | `question, factors` (mock) |
+| `QuizMetaCard` | Gradient hero: title/hook inline-editable, type/audience/tone as editable chips | `meta, onChange?` |
+| `ResultCard` | Colored card: name/subtitle/desc/traits/shareText all inline-editable, delete button (hover) | `result, index, onChange?, onDelete?` |
+| `FactorList` | Cream card: factor name/key inline-editable per pill, add/delete buttons | `factors, onChange?, onAdd?, onDelete?` |
+| `ResultVectorCard` | Vector bar chart → custom `EditableSlider` per factor when editing | `result, vector, factors, index, onValueChange?` |
+| `QuestionEffectsCard` | Question text + option text inline-editable, factor effects as ±3 number inputs, add/delete option/question | `question, factors, index, onChange?, onDelete?` |
 | `CoverageValidator` | Checks each factor covered by ≥1 question option. **Real logic.** | `questions, factors` (mock data, real algo) |
 | `DistanceValidator` | Pairwise result vector distance. Flags close pairs (sim > 55%). **Real logic.** | `resultVectors, results` (mock data, real algo) |
 | `SimilarityRanking` | Ranks results by similarity to user vector. **Real logic.** | `userVector, resultVectors, results` (mock data, real algo) |
 | `FinalResultPreview` | Final result hero: name, match %, interpretation, traits, secondary note | Props (mock) |
+| `SaveQuizButton` | "保存这个测试" button with loading/success/error states, calls `saveQuizSchema()` | Client component — Supabase via `lib/quizzes-db.ts` |
 
-### 3.3 Explore Components (`app/explore/_components/`)
+### 3.4 Explore Components (`app/explore/_components/`)
 
 | Component | Purpose |
 |---|---|
@@ -96,6 +107,7 @@ Last updated: 2026-05-24
 |---|---|
 | `lib/supabase.ts` | Supabase client singleton from `NEXT_PUBLIC_SUPABASE_*` env vars |
 | `lib/test-sites-db.ts` | `getCategories()`, `getPublishedTestSites()`, `getTestSiteBySlug()`, `getTestSitesByCategory()` — queries `test_categories` and `test_sites` tables with joins |
+| `lib/quizzes-db.ts` | `saveQuizSchema()` — writes full quiz schema (quizzes → quiz_factors → quiz_results → quiz_questions → quiz_options) to Supabase |
 | `lib/test-supabase.ts` | `testSupabaseConnection()` — connectivity smoke test |
 
 ### 4.3 Real Algorithms (active — operate on mock data)
@@ -165,6 +177,18 @@ Last updated: 2026-05-24
 ---
 
 ## 10. Recent Changes
+
+### 2026-05-25 (3)
+
+- **Quiz Studio — 全线可编辑 Quiz Builder** — 创建 4 个融合式编辑组件（`components/quiz-studio/`）：`InlineEditableInput`（自适应宽度、透明边框、currentColor 适配）、`InlineEditableTextarea`（自动高度）、`EditableChipList`（chip 增删）、`EditableSlider`（自定义 0-100 slider）。全部使用 `bg-transparent` + `border-current/10` + `focus:border-current/30` 风格，与卡片背景完美融合，无白底表单感。Quiz Meta/Results/Factors/Result Vectors/Questions 五个模块全部可编辑：文字用 inline input/textarea、特质用 chip list、向量用 slider、因子效果用小型数字输入。支持新增/删除 Result/Factor/Question/Option。所有编辑通过 `useCallback` 写回统一的 `QuizState`。AI 生成 results 后自动创建新 resultVectors。删除 result/factor 时同步清理关联数据。
+
+### 2026-05-25 (2)
+
+- **Quiz Studio AI Copilot — Results 生成** — 新增 `app/api/quiz-ai/generate-results/route.ts`：POST 端点，服务端调用 DeepSeek API，接收 quiz meta + result_count，返回严格 JSON 格式的人格结果列表（key/name/subtitle/description/traits/share_text）。API key 仅存于 `.env.local`（`DEEPSEEK_API_KEY`），前端不暴露。`Result` 类型扩展了 `subtitle`/`shareText` 可选字段，新增 `AIResult` 接口 + `mapAIResults()` 映射函数。`/create` 页面转换为客户端组件，Results 模块新增 "AI 生成结果人格" 按钮（渐变紫色药丸风格），含 loading spinner + 错误提示，成功后替换当前 results state。
+
+### 2026-05-25
+
+- **Quiz Studio /create 页面职责修正 + Supabase 保存接入** — 从 `/create` 页面移除 Mock User Result (SimilarityRanking) 和 Final Result Preview 两个模块，因为它们是用户答题后的结果展示，不属于创作者设计测试的页面。创建 `lib/quizzes-db.ts`，实现 `saveQuizSchema()` 函数，按顺序写入 quizzes → quiz_factors → quiz_results → quiz_questions → quiz_options，slug 重复时抛出中文友好错误。创建 `components/quiz-engine/SaveQuizButton.tsx` 客户端组件，含 loading/success/error 三态，成功后显示 slug。按钮已接入 `/create` 页面底部。
 
 ### 2026-05-24 (4)
 

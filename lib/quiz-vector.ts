@@ -23,14 +23,18 @@ export function rankResults(
   resultVectors: ResultVector[],
   results: Result[],
 ): RankedResult[] {
-  const ranked = resultVectors.map((rv) => {
-    const distance = calculateDistance(userVector, rv.values);
-    return {
-      result: results.find((r) => r.id === rv.resultId)!,
-      similarity: calculateSimilarity(distance),
-      distance: Math.round(distance * 100) / 100,
-    };
-  });
+  const ranked = resultVectors
+    .map((rv) => {
+      const result = results.find((r) => r.id === rv.resultId);
+      if (!result) return null;
+      const distance = calculateDistance(userVector, rv.values);
+      return {
+        result,
+        similarity: calculateSimilarity(distance),
+        distance: Math.round(distance * 100) / 100,
+      };
+    })
+    .filter((r): r is RankedResult => r !== null);
 
   ranked.sort((a, b) => b.similarity - a.similarity);
   return ranked;
@@ -53,11 +57,14 @@ export function validateResultDistances(
 
   for (let i = 0; i < resultVectors.length; i++) {
     for (let j = i + 1; j < resultVectors.length; j++) {
+      const resultA = results.find((r) => r.id === resultVectors[i].resultId);
+      const resultB = results.find((r) => r.id === resultVectors[j].resultId);
+      if (!resultA || !resultB) continue;
       const distance = calculateDistance(resultVectors[i].values, resultVectors[j].values);
       const similarity = calculateSimilarity(distance);
       pairs.push({
-        resultA: results.find((r) => r.id === resultVectors[i].resultId)!,
-        resultB: results.find((r) => r.id === resultVectors[j].resultId)!,
+        resultA,
+        resultB,
         distance: Math.round(distance * 100) / 100,
         similarity,
         close: similarity > threshold,

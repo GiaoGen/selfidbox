@@ -1,4 +1,7 @@
+"use client";
+
 import type { Result, Factor, ResultVector } from "@/lib/mock-quiz-engine";
+import { EditableSlider } from "@/components/quiz-studio/EditableSlider";
 
 const BAR_COLORS = [
   "bg-[#ffb084]",
@@ -16,19 +19,24 @@ const CARD_ACCENTS = [
   "border-l-[#1a3a3a]",
 ];
 
+type Props = {
+  result: Result;
+  vector: ResultVector;
+  factors: Factor[];
+  index: number;
+  onValueChange?: (factorId: string, value: number) => void;
+};
+
 export function ResultVectorCard({
   result,
   vector,
   factors,
   index,
-}: {
-  result: Result;
-  vector: ResultVector;
-  factors: Factor[];
-  index: number;
-}) {
+  onValueChange,
+}: Props) {
   const barColor = BAR_COLORS[index % BAR_COLORS.length];
   const accent = CARD_ACCENTS[index % CARD_ACCENTS.length];
+  const isEditing = !!onValueChange;
 
   return (
     <article className={`rounded-[24px] bg-[var(--surface-card)] p-5 border-l-[4px] ${accent}`}>
@@ -40,23 +48,34 @@ export function ResultVectorCard({
       </div>
       <p className="mt-1 text-sm text-[var(--muted)]">{result.description}</p>
 
-      <div className="mt-5 space-y-3">
+      <div className="mt-5 space-y-4">
         {factors.map((factor) => {
           const value = vector.values[factor.id] ?? 0;
           return (
-            <div key={factor.id} className="flex items-center gap-3">
-              <span className="w-20 shrink-0 text-sm font-semibold text-[var(--body)]">
-                {factor.name}
-              </span>
-              <div className="flex-1 h-3 rounded-full bg-[var(--surface-strong)] overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${barColor}`}
-                  style={{ width: `${value}%` }}
-                />
+            <div key={factor.id}>
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-sm font-semibold text-[var(--body)]">
+                  {factor.name}
+                </span>
               </div>
-              <span className="w-8 text-right text-sm font-semibold text-[var(--ink)] tabular-nums">
-                {value}
-              </span>
+              {isEditing ? (
+                <EditableSlider
+                  value={value}
+                  onChange={(v) => onValueChange(factor.id, v)}
+                />
+              ) : (
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-3 rounded-full bg-[var(--surface-strong)] overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${barColor}`}
+                      style={{ width: `${value}%` }}
+                    />
+                  </div>
+                  <span className="w-8 text-right text-sm font-semibold text-[var(--ink)] tabular-nums">
+                    {value}
+                  </span>
+                </div>
+              )}
             </div>
           );
         })}

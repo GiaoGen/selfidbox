@@ -9,8 +9,30 @@ export interface QuizMeta {
 export interface Result {
   id: string;
   name: string;
+  subtitle?: string;
   description: string;
   traits: string[];
+  shareText?: string;
+}
+
+export interface AIResult {
+  key: string;
+  name: string;
+  subtitle?: string;
+  description: string;
+  traits: string[];
+  share_text?: string;
+}
+
+export function mapAIResults(aiResults: AIResult[]): Result[] {
+  return aiResults.map((ai) => ({
+    id: ai.key,
+    name: ai.name,
+    subtitle: ai.subtitle,
+    description: ai.description,
+    traits: ai.traits,
+    shareText: ai.share_text,
+  }));
 }
 
 export interface Factor {
