@@ -20,7 +20,7 @@ export function SaveQuizButton({ quiz }: { quiz: SaveQuizInput }) {
       setMessage("测试已保存");
     } catch (err) {
       setStatus("error");
-      setMessage(err instanceof Error ? err.message : "保存失败，请重试");
+      setMessage(err instanceof Error ? err.message : "保存失败");
     }
   }
 
@@ -95,7 +95,7 @@ export function SaveQuizButton({ quiz }: { quiz: SaveQuizInput }) {
           >
             重试保存
           </button>
-          <p className="text-sm text-red-600">{message}</p>
+          <p className="max-w-md text-sm text-red-600">{message}</p>
         </div>
       )}
     </div>

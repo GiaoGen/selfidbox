@@ -51,24 +51,31 @@ export async function saveQuizSchema(
     if (quizError.code === "23505") {
       throw new Error("这个测试 slug 已经存在，请换一个标题或 slug。");
     }
-    throw quizError;
+    throw new Error(quizError.message);
   }
 
   const quizId = quiz.id;
+
+  async function rollback() {
+    await supabase.from("quizzes").delete().eq("id", quizId);
+  }
 
   // 2. Insert quiz_factors
   const factorRows = input.factors.map((f, i) => ({
     quiz_id: quizId,
     key: f.id,
     name: f.name,
-    name_en: f.nameEn,
+    description: f.nameEn ?? null,
     sort_order: i,
   }));
 
   const { error: factorError } = await supabase
     .from("quiz_factors")
     .insert(factorRows);
-  if (factorError) throw factorError;
+  if (factorError) {
+    await rollback();
+    throw new Error(`保存因子失败：${factorError.message}`);
+  }
 
   // 3. Insert quiz_results
   const resultRows = input.results.map((r, i) => {
@@ -77,9 +84,11 @@ export async function saveQuizSchema(
       quiz_id: quizId,
       key: r.id,
       name: r.name,
+      subtitle: r.subtitle ?? null,
       description: r.description,
       traits: r.traits,
       result_vector: vector?.values ?? {},
+      share_text: r.shareText ?? null,
       sort_order: i,
     };
   });
@@ -87,7 +96,10 @@ export async function saveQuizSchema(
   const { error: resultError } = await supabase
     .from("quiz_results")
     .insert(resultRows);
-  if (resultError) throw resultError;
+  if (resultError) {
+    await rollback();
+    throw new Error(`保存结果失败：${resultError.message}`);
+  }
 
   // 4. Insert quiz_questions
   for (const [qi, q] of input.questions.entries()) {
@@ -97,11 +109,15 @@ export async function saveQuizSchema(
         quiz_id: quizId,
         question_order: qi,
         text: q.text,
+        description: null,
       })
       .select("id")
       .single();
 
-    if (questionError) throw questionError;
+    if (questionError) {
+      await rollback();
+      throw new Error(`保存题目失败：${questionError.message}`);
+    }
 
     // 5. Insert quiz_options for this question
     const optionRows = q.options.map((opt, oi) => ({
@@ -116,7 +132,10 @@ export async function saveQuizSchema(
     const { error: optionError } = await supabase
       .from("quiz_options")
       .insert(optionRows);
-    if (optionError) throw optionError;
+    if (optionError) {
+      await rollback();
+      throw new Error(`保存选项失败：${optionError.message}`);
+    }
   }
 
   return { slug, quizId };
