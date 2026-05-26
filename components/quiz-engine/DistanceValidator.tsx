@@ -13,18 +13,18 @@ export function DistanceValidator({
   const closePairs = pairs.filter((p) => p.close);
   const distinctPairs = pairs.filter((p) => !p.close);
 
-  return (
-    <section className="rounded-[32px] bg-[var(--surface-card)] p-6 sm:p-8">
-      <p className="text-sm font-semibold text-[var(--muted)]">5</p>
-      <h2 className="mt-1 text-xl font-semibold tracking-[-0.02em]">
-        结果区分度检查
-      </h2>
-      <p className="mt-2 text-base leading-7 text-[var(--body)]">
-        基于欧氏距离计算结果向量之间的相似程度。相似度 &gt; {threshold}% 表示两个人格位置较接近。
-      </p>
+  if (pairs.length === 0 && results.length < 2) {
+    return (
+      <div className="rounded-2xl bg-[var(--surface-card)] px-5 py-4 text-sm text-[var(--muted)]">
+        至少需要 2 个结果才能进行区分度检查。
+      </div>
+    );
+  }
 
+  return (
+    <>
       {closePairs.length > 0 && (
-        <div className="mt-5 space-y-3">
+        <div className="space-y-3">
           <p className="text-sm font-semibold text-[var(--muted)]">
             距离较近的结果对（可能存在相似输出）
           </p>
@@ -68,6 +68,6 @@ export function DistanceValidator({
           ))}
         </div>
       )}
-    </section>
+    </>
   );
 }

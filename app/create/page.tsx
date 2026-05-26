@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { Library, Sparkles, Wand, Settings } from "lucide-react";
 import { TopNavbar } from "@/components/layout/TopNavbar";
 import { QuizMetaCard } from "@/components/quiz-engine/QuizMetaCard";
 import { ResultCard } from "@/components/quiz-engine/ResultCard";
@@ -10,6 +11,7 @@ import { DistanceValidator } from "@/components/quiz-engine/DistanceValidator";
 import { QuestionEffectsCard } from "@/components/quiz-engine/QuestionEffectsCard";
 import { CoverageValidator } from "@/components/quiz-engine/CoverageValidator";
 import { SaveQuizButton } from "@/components/quiz-engine/SaveQuizButton";
+import { MyQuizzesModal } from "@/components/quiz-runtime/MyQuizzesModal";
 import { mapAIResults } from "@/lib/mock-quiz-engine";
 import type {
   QuizMeta,
@@ -119,6 +121,7 @@ export default function CreatePage() {
   const [questionCount, setQuestionCount] = useState(8);
   const [optionsPerQuestion, setOptionsPerQuestion] = useState(4);
   const [questionIndex, setQuestionIndex] = useState(0);
+  const [myQuizzesOpen, setMyQuizzesOpen] = useState(false);
 
   /* ---- Meta ---- */
 
@@ -616,18 +619,47 @@ export default function CreatePage() {
         <TopNavbar />
 
         {/* Hero */}
-        <section className="overflow-hidden rounded-[36px] bg-[linear-gradient(135deg,#1a3a3a_0%,#b8a4ed_40%,#ffb084_85%)] p-6 text-white shadow-[0_18px_50px_rgba(10,10,10,0.1)] sm:p-10">
-          <p className="text-sm font-semibold opacity-70">AI Quiz Studio</p>
-          <h1 className="mt-2 text-4xl font-semibold leading-none tracking-[-0.04em] sm:text-5xl">
+        <section className="overflow-hidden rounded-[36px] border border-[var(--ink)]/8 bg-white p-6 shadow-[0_8px_30px_rgba(10,10,10,0.04)] sm:p-10">
+          <p className="text-sm font-semibold text-[var(--muted)]">AI Quiz Studio</p>
+          <h1 className="mt-2 text-4xl font-semibold leading-none tracking-[-0.04em] text-[var(--ink)] sm:text-5xl">
             AI Quiz Studio
           </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 opacity-85 sm:text-lg">
+          <p className="mt-3 max-w-2xl text-base leading-7 text-[var(--body)] sm:text-lg">
             用向量空间创建一个更稳定、更有解释力的人格测试。
           </p>
-          <p className="mt-3 max-w-xl text-sm leading-6 opacity-70">
-            一个好的测试不是简单地给结果加分，而是让用户通过答题形成一个人格向量，再匹配最接近的结果人格。
-          </p>
+
+          {/* Action grid */}
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+            <button
+              type="button"
+              onClick={() => setMyQuizzesOpen(true)}
+              className="group flex aspect-[4/3] items-center justify-center rounded-2xl border border-[var(--ink)]/10 bg-[var(--canvas)] transition-all hover:border-[var(--ink)]/25 hover:bg-[var(--ink)]/4 hover:shadow-[0_4px_16px_rgba(10,10,10,0.06)] active:scale-[0.98]"
+            >
+              <Library
+                size={28}
+                className="text-[var(--ink)] transition-transform group-hover:scale-110 sm:size-8"
+              />
+            </button>
+
+            <div className="flex aspect-[4/3] items-center justify-center rounded-2xl border border-[var(--ink)]/6 bg-[var(--canvas)] opacity-50">
+              <Sparkles size={28} className="text-[var(--muted)] sm:size-8" />
+            </div>
+
+            <div className="flex aspect-[4/3] items-center justify-center rounded-2xl border border-[var(--ink)]/6 bg-[var(--canvas)] opacity-50">
+              <Wand size={28} className="text-[var(--muted)] sm:size-8" />
+            </div>
+
+            <div className="flex aspect-[4/3] items-center justify-center rounded-2xl border border-[var(--ink)]/6 bg-[var(--canvas)] opacity-50">
+              <Settings size={28} className="text-[var(--muted)] sm:size-8" />
+            </div>
+          </div>
         </section>
+
+        {/* My Quizzes Modal */}
+        <MyQuizzesModal
+          open={myQuizzesOpen}
+          onClose={() => setMyQuizzesOpen(false)}
+        />
 
         {/* Step 1: Quiz Meta */}
         <section className="space-y-4">
@@ -842,10 +874,19 @@ export default function CreatePage() {
         </section>
 
         {/* Step 5: Distance Validator */}
-        <DistanceValidator
-          resultVectors={resultVectors}
-          results={results}
-        />
+        <section className="space-y-4">
+          <StepLabel num={5} label="结果区分度检查" />
+          <div className="border-t border-[var(--ink)]/5 pt-4 pl-3" />
+          <div className="rounded-2xl bg-[var(--surface-card)] px-5 py-4 shadow-[0_8px_30px_rgba(10,10,10,0.04)]">
+            <p className="text-sm leading-6 text-[var(--body)]">
+              基于欧氏距离计算结果向量之间的相似程度。相似度 &gt; 55% 表示两个人格位置较接近。
+            </p>
+          </div>
+          <DistanceValidator
+            resultVectors={resultVectors}
+            results={results}
+          />
+        </section>
 
         {/* Step 6: Questions + Option Effects */}
         <section className="space-y-4">

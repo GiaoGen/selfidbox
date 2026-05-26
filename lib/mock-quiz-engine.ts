@@ -14,6 +14,7 @@ export interface Result {
   traits: string[];
   shareText?: string;
   isPinned: boolean;
+  image_url?: string;
 }
 
 export interface AIResult {
@@ -34,6 +35,7 @@ export function mapAIResults(aiResults: AIResult[]): Result[] {
     traits: ai.traits,
     shareText: ai.share_text,
     isPinned: false,
+    image_url: undefined,
   }));
 }
 

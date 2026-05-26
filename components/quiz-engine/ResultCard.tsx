@@ -1,7 +1,9 @@
 "use client";
 
-import { Pin, PinOff } from "lucide-react";
+import { useRef, useState } from "react";
+import { Pin, PinOff, Image, Loader } from "lucide-react";
 import type { Result } from "@/lib/mock-quiz-engine";
+import { uploadResultImage } from "@/lib/image-upload";
 import { InlineEditableInput } from "@/components/quiz-studio/InlineEditableInput";
 import { InlineEditableTextarea } from "@/components/quiz-studio/InlineEditableTextarea";
 import { EditableChipList } from "@/components/quiz-studio/EditableChipList";
@@ -28,8 +30,31 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin }: P
   const update = onChange ?? (() => {});
   const pinned = result.isPinned;
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadState, setUploadState] = useState<"idle" | "loading" | "error">("idle");
+
   const btnBase = "flex h-7 w-7 items-center justify-center rounded-full transition-all";
   const btnVisible = "bg-white/20 text-current/80 hover:bg-white/35 hover:text-current";
+
+  function handleUploadClick() {
+    fileInputRef.current?.click();
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadState("loading");
+    try {
+      const { image_url } = await uploadResultImage(file, result.id);
+      update({ ...result, image_url });
+      setUploadState("idle");
+    } catch {
+      setUploadState("error");
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   return (
     <article
@@ -38,6 +63,32 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin }: P
       }`}
     >
       <div className="absolute right-3 top-3 flex items-center gap-0.5">
+        {isEditing && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <button
+              type="button"
+              onClick={handleUploadClick}
+              className={`${btnBase} ${btnVisible}`}
+              title="上传图片"
+              disabled={uploadState === "loading"}
+            >
+              {uploadState === "loading" ? (
+                <Loader size={13} className="animate-spin" />
+              ) : uploadState === "error" ? (
+                <Image size={13} className="opacity-50" />
+              ) : (
+                <Image size={13} />
+              )}
+            </button>
+          </>
+        )}
         {onTogglePin && (
           <button
             type="button"
@@ -63,6 +114,17 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin }: P
           </button>
         )}
       </div>
+
+      {/* image preview */}
+      {result.image_url && (
+        <div className="mb-4 overflow-hidden rounded-2xl">
+          <img
+            src={result.image_url}
+            alt=""
+            className="aspect-[16/10] w-full object-cover"
+          />
+        </div>
+      )}
 
       {/* subtitle */}
       {isEditing ? (
@@ -127,6 +189,11 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin }: P
             className="w-full text-xs opacity-50"
           />
         </div>
+      )}
+
+      {/* upload error feedback */}
+      {uploadState === "error" && (
+        <p className="mt-2 text-xs opacity-60">上传失败，请重试</p>
       )}
     </article>
   );

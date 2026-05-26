@@ -1,6 +1,81 @@
 # TASKER STATUS
 
-Last updated: 2026-05-25
+Last updated: 2026-05-26
+
+---
+
+## Recent — 2026-05-26 (evening)
+
+### Quiz Studio: creator_user_id + My Quizzes entry
+
+**DEV user** (`lib/dev-user.ts`):
+- New file: `export const DEV_USER_ID = "00000000-0000-0000-0000-000000000001"`
+
+**Save with creator** (`lib/quizzes-db.ts`):
+- `saveQuizSchema` now writes `creator_user_id: DEV_USER_ID` to `quizzes`
+- New `getQuizzesByCreator(userId)` — returns `{ id, slug, title, hook, status, created_at }[]`, ordered by `created_at desc`
+
+**API route** (`app/api/my-quizzes/route.ts`):
+- `GET` — uses `DEV_USER_ID`, calls `getQuizzesByCreator`, returns JSON array
+
+**Hero card redesign** (`app/create/page.tsx`):
+- Replaced gradient hero with clean white card + thin border
+- 4-icon action grid (2×2 mobile, 4×1 desktop): Library (opens modal), Sparkles/Wand/Settings (placeholder)
+- Wired `MyQuizzesModal` open/close state
+
+**My Quizzes modal** (`components/quiz-runtime/MyQuizzesModal.tsx`):
+- Full-screen mobile / centered 560px desktop panel
+- Backdrop blur, slide-up animation (framer-motion)
+- Fetches `/api/my-quizzes` on open; loading spinner; empty state ("还没有创建过 Quiz")
+- Each quiz row: title, hook, status badge, date — full row clickable → `router.push(/quiz/[slug])`
+- Slug validation (empty slug shows error, no navigation)
+
+---
+
+## Recent — 2026-05-26 (later)
+
+### Quiz Runtime: `/quiz/[slug]` user-facing quiz page
+
+**New route**: `app/quiz/[slug]/page.tsx` — server component fetching quiz from Supabase via `getQuizBySlug`, `notFound()` on miss, passes to client `QuizPlayer`. Includes `loading.tsx`.
+
+**Data layer** (`lib/quizzes-db.ts`):
+- Added `getQuizBySlug(slug)` — fetches quiz + factors + results + questions + options in parallel
+- Added `saveQuizAttempt()` — writes `quiz_attempts` + `quiz_attempt_answers` (user_id = null for now)
+
+**Runtime logic** (`lib/quiz-runtime.ts`):
+- `calculateUserVector(factorKeys, answers)` — init 50, sum effects × 10, clamp 0–100
+- `rankRuntimeResults(userVector, results)` — Euclidean distance + similarity ranking
+- Runtime data types (`QuizRuntimeData`, `QuizFactorData`, `QuizResultData`, `QuizQuestionData`, `QuizOptionData`, `AnswerRecord`, `RankedRuntimeResult`)
+
+**UI components** (`components/quiz-runtime/`):
+- `QuizPlayer` — state machine (quiz → result), forward/back nav, 300ms auto-advance, answer re-selection on back
+- `QuestionCard` — single question with AnimatePresence fade+slide, option state logic (idle/selected/dimmed)
+- `OptionButton` — framer-motion tap scale, 3 visual states
+- `QuizProgress` — thin progress bar + step counter
+- `QuizResult` — staggered fade-in: image (if image_url), similarity badge, name, subtitle, description, traits, secondary results, retry/share buttons
+
+**New dependency**: framer-motion (^12.x)
+
+**Design**: Minimal premium — cream canvas, black/white cards, thin borders ([var(--ink)]/8–/25), subtle shadows, no gradients, mobile-first. Linear/Typeform/Apple aesthetic.
+
+**Note**: `saveQuizSchema` function preserved unchanged in `lib/quizzes-db.ts`.
+
+---
+
+## Earlier — 2026-05-26
+
+### Quiz Studio: Step 5 layout fix + Result image upload
+
+**Step 5 header layout**
+- `DistanceValidator` no longer renders its own step number/title — extracted to `page.tsx` with `StepLabel` matching Steps 1-4, 6
+- Added description card, divider, empty-state handling (< 2 results)
+
+**Result image upload**
+- Added `image_url?: string` to `Result` type (`lib/mock-quiz-engine.ts`)
+- New `lib/image-upload.ts`: canvas-based image compression (max 800px, webp) + Supabase Storage upload to `quiz-result-images` bucket
+- `ResultCard` now has image icon (lucide `Image`) in top-right, hidden file input, upload states (loading spinner / error feedback), and image preview when `image_url` set
+- `quizzes-db.ts` now saves `image_url` in `quiz_results` insert
+- SQL migration at `supabase/migrations/add_image_url.sql`: ALTER TABLE + storage bucket + RLS policies
 
 ---
 
