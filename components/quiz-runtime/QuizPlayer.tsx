@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { QuizRuntimeData, AnswerRecord, RankedRuntimeResult } from "@/lib/quiz-runtime";
 import { calculateUserVector, rankRuntimeResults } from "@/lib/quiz-runtime";
 import { saveQuizAttempt } from "@/lib/quizzes-db";
+import { DEV_USER_ID } from "@/lib/dev-user";
+import { rebuildUserProfile } from "@/lib/rebuild-user-profile";
 import { QuizProgress } from "./QuizProgress";
 import { QuestionCard } from "./QuestionCard";
 import { QuizResult } from "./QuizResult";
@@ -31,21 +33,32 @@ export function QuizPlayer({ quiz }: Props) {
   const isLastQuestion = currentIndex === total - 1;
 
   const finishQuiz = useCallback(
-    (finalAnswers: AnswerRecord[]) => {
+    async (finalAnswers: AnswerRecord[]) => {
       const vector = calculateUserVector(factorKeys, finalAnswers);
       const ranked = rankRuntimeResults(vector, quiz.results);
       setUserVector(vector);
       setRanking(ranked);
       setPhase("result");
 
-      saveQuizAttempt({
-        quizId: quiz.id,
-        userVector: vector,
-        ranking: ranked,
-        answers: finalAnswers,
-      }).catch(() => {
+      try {
+        await saveQuizAttempt({
+          quizId: quiz.id,
+          userVector: vector,
+          ranking: ranked,
+          answers: finalAnswers,
+        });
+      } catch {
         // best-effort, result already shown
-      });
+      }
+
+      console.log("[Quiz Runtime] calling rebuildUserProfile");
+      rebuildUserProfile(DEV_USER_ID)
+        .then((result) => {
+          console.log(`[Quiz Runtime] profile_rebuild_result: ${JSON.stringify(result)}`);
+        })
+        .catch((err) => {
+          console.warn("[Quiz Runtime] profile_rebuild_result: failed —", err);
+        });
     },
     [factorKeys, quiz.id, quiz.results],
   );

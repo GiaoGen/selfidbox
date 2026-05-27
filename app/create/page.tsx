@@ -13,6 +13,7 @@ import { CoverageValidator } from "@/components/quiz-engine/CoverageValidator";
 import { SaveQuizButton } from "@/components/quiz-engine/SaveQuizButton";
 import { MyQuizzesModal } from "@/components/quiz-runtime/MyQuizzesModal";
 import { mapAIResults } from "@/lib/mock-quiz-engine";
+import { SELFID_FACTORS } from "@/lib/selfid-factors";
 import type {
   QuizMeta,
   Result,
@@ -122,6 +123,7 @@ export default function CreatePage() {
   const [optionsPerQuestion, setOptionsPerQuestion] = useState(4);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [myQuizzesOpen, setMyQuizzesOpen] = useState(false);
+  const [showFactorPicker, setShowFactorPicker] = useState(false);
 
   /* ---- Meta ---- */
 
@@ -185,17 +187,21 @@ export default function CreatePage() {
   }, []);
 
   const addFactor = useCallback(() => {
-    setQuiz((prev) => {
-      const id = `factor_${Date.now()}`;
-      return {
-        ...prev,
-        factors: [...prev.factors, { id, name: "新因子", nameEn: "", isPinned: false }],
-        resultVectors: prev.resultVectors.map((rv) => ({
-          ...rv,
-          values: { ...rv.values, [id]: 50 },
-        })),
-      };
-    });
+    setShowFactorPicker(true);
+  }, []);
+
+  const selectFactor = useCallback((key: string) => {
+    const sf = SELFID_FACTORS.find((f) => f.key === key);
+    if (!sf) return;
+    setQuiz((prev) => ({
+      ...prev,
+      factors: [...prev.factors, { id: sf.key, name: sf.name, nameEn: sf.description, isPinned: false }],
+      resultVectors: prev.resultVectors.map((rv) => ({
+        ...rv,
+        values: { ...rv.values, [sf.key]: 50 },
+      })),
+    }));
+    setShowFactorPicker(false);
   }, []);
 
   const deleteFactor = useCallback((index: number) => {
@@ -802,6 +808,41 @@ export default function CreatePage() {
             onDelete={factors.length > 1 ? deleteFactor : undefined}
             onTogglePin={toggleFactorPin}
           />
+
+          {showFactorPicker && (() => {
+            const usedKeys = new Set(factors.map((f) => f.id));
+            const available = SELFID_FACTORS.filter((sf) => !usedKeys.has(sf.key));
+            if (available.length === 0) {
+              return (
+                <p className="mt-2 text-sm text-[var(--muted)]">所有 Selfid 因子已添加完毕。</p>
+              );
+            }
+            return (
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-[var(--surface-card)] p-4">
+                <span className="w-full text-xs text-[var(--muted)]">从因子库中选择：</span>
+                {available.map((sf) => (
+                  <button
+                    key={sf.key}
+                    type="button"
+                    onClick={() => selectFactor(sf.key)}
+                    className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-strong)] px-3 py-1.5 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--ink)]/12"
+                  >
+                    {sf.name}
+                    <span className="text-[10px] text-[var(--muted)]">
+                      {sf.group === "core" ? "核心" : "社交"}
+                    </span>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setShowFactorPicker(false)}
+                  className="text-xs text-[var(--muted)] hover:text-[var(--ink)] ml-1"
+                >
+                  取消
+                </button>
+              </div>
+            );
+          })()}
         </section>
 
         {/* Step 4: Result Vectors */}

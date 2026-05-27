@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SELFID_FACTORS, SELFID_FACTOR_KEYS } from "@/lib/selfid-factors";
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_CHAT_URL = "https://api.deepseek.com/v1/chat/completions";
 
-const SYSTEM_PROMPT = `You are a personality quiz designer. Your task is to design the dimensional factors (axes) that make up a personality space for a quiz.
+const SYSTEM_PROMPT = `You are a personality quiz designer. Your task is to SELECT dimensional factors (axes) from a predefined catalog for a quiz.
 
 Rules:
 - Output ONLY valid JSON. No markdown, no code fences, no explanation.
-- Each factor should be a measurable personality dimension (e.g. sensitivity, expressiveness, orderliness).
-- Factors must be able to differentiate the given results — no two results should look identical across all factors.
-- Factors should be specific and concrete, not vague or overlapping.
+- You MUST pick factors ONLY from the provided catalog below. DO NOT invent new keys.
+- Each factor key you return MUST be exactly one of the keys in the catalog.
+- The name and description MUST match the catalog entry for that key.
+- Choose factors that best differentiate the given results — no two results should look identical across all factors.
+- Factors should be diverse and cover different aspects of personality.
 - All text in Chinese except "key" which must be English snake_case.
 
 PINNED FACTORS: Some factors may already be fixed (pinned) by the user. You will receive a list of pinned factors. You MUST:
-- NOT generate any factor with the same key as a pinned factor.
-- NOT generate factors that are semantically overlapping with pinned factors (e.g. if "敏感度" is pinned, do not generate "情绪感知力" which means the same thing).
-- Ensure every new factor measures a genuinely different dimension from all pinned factors.
+- NOT select any factor with the same key as a pinned factor.
+- Ensure every selected factor measures a genuinely different dimension from all pinned factors.
 
 Output format:
 {
@@ -91,7 +93,11 @@ export async function POST(request: NextRequest) {
       .join("\n")}\n`;
   }
 
-  const userMessage = `设计一个人格测试的因子维度。
+  const catalog = SELFID_FACTORS.map(
+    (sf) => `- ${sf.key}（${sf.name}）：${sf.description}`,
+  ).join("\n");
+
+  const userMessage = `从以下因子库中选择适合这个测试的因子维度。
 
 测试标题：${title}
 测试副标题：${hookStr}
@@ -103,7 +109,11 @@ export async function POST(request: NextRequest) {
 已有的结果人格：
 ${resultsSummary}
 ${pinnedSection}
-请设计 ${count} 个能够有效区分这些结果人格的因子维度。${pinned_factors?.length ? "新生成的因子必须与上述固定因子有明确区分度，不能语义重复。" : ""}每个因子必须能够产生足够的区分度——不能让所有结果在同一因子上看起来一样。`;
+
+可用因子库（只能从中选择，绝对不能自己创造 key）：
+${catalog}
+
+请从以上因子库中选择 ${count} 个能够有效区分这些结果人格的因子维度。${pinned_factors?.length ? "不能选择已被固定的因子。" : ""}每个因子必须能够产生足够的区分度——不能让所有结果在同一因子上看起来一样。返回的 key 必须与因子库中完全一致。`;
 
   try {
     const dsResponse = await fetch(DEEPSEEK_CHAT_URL, {
@@ -172,6 +182,7 @@ ${pinnedSection}
       );
     }
 
+    const seenKeys = new Set<string>();
     for (let i = 0; i < parsed.factors.length; i++) {
       const f = parsed.factors[i];
       if (!f || typeof f !== "object") {
@@ -181,12 +192,19 @@ ${pinnedSection}
         );
       }
       const obj = f as Record<string, unknown>;
-      if (!obj.key || typeof obj.key !== "string") {
+      if (!obj.key || typeof obj.key !== "string" || !SELFID_FACTOR_KEYS.has(obj.key)) {
         return NextResponse.json(
-          { error: `Factor ${i} missing valid key` },
+          { error: `Factor ${i} key "${String(obj.key)}" is not a valid Selfid factor` },
           { status: 502 },
         );
       }
+      if (seenKeys.has(obj.key)) {
+        return NextResponse.json(
+          { error: `Factor ${i} key "${obj.key}" appears more than once` },
+          { status: 502 },
+        );
+      }
+      seenKeys.add(obj.key);
       if (!obj.name || typeof obj.name !== "string") {
         return NextResponse.json(
           { error: `Factor ${i} missing valid name` },

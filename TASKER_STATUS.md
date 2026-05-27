@@ -1,10 +1,72 @@
 # TASKER STATUS
 
-Last updated: 2026-05-26
+Last updated: 2026-05-27
 
 ---
 
-## Recent — 2026-05-26 (evening)
+## Recent — 2026-05-27 (evening)
+
+### Profile fusion: incremental → full recompute, latest-attempt-per-quiz
+
+**`lib/profile-fusion.ts` — rewritten**:
+- Changed from incremental fusion (marking attempts as fused) to **full recompute** every call
+- **Latest attempt per quiz**: deduplicates `quiz_attempts` by `(user_id, quiz_id)`, keeps only most recent `created_at`
+- Sources: normalized reports (standard format `{ count, value, confidence }`) + latest quiz attempts (flat `{ key: number }`)
+- All sources contribute independently to per-dimension weighted average
+- Output always standard format: `{ value: rounded, confidence: min(1, totalWeight/count), count: sources }`
+- `report_count` = reports used + unique quizzes used (not total attempts)
+- Invalid keys in quiz_attempts.user_vector logged via `console.warn` and skipped
+- No `fused_into_profile` dependency — removed from `saveQuizAttempt` also
+- Protection: zero valid sources → return early, don't touch user_profile
+
+**`lib/quizzes-db.ts`**: removed `fused_into_profile: false` from `saveQuizAttempt` insert
+
+---
+
+## Recent — 2026-05-27
+
+### Profile Fusion: UGC Quiz → user_profile closed loop
+
+**Global factor library** (`lib/selfid-factors.ts`):
+- New file. Exports `SELFID_FACTORS` — 16 canonical Selfid personality dimensions (8 core + 8 social)
+- Each factor: `key`, `name` (Chinese), `group` ("core"|"social"), `description`
+- Exports helpers: `SELFID_FACTOR_KEYS` (Set), `CORE_KEYS`, `SOCIAL_KEYS`, `FACTOR_BY_KEY` (Record)
+
+**generate-factors API constrained** (`app/api/quiz-ai/generate-factors/route.ts`):
+- AI now SELECTS from SELFID_FACTORS catalog instead of freely inventing factors
+- User message includes full factor library; system prompt instructs to pick only from catalog
+- Validation rejects any key not in `SELFID_FACTOR_KEYS` + detects duplicate keys
+
+**Quiz Studio factor adding** (`app/create/page.tsx`):
+- `addFactor` now opens a factor picker showing unused SELFID_FACTORS (group-tagged: core/social)
+- New `selectFactor(key)` callback creates factor from SELFID_FACTORS entry (id=key, name=Chinese name, nameEn=description)
+- Picker auto-hides when all 16 factors are used
+- FactorList inline editing preserved — display names remain customizable
+
+**quiz_attempts new columns** (`supabase/migrations/add_quiz_attempt_profile_fields.sql`):
+- New migration: `ALTER TABLE quiz_attempts ADD included_in_profile boolean DEFAULT true`, `ADD profile_weight numeric DEFAULT 0.3`
+- Partial index on `(user_id, included_in_profile) WHERE included_in_profile = true`
+
+**Quiz attempts bound to DEV_USER_ID** (`lib/quizzes-db.ts`):
+- `saveQuizAttempt` now writes `user_id: DEV_USER_ID` (was null), `included_in_profile: true`, `profile_weight: 0.3`
+
+**Profile fusion engine** (`lib/profile-fusion.ts`):
+- New file. `refreshUserProfileFromSources(userId)`:
+  1. Reads `reports` WHERE `parse_status = 'normalized'` → core_vector, social_vector, confidence (default 0.5)
+  2. Reads `quiz_attempts` WHERE `included_in_profile = true` → user_vector, profile_weight (default 0.3)
+  3. Maps quiz user_vector keys to core/social groups via `CORE_KEYS`/`SOCIAL_KEYS`
+  4. Weighted average across all sources per dimension (skips non-finite values)
+  5. Preserves existing `selfid_profile` and `summary` from current user_profile row
+  6. Upserts into `user_profile` (onConflict: user_id), sets `report_count`, `updated_at`
+
+**Post-quiz profile refresh** (`components/quiz-runtime/QuizPlayer.tsx`):
+- `finishQuiz` is now async, awaits `saveQuizAttempt`
+- After save succeeds, fire-and-forget calls `refreshUserProfileFromSources(DEV_USER_ID)`
+- Profile page (`/profile`) sees updated radar charts on next visit
+
+**Verification**: `tsc --noEmit` zero errors, `npm run build` 30 routes compiled (~2.9s), `npm run lint` no new warnings
+
+---
 
 ### Quiz Studio: creator_user_id + My Quizzes entry
 

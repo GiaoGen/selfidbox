@@ -115,7 +115,7 @@ export async function saveQuizAttempt(input: SaveAttemptInput) {
     .from("quiz_attempts")
     .insert({
       quiz_id: input.quizId,
-      user_id: null,
+      user_id: DEV_USER_ID,
       user_vector: input.userVector,
       similarity_ranking: input.ranking.slice(0, 3).map((r) => ({
         result_key: r.result.key,
@@ -125,6 +125,8 @@ export async function saveQuizAttempt(input: SaveAttemptInput) {
       final_result_id: top?.result.id ?? null,
       final_result_key: top?.result.key ?? null,
       final_result_name: top?.result.name ?? null,
+      included_in_profile: true,
+      profile_weight: 0.3,
     })
     .select("id")
     .single();
