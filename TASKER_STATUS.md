@@ -1,6 +1,56 @@
 # TASKER STATUS
 
-Last updated: 2026-05-27
+Last updated: 2026-05-31
+
+---
+
+## Recent — 2026-05-31
+
+### Profile 数据来源弹窗接入真实数据
+
+**`lib/user-profile-db.ts`**:
+- Added `ProfileSourceEntry` interface (id, source_type, created_at, title, result, meta)
+- Added `getProfileSources(userId)` — queries `reports` (parse_status=normalized) and `quiz_attempts` (included_in_profile=true), batch-joins `quizzes` for title/slug, transforms to unified format, sorts by created_at desc
+
+**`app/api/profile/sources/route.ts`** — new:
+- GET handler using DEV_USER_ID, calls `getProfileSources`, returns `{ ok, sources }` or `{ ok: false, error, sources: [] }`
+
+**`components/DataSourceModal.tsx`** — rewritten:
+- Removed all mock data
+- Fetches `/api/profile/sources` on modal open
+- Loading state (spinner), error state (message + retry button), empty state ("还没有数据来源。")
+- Mobile: fullscreen `fixed inset-0` with warm cream `bg-[#fffaf0]`
+- Desktop: centered 720px-wide modal with `max-h-[80vh]`, `rounded-[32px]`
+- Clean row layout: date + type badge on top line, title (bold) + result (muted) below
+- Type badge: "截图" (purple pill) for reports, "Quiz" (amber pill) for quizzes
+- Date format: YYYY-MM-DD
+- Upload section preserved (toggleable)
+- Re-exports `ProfileSourceEntry` type for consumers
+
+**No changes to**: radar chart, user_profile aggregation, OCR service, Quiz Runtime, Supabase schema
+
+---
+
+### rebuildUserProfile: full recompute → incremental weighted fusion
+
+**`lib/rebuild-user-profile.ts` — rewritten**:
+- Changed from full recompute to **incremental weighted rolling average**
+- Reads existing `user_profile` first; only processes new data since last update
+- **New reports**: filtered by `created_at > user_profile.updated_at` (or all if no profile yet)
+- **New quiz_attempts**: filtered by `fused_into_profile = false` (existing column, previously unused)
+- After fusion, marks processed quiz_attempts with `fused_into_profile = true` for idempotency
+- Per-dimension formula: `new_value = (old × count + incoming × weight) / (count + weight)`, same pattern for confidence; `count` now accumulates weights not source count
+- `report_count` is cumulative (`old + new_reports + new_attempts`), never decreases
+- Added `readOldDim()` to handle legacy flat-number dims and current DimOut objects
+- Added `fuseDim()` for single-dimension incremental weighted average
+- No new sources → returns `{ ok: false, reason: "NO_NEW_SOURCES" }`, profile untouched
+- Verbose console logging: old/new dims, per-dimension changes, cumulative counts, upsert confirmation
+
+**`lib/user-profile-db.ts`**:
+- Exported `DimOut` interface (`{ value, confidence, count }`)
+- Fixed `UserProfileRow.core_vector` / `social_vector` types from `Record<string, number>` to `Record<string, DimOut>` (matches actual stored shape)
+
+**No changes to**: UI, OCR FastAPI proxy, Supabase schema, callers (API route + QuizPlayer)
 
 ---
 

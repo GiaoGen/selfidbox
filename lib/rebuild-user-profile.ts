@@ -3,8 +3,9 @@ import { supabase } from "./supabase";
 /* ================================================================== */
 /*  rebuildUserProfile(userId)                                         */
 /*                                                                     */
-/*  The SINGLE function that writes user_profile.                      */
-/*  Every call does a full recompute from all source data.             */
+/*  Incremental weighted fusion — reads existing profile, only fuses   */
+/*  new reports & quiz_attempts, updates in place.                     */
+/*  Safe to call repeatedly — idempotent via created_at / fused flag.  */
 /* ================================================================== */
 
 /* ---- constants ---- */
@@ -145,7 +146,7 @@ function extractQuizDims(
     if (allowed.has(key)) {
       dims.set(key, { value: num, weight });
     } else if (ALL_SELFID_KEYS.has(key)) {
-      // valid Selfid key but not in this group — silently skip (it will be picked up by the other group)
+      // valid Selfid key but not in this group — silently skip
     } else {
       invalidKeys.push(key);
     }
@@ -153,20 +154,43 @@ function extractQuizDims(
   return { dims, invalidKeys };
 }
 
-/** Compute final DimOut from accumulated contributions. */
-function finalizeDim(contribs: DimContrib[]): DimOut | null {
-  if (contribs.length === 0) return null;
-  let ws = 0;
-  let tw = 0;
-  for (const c of contribs) {
-    ws += c.value * c.weight;
-    tw += c.weight;
+/**
+ * Read a dimension from existing user_profile.
+ * Handles both flat-number format (legacy) and DimOut object format.
+ */
+function readOldDim(raw: unknown): DimOut | null {
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return { value: raw, count: 1, confidence: 0.5 };
   }
-  if (tw === 0) return null;
+  if (raw && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    const value = toNum(obj.value);
+    if (value === null) return null;
+    return {
+      value,
+      count: toNum(obj.count) ?? 1,
+      confidence: toNum(obj.confidence) ?? 0.5,
+    };
+  }
+  return null;
+}
+
+/**
+ * Incremental weighted fusion for a single dimension.
+ *
+ *   new_value    = (old.value * old.count + incoming.value * weight) / (old.count + weight)
+ *   new_count    = old.count + weight
+ *   new_conf     = (old.confidence * old.count + weight * weight) / (old.count + weight)
+ *
+ * For both reports and quiz_attempts, the per-source confidence equals the weight,
+ * so `weight` serves double duty in the confidence numerator.
+ */
+function fuseDim(old: DimOut, value: number, weight: number): DimOut {
+  const newCount = old.count + weight;
   return {
-    value: Number((ws / tw).toFixed(2)),
-    confidence: Number(Math.min(1, tw / contribs.length).toFixed(2)),
-    count: contribs.length,
+    value: Number(((old.value * old.count + value * weight) / newCount).toFixed(2)),
+    count: Number(newCount.toFixed(2)),
+    confidence: Number(((old.confidence * old.count + weight * weight) / newCount).toFixed(2)),
   };
 }
 
@@ -253,40 +277,87 @@ const SOCIAL_CN: Record<string, string> = {
 export async function rebuildUserProfile(userId: string): Promise<RebuildResult> {
   console.log(`[ProfileRebuild] start userId: ${userId}`);
 
-  /* ---- 1. Read normalized reports ---- */
+  /* ---- 1. Read existing user_profile ---- */
 
-  let reportRows: Record<string, unknown>[] = [];
+  let oldProfile: Record<string, unknown> | null = null;
   try {
     const { data, error } = await supabase
+      .from("user_profile")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+
+    if (error && error.code !== "PGRST116") {
+      console.warn(`[ProfileRebuild] read existing profile failed: ${error.message}`);
+    } else if (data) {
+      oldProfile = data as Record<string, unknown>;
+    }
+  } catch (err) {
+    console.warn("[ProfileRebuild] read existing profile threw", err);
+  }
+
+  const oldUpdatedAt = oldProfile?.updated_at as string | undefined;
+  const oldReportCount = (oldProfile?.report_count as number) ?? 0;
+
+  const oldCoreObj = normalizeJsonb(oldProfile?.core_vector) ?? {};
+  const oldSocialObj = normalizeJsonb(oldProfile?.social_vector) ?? {};
+
+  const oldCore: Record<string, DimOut> = {};
+  for (const key of CORE_KEYS) {
+    const dim = readOldDim(oldCoreObj[key]);
+    if (dim) oldCore[key] = dim;
+  }
+  const oldSocial: Record<string, DimOut> = {};
+  for (const key of SOCIAL_KEYS) {
+    const dim = readOldDim(oldSocialObj[key]);
+    if (dim) oldSocial[key] = dim;
+  }
+
+  console.log(`[ProfileRebuild] existing profile: ${oldProfile ? "found" : "not found"}`);
+  console.log(`[ProfileRebuild] old report_count: ${oldReportCount}`);
+  console.log(`[ProfileRebuild] old core keys: [${Object.keys(oldCore).join(", ") || "(none)"}]`);
+  console.log(`[ProfileRebuild] old social keys: [${Object.keys(oldSocial).join(", ") || "(none)"}]`);
+
+  /* ---- 2. Read NEW reports (created after last profile update) ---- */
+
+  let newReportRows: Record<string, unknown>[] = [];
+  try {
+    let query = supabase
       .from("reports")
-      .select("id, core_vector, social_vector, normalized_confidence, confidence, raw_ai_response")
+      .select("id, core_vector, social_vector, normalized_confidence, confidence, raw_ai_response, created_at")
       .eq("user_id", userId)
       .eq("parse_status", "normalized");
 
+    if (oldUpdatedAt) {
+      query = query.gt("created_at", oldUpdatedAt);
+    }
+
+    const { data, error } = await query;
     if (error) {
       console.warn(`[ProfileRebuild] reports query failed: ${error.message}`);
     } else {
-      reportRows = (data ?? []) as Record<string, unknown>[];
+      newReportRows = (data ?? []) as Record<string, unknown>[];
     }
   } catch (err) {
     console.warn("[ProfileRebuild] reports query threw", err);
   }
 
-  /* ---- 2. Read quiz_attempts (latest per quiz_id) ---- */
+  /* ---- 3. Read NEW quiz_attempts (not yet fused) ---- */
 
-  let attemptRows: Record<string, unknown>[] = [];
+  let newAttemptRows: Record<string, unknown>[] = [];
   try {
     const { data, error } = await supabase
       .from("quiz_attempts")
       .select("id, quiz_id, user_vector, profile_weight, created_at")
       .eq("user_id", userId)
       .eq("included_in_profile", true)
+      .eq("fused_into_profile", false)
       .order("created_at", { ascending: false });
 
     if (error) {
       console.warn(`[ProfileRebuild] quiz_attempts query failed: ${error.message}`);
     } else {
-      attemptRows = (data ?? []) as Record<string, unknown>[];
+      newAttemptRows = (data ?? []) as Record<string, unknown>[];
     }
   } catch (err) {
     console.warn("[ProfileRebuild] quiz_attempts query threw", err);
@@ -294,45 +365,68 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
 
   // Deduplicate: latest per quiz_id
   const seen = new Set<string>();
-  const latestAttempts: Record<string, unknown>[] = [];
-  for (const r of attemptRows) {
+  const newAttempts: Record<string, unknown>[] = [];
+  for (const r of newAttemptRows) {
     const qid = r.quiz_id as string;
     if (!qid || seen.has(qid)) continue;
     seen.add(qid);
-    latestAttempts.push(r);
+    newAttempts.push(r);
   }
 
-  console.log(`[ProfileRebuild] reports count: ${reportRows.length}`);
-  console.log(`[ProfileRebuild] quiz attempts total count: ${attemptRows.length}`);
-  console.log(`[ProfileRebuild] latest quiz attempts count: ${latestAttempts.length}`);
+  console.log(`[ProfileRebuild] new reports count: ${newReportRows.length}`);
+  console.log(`[ProfileRebuild] new quiz attempts count: ${newAttempts.length} (total unfused: ${newAttemptRows.length})`);
 
-  /* ---- 3. Accumulate per-dimension contributions ---- */
+  /* ---- 4. No new sources → skip ---- */
 
-  const accum: Record<string, DimContrib[]> = {};
-  for (const key of ALL_SELFID_KEYS) accum[key] = [];
+  if (newReportRows.length === 0 && newAttempts.length === 0) {
+    console.log("[ProfileRebuild] NO_NEW_SOURCES — user_profile unchanged");
+    return { ok: false, reason: "NO_NEW_SOURCES" };
+  }
+
+  /* ---- 5. Start from existing dims ---- */
+
+  const core_vector: Record<string, DimOut> = {};
+  for (const key of CORE_KEYS) {
+    if (oldCore[key]) core_vector[key] = { ...oldCore[key] };
+  }
+  const social_vector: Record<string, DimOut> = {};
+  for (const key of SOCIAL_KEYS) {
+    if (oldSocial[key]) social_vector[key] = { ...oldSocial[key] };
+  }
+
+  /* ---- 6. Fuse new reports ---- */
 
   let reportsUsed = 0;
 
-  for (let i = 0; i < reportRows.length; i++) {
-    const r = reportRows[i];
+  for (let i = 0; i < newReportRows.length; i++) {
+    const r = newReportRows[i];
     const fallbackWeight = reportFallbackWeight(r);
 
     const coreDims = extractReportDims(r.core_vector, CORE_KEYS, fallbackWeight);
     const socialDims = extractReportDims(r.social_vector, SOCIAL_KEYS, fallbackWeight);
 
     if (coreDims.size === 0 && socialDims.size === 0) {
-      console.warn(`[ProfileRebuild] skipping report[${i}] — no valid Selfid keys`);
+      console.warn(`[ProfileRebuild] skipping report[${r.id}] — no valid Selfid keys`);
       continue;
     }
 
-    for (const [key, c] of coreDims) accum[key].push(c);
-    for (const [key, c] of socialDims) accum[key].push(c);
+    for (const [key, c] of coreDims) {
+      const old = core_vector[key] ?? { value: 0, count: 0, confidence: 0 };
+      core_vector[key] = fuseDim(old, c.value, c.weight);
+    }
+    for (const [key, c] of socialDims) {
+      const old = social_vector[key] ?? { value: 0, count: 0, confidence: 0 };
+      social_vector[key] = fuseDim(old, c.value, c.weight);
+    }
     reportsUsed++;
   }
 
-  let attemptsUsed = 0;
+  /* ---- 7. Fuse new quiz_attempts ---- */
 
-  for (const row of latestAttempts) {
+  let attemptsUsed = 0;
+  const fusedAttemptIds: string[] = [];
+
+  for (const row of newAttempts) {
     const uv = normalizeJsonb(row.user_vector);
     if (!uv) {
       console.warn(`[ProfileRebuild] skipping quiz_attempt[${row.id}] — user_vector null`);
@@ -352,55 +446,68 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
     }
 
     if (core.dims.size === 0 && social.dims.size === 0) {
-      console.warn(
-        `[ProfileRebuild] skipping quiz_attempt[${row.id}] — no valid Selfid keys`,
-      );
+      console.warn(`[ProfileRebuild] skipping quiz_attempt[${row.id}] — no valid Selfid keys`);
       continue;
     }
 
-    for (const [key, c] of core.dims) accum[key].push(c);
-    for (const [key, c] of social.dims) accum[key].push(c);
+    for (const [key, c] of core.dims) {
+      const old = core_vector[key] ?? { value: 0, count: 0, confidence: 0 };
+      core_vector[key] = fuseDim(old, c.value, c.weight);
+    }
+    for (const [key, c] of social.dims) {
+      const old = social_vector[key] ?? { value: 0, count: 0, confidence: 0 };
+      social_vector[key] = fuseDim(old, c.value, c.weight);
+    }
     attemptsUsed++;
+    if (row.id) fusedAttemptIds.push(row.id as string);
   }
 
-  /* ---- 4. No valid sources → don't touch user_profile ---- */
-
-  if (reportsUsed === 0 && attemptsUsed === 0) {
-    console.warn("[ProfileRebuild] NO_VALID_PROFILE_SOURCES — user_profile unchanged");
-    return { ok: false, reason: "NO_VALID_PROFILE_SOURCES" };
-  }
-
-  /* ---- 5. Finalize per-dimension vectors ---- */
-
-  const core_vector: Record<string, DimOut> = {};
-  const social_vector: Record<string, DimOut> = {};
+  /* ---- 8. Log per-dimension changes ---- */
 
   for (const key of CORE_KEYS) {
-    const dim = finalizeDim(accum[key]);
-    if (dim) core_vector[key] = dim;
+    const old = oldCore[key];
+    const cur = core_vector[key];
+    if (old && cur) {
+      console.log(
+        `[ProfileRebuild] dim "core.${key}": old_value=${old.value} new_value=${cur.value} ` +
+        `weight=${cur.count} new_count=${cur.count} new_confidence=${cur.confidence}`,
+      );
+    } else if (cur) {
+      console.log(
+        `[ProfileRebuild] dim "core.${key}": NEW — value=${cur.value} weight=${cur.count} ` +
+        `new_count=${cur.count} new_confidence=${cur.confidence}`,
+      );
+    }
   }
   for (const key of SOCIAL_KEYS) {
-    const dim = finalizeDim(accum[key]);
-    if (dim) social_vector[key] = dim;
+    const old = oldSocial[key];
+    const cur = social_vector[key];
+    if (old && cur) {
+      console.log(
+        `[ProfileRebuild] dim "social.${key}": old_value=${old.value} new_value=${cur.value} ` +
+        `weight=${cur.count} new_count=${cur.count} new_confidence=${cur.confidence}`,
+      );
+    } else if (cur) {
+      console.log(
+        `[ProfileRebuild] dim "social.${key}": NEW — value=${cur.value} weight=${cur.count} ` +
+        `new_count=${cur.count} new_confidence=${cur.confidence}`,
+      );
+    }
   }
 
-  console.log(
-    `[ProfileRebuild] core keys: [${Object.keys(core_vector).join(", ") || "(none)"}]`,
-  );
-  console.log(
-    `[ProfileRebuild] social keys: [${Object.keys(social_vector).join(", ") || "(none)"}]`,
-  );
-
-  /* ---- 6. Generate selfid_profile + summary ---- */
+  /* ---- 9. Generate labels ---- */
 
   const { selfid_profile, summary } = generateProfileLabel(core_vector, social_vector);
 
-  /* ---- 7. report_count ---- */
+  /* ---- 10. Cumulative report_count ---- */
 
-  const reportCount = reportsUsed + attemptsUsed;
-  console.log(`[ProfileRebuild] final report_count: ${reportCount}`);
+  const newReportCount = oldReportCount + reportsUsed + attemptsUsed;
+  console.log(
+    `[ProfileRebuild] report_count: ${oldReportCount} → ${newReportCount} ` +
+    `(+${reportsUsed} reports, +${attemptsUsed} attempts)`,
+  );
 
-  /* ---- 8. Upsert ---- */
+  /* ---- 11. Upsert ---- */
 
   const { error: upsertError } = await supabase.from("user_profile").upsert(
     {
@@ -409,7 +516,7 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
       social_vector,
       selfid_profile,
       summary,
-      report_count: reportCount,
+      report_count: newReportCount,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" },
@@ -420,6 +527,22 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
     throw new Error(`用户档案更新失败：${upsertError.message}`);
   }
 
-  console.log("[ProfileRebuild] upsert success");
-  return { ok: true, report_count: reportCount };
+  console.log(`[ProfileRebuild] upsert success — user_id=${userId} report_count=${newReportCount}`);
+
+  /* ---- 12. Mark quiz_attempts as fused ---- */
+
+  if (fusedAttemptIds.length > 0) {
+    const { error: fuseError } = await supabase
+      .from("quiz_attempts")
+      .update({ fused_into_profile: true })
+      .in("id", fusedAttemptIds);
+
+    if (fuseError) {
+      console.warn(`[ProfileRebuild] mark fused failed (non-fatal): ${fuseError.message}`);
+    } else {
+      console.log(`[ProfileRebuild] marked ${fusedAttemptIds.length} quiz_attempt(s) as fused`);
+    }
+  }
+
+  return { ok: true, report_count: newReportCount };
 }
