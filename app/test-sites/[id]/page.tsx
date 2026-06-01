@@ -5,7 +5,6 @@ import {
   getTestSitesByCategory,
   mapTestSite,
 } from "@/lib/test-sites-db";
-import { importEmail } from "@/lib/test-sites";
 
 export default async function TestSitePage({
   params,
@@ -31,7 +30,6 @@ export default async function TestSitePage({
     <TestSiteDetail
       site={site}
       relatedSites={relatedSites}
-      importEmail={importEmail}
     />
   );
 }

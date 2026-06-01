@@ -1,6 +1,76 @@
 # TASKER STATUS
 
-Last updated: 2026-05-31
+Last updated: 2026-06-01
+
+---
+
+## Recent — 2026-06-01
+
+### Test Site 详情页 UI 精简
+
+- 从 `TestSiteDetail.tsx` 删除了 4 个模块：
+  1. Hero Card 中"去做这个测试"下方的 source 链接按钮（`<a>` 指向 `site.sourceUrl`）
+  2. "邮箱报告" pill（`DetailPill`）
+  3. "第三方网站" pill（`DetailPill`）
+  4. 整个 `<ImportEmailBox>` 导入结果卡片（邮件导入路线已废弃，改为 OCR 截图导入）
+- 从 `app/test-sites/[id]/page.tsx` 移除 `importEmail` 导入和 prop 传递
+- Pills grid 现在只保留"预计完成时间"和"测试难度"两项
+- 简介 → 相关测试推荐之间的 spacing 由 flex `gap-5` 自动收紧，无多余空白
+- 未改动：Explore、Profile、OCR、Quiz Studio、数据库、配色/风格、简介、相关测试推荐
+
+### Profile 数据来源删除功能
+
+**目标**：用户可以在数据来源弹窗中删除某一条数据，删除后数据库记录被清除，user_profile 全量重算，列表刷新。
+
+**新增文件**：
+
+- **`components/profile/SwipeToDeleteSourceRow.tsx`** — 移动端滑动删除组件
+  - 使用 framer-motion `drag="x"` 实现向左滑动露出删除按钮
+  - `dragConstraints`: `{ left: -72, right: 0 }`，`dragElastic: 0.06` 提供紧致手感
+  - 释放阈值 35%：滑动超过 25px 即吸附到打开状态，否则回弹
+  - 删除按钮：`bg-[#fce8e6] text-[#c0392b]`（柔和红色），宽度 72px，文案 "删除"
+  - 桌面端：hover 时在 row 右侧边缘显示 trash icon（`hidden md:flex` + `group-hover:opacity-100`）
+  - 打开状态下点击 row 内容关闭滑动
+  - 父组件通过 `isOpen` / `onOpenChange` 管理互斥（同一时间只有一行打开）
+  - 接受 `className` prop 传递到外层容器（支持 `first:pt-0 last:pb-0` 等 CSS 伪类）
+
+- **`app/api/profile/sources/delete/route.ts`** — 删除 API
+  - `POST /api/profile/sources/delete`
+  - Body: `{ source_type: "report" | "quiz", source_id: string }`
+  - 根据 `source_type` 删除 `reports` 或 `quiz_attempts` 表中记录（带 `.eq("user_id", DEV_USER_ID)` 安全检查）
+  - 记录不存在返回 404 + `"未找到该数据来源，或无权删除"`
+  - 删除后调用 `rebuildUserProfileFromAllSources(userId)` 全量重建 user_profile
+  - 成功返回 `{ ok: true, deleted: true, profile_rebuild_result: {...} }`
+  - 失败返回 `{ ok: false, error: "..." }`
+
+**修改文件**：
+
+- **`lib/rebuild-user-profile.ts`** — 新增 `rebuildUserProfileFromAllSources(userId)` 函数
+  - 全量读取所有 `reports`（`parse_status = "normalized"`）和 `quiz_attempts`（`included_in_profile = true`）
+  - 不做增量过滤（不检查 `created_at > updated_at`，不检查 `fused_into_profile`）
+  - 从零开始融合（不读取旧 `user_profile` 作为基线）
+  - 无数据来源 → 重置为空/初始 profile：`core_vector = {}`, `social_vector = {}`, `selfid_profile = "待完善的人格画像"`, `summary = "目前还没有足够的数据生成个人图谱。"`, `report_count = 0`
+  - 复用现有所有 helper：`extractReportDims`, `extractQuizDims`, `fuseDim`, `reportFallbackWeight`, `generateProfileLabel` 等
+  - Quiz attempts 去重：同一 quiz_id 保留最新一条
+
+- **`components/DataSourceModal.tsx`** — 集成删除流程
+  - 新增状态：`openSwipeId`（当前打开的滑动行）、`deleteTarget`（待确认删除的条目）、`deleting`、`feedback`
+  - 每行包裹 `<SwipeToDeleteSourceRow>` 替代原来的 `<div>`
+  - 点击删除按钮 → 显示确认卡片：`"确定删除这条数据来源吗？删除后会重新计算你的个人图谱。"` + "取消" / "确认删除" 按钮
+  - 确认后 `POST /api/profile/sources/delete` → 成功后乐观移除 + re-fetch + `router.refresh()`
+  - 成功反馈：绿色 banner `"已删除，个人图谱已更新"`（3 秒自动消失）
+  - 失败反馈：红色 banner 显示错误信息（3 秒自动消失）
+  - 删除中状态：确认按钮显示 spinner，禁用取消按钮
+  - 删除/确认进行中禁止其他行滑动操作（`disabled` prop）
+
+**交互流程**：
+1. 移动端：向左滑动 row → 右侧露出 "删除" 按钮 → 点击 → 确认对话框 → 确认/取消
+2. 桌面端：hover row → 右侧出现 trash icon → 点击 → 确认对话框 → 确认/取消
+3. 删除后：列表即时更新，Profile 页面 server component 通过 `router.refresh()` 重新获取数据
+
+**安全**：API 删除使用 `.eq("user_id", DEV_USER_ID)` 确保只删除当前用户数据。
+
+**No changes to**: OCR 服务、Quiz Studio、Quiz Runtime、Explore/Admin、Supabase schema、UI 大结构。
 
 ---
 

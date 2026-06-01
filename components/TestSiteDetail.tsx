@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ImportEmailBox } from "@/components/ImportEmailBox";
 import { RelatedTestSites } from "@/components/RelatedTestSites";
 import { ExternalTestButton } from "@/components/test-sites/ExternalTestButton";
 import type { TestSite } from "@/lib/test-sites";
@@ -27,11 +26,9 @@ function DetailPill({ label, value }: { label: string; value: string }) {
 export function TestSiteDetail({
   site,
   relatedSites,
-  importEmail,
 }: {
   site: TestSite;
   relatedSites: TestSite[];
-  importEmail: string;
 }) {
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
@@ -85,27 +82,17 @@ export function TestSiteDetail({
             </p>
           </div>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-8">
             <ExternalTestButton
               testSiteId={site.id}
               url={site.url}
             />
-            <a
-              href={site.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-14 items-center justify-center rounded-[20px] bg-white/35 px-6 text-base font-semibold"
-            >
-              {site.sourceName}
-            </a>
           </div>
         </section>
 
         <section className="grid gap-3 sm:grid-cols-2">
           <DetailPill label="预计完成时间" value={`${site.estimatedMinutes} 分钟`} />
-          <DetailPill label="邮箱报告" value={site.supportsEmailReport ? "支持" : "暂不支持"} />
           <DetailPill label="测试难度" value={site.difficulty} />
-          <DetailPill label="第三方网站" value={site.sourceName} />
         </section>
 
         <section className="rounded-[32px] bg-[var(--surface-card)] p-5 sm:p-6">
@@ -125,7 +112,6 @@ export function TestSiteDetail({
           </div>
         </section>
 
-        <ImportEmailBox email={importEmail} />
         <RelatedTestSites sites={relatedSites} />
       </div>
     </main>
