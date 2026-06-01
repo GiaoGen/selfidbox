@@ -546,3 +546,228 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
 
   return { ok: true, report_count: newReportCount };
 }
+
+/* ================================================================== */
+/*  rebuildUserProfileFromAllSources(userId)                            */
+/*                                                                      */
+/*  FULL rebuild — used after deletion to recompute from ALL remaining  */
+/*  data. Starts from empty, reads every report and quiz_attempt, and   */
+/*  fuses everything from scratch.                                      */
+/*                                                                      */
+/*  If no sources remain → resets to empty/initial profile.             */
+/* ================================================================== */
+
+export async function rebuildUserProfileFromAllSources(userId: string): Promise<RebuildResult> {
+  console.log(`[ProfileRebuild-Full] start userId: ${userId}`);
+
+  /* ---- 1. Read ALL reports ---- */
+
+  let allReportRows: Record<string, unknown>[] = [];
+  try {
+    const { data, error } = await supabase
+      .from("reports")
+      .select("id, core_vector, social_vector, normalized_confidence, confidence, raw_ai_response, created_at")
+      .eq("user_id", userId)
+      .eq("parse_status", "normalized");
+
+    if (error) {
+      console.warn(`[ProfileRebuild-Full] reports query failed: ${error.message}`);
+    } else {
+      allReportRows = (data ?? []) as Record<string, unknown>[];
+    }
+  } catch (err) {
+    console.warn("[ProfileRebuild-Full] reports query threw", err);
+  }
+
+  /* ---- 2. Read ALL quiz_attempts ---- */
+
+  let allAttemptRows: Record<string, unknown>[] = [];
+  try {
+    const { data, error } = await supabase
+      .from("quiz_attempts")
+      .select("id, quiz_id, user_vector, profile_weight, created_at")
+      .eq("user_id", userId)
+      .eq("included_in_profile", true)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.warn(`[ProfileRebuild-Full] quiz_attempts query failed: ${error.message}`);
+    } else {
+      allAttemptRows = (data ?? []) as Record<string, unknown>[];
+    }
+  } catch (err) {
+    console.warn("[ProfileRebuild-Full] quiz_attempts query threw", err);
+  }
+
+  // Deduplicate: latest per quiz_id
+  const seen = new Set<string>();
+  const allAttempts: Record<string, unknown>[] = [];
+  for (const r of allAttemptRows) {
+    const qid = r.quiz_id as string;
+    if (!qid || seen.has(qid)) continue;
+    seen.add(qid);
+    allAttempts.push(r);
+  }
+
+  console.log(`[ProfileRebuild-Full] reports: ${allReportRows.length}, quiz_attempts: ${allAttempts.length}`);
+
+  /* ---- 3. No sources → reset to empty/initial profile ---- */
+
+  if (allReportRows.length === 0 && allAttempts.length === 0) {
+    console.log("[ProfileRebuild-Full] no sources — resetting to empty profile");
+
+    const emptyCore: Record<string, DimOut> = {};
+    const emptySocial: Record<string, DimOut> = {};
+
+    const { error: upsertError } = await supabase.from("user_profile").upsert(
+      {
+        user_id: userId,
+        core_vector: emptyCore,
+        social_vector: emptySocial,
+        selfid_profile: "待完善的人格画像",
+        summary: "目前还没有足够的数据生成个人图谱。",
+        report_count: 0,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
+
+    if (upsertError) {
+      console.error(`[ProfileRebuild-Full] empty upsert failed: ${upsertError.message}`);
+      throw new Error(`用户档案重置失败：${upsertError.message}`);
+    }
+
+    // Reset all quiz_attempts fused flag so incremental rebuild can pick them up later
+    if (allAttemptRows.length > 0) {
+      const ids = allAttemptRows.map((r) => r.id).filter(Boolean) as string[];
+      if (ids.length > 0) {
+        await supabase
+          .from("quiz_attempts")
+          .update({ fused_into_profile: false })
+          .in("id", ids);
+      }
+    }
+
+    return { ok: true, report_count: 0 };
+  }
+
+  /* ---- 4. Start from empty dims ---- */
+
+  const core_vector: Record<string, DimOut> = {};
+  const social_vector: Record<string, DimOut> = {};
+
+  /* ---- 5. Fuse all reports ---- */
+
+  let reportsUsed = 0;
+
+  for (const r of allReportRows) {
+    const fallbackWeight = reportFallbackWeight(r);
+
+    const coreDims = extractReportDims(r.core_vector, CORE_KEYS, fallbackWeight);
+    const socialDims = extractReportDims(r.social_vector, SOCIAL_KEYS, fallbackWeight);
+
+    if (coreDims.size === 0 && socialDims.size === 0) {
+      console.warn(`[ProfileRebuild-Full] skipping report[${r.id}] — no valid Selfid keys`);
+      continue;
+    }
+
+    for (const [key, c] of coreDims) {
+      const old = core_vector[key] ?? { value: 0, count: 0, confidence: 0 };
+      core_vector[key] = fuseDim(old, c.value, c.weight);
+    }
+    for (const [key, c] of socialDims) {
+      const old = social_vector[key] ?? { value: 0, count: 0, confidence: 0 };
+      social_vector[key] = fuseDim(old, c.value, c.weight);
+    }
+    reportsUsed++;
+  }
+
+  /* ---- 6. Fuse all quiz_attempts ---- */
+
+  let attemptsUsed = 0;
+  const fusedAttemptIds: string[] = [];
+
+  for (const row of allAttempts) {
+    const uv = normalizeJsonb(row.user_vector);
+    if (!uv) {
+      console.warn(`[ProfileRebuild-Full] skipping quiz_attempt[${row.id}] — user_vector null`);
+      continue;
+    }
+
+    const weight = toNum(row.profile_weight) ?? 0.3;
+
+    const core = extractQuizDims(uv, CORE_KEYS, weight);
+    const social = extractQuizDims(uv, SOCIAL_KEYS, weight);
+
+    const allInvalid = [...core.invalidKeys, ...social.invalidKeys];
+    if (allInvalid.length > 0) {
+      console.warn(
+        `[ProfileRebuild-Full] quiz_attempt[${row.id}] invalid keys skipped: [${allInvalid.join(", ")}]`,
+      );
+    }
+
+    if (core.dims.size === 0 && social.dims.size === 0) {
+      console.warn(`[ProfileRebuild-Full] skipping quiz_attempt[${row.id}] — no valid Selfid keys`);
+      continue;
+    }
+
+    for (const [key, c] of core.dims) {
+      const old = core_vector[key] ?? { value: 0, count: 0, confidence: 0 };
+      core_vector[key] = fuseDim(old, c.value, c.weight);
+    }
+    for (const [key, c] of social.dims) {
+      const old = social_vector[key] ?? { value: 0, count: 0, confidence: 0 };
+      social_vector[key] = fuseDim(old, c.value, c.weight);
+    }
+    attemptsUsed++;
+    if (row.id) fusedAttemptIds.push(row.id as string);
+  }
+
+  const newReportCount = reportsUsed + attemptsUsed;
+  console.log(
+    `[ProfileRebuild-Full] fused ${reportsUsed} reports + ${attemptsUsed} quiz_attempts = ${newReportCount} total`,
+  );
+
+  /* ---- 7. Generate labels ---- */
+
+  const { selfid_profile, summary } = generateProfileLabel(core_vector, social_vector);
+
+  /* ---- 8. Upsert ---- */
+
+  const { error: upsertError } = await supabase.from("user_profile").upsert(
+    {
+      user_id: userId,
+      core_vector,
+      social_vector,
+      selfid_profile,
+      summary,
+      report_count: newReportCount,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+
+  if (upsertError) {
+    console.error(`[ProfileRebuild-Full] upsert failed: ${upsertError.message}`);
+    throw new Error(`用户档案更新失败：${upsertError.message}`);
+  }
+
+  console.log(`[ProfileRebuild-Full] upsert success — user_id=${userId} report_count=${newReportCount}`);
+
+  /* ---- 9. Mark quiz_attempts as fused ---- */
+
+  if (fusedAttemptIds.length > 0) {
+    const { error: fuseError } = await supabase
+      .from("quiz_attempts")
+      .update({ fused_into_profile: true })
+      .in("id", fusedAttemptIds);
+
+    if (fuseError) {
+      console.warn(`[ProfileRebuild-Full] mark fused failed (non-fatal): ${fuseError.message}`);
+    } else {
+      console.log(`[ProfileRebuild-Full] marked ${fusedAttemptIds.length} quiz_attempt(s) as fused`);
+    }
+  }
+
+  return { ok: true, report_count: newReportCount };
+}

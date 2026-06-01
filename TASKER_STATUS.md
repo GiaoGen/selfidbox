@@ -6,6 +6,22 @@ Last updated: 2026-06-01
 
 ## Recent — 2026-06-01
 
+### Quiz Result 分享卡片 & 保存图片
+
+- 安装 `html-to-image` 依赖（PNG 导出）
+- 新增 `components/share/QuizResultShareCard.tsx`：
+  - forwardRef 组件，供 html-to-image 捕获
+  - 固定 400px 宽，3:4 竖版比例，适合手机保存
+  - 信息层级：quizTitle → 图片/占位图 → traits → "你的结果" → resultName → description → subtitle → shareText → SelfIDBox
+  - 暖色纯色设计（#faf7f2 底色），圆角，字重大，简约高级
+  - 无图片时显示简洁几何占位图形
+- 更新 `components/quiz-runtime/QuizResult.tsx`：
+  - "分享结果"按钮接入 modal（framer-motion AnimatePresence）
+  - Modal 内展示 QuizResultShareCard，底部有"关闭"和"保存图片"按钮
+  - 保存图片：toPng 2x pixelRatio → download `selfidbox-quiz-result.png`
+  - 真实数据映射：quizTitle=quiz.title, resultName=top.result.name, traits=top.result.traits, shareText=top.result.share_text, 等
+- 未改动：答题流程、结果计算、QuizPlayer、Supabase schema、profile、OCR、Explore、Quiz Studio
+
 ### Test Site 详情页 UI 精简
 
 - 从 `TestSiteDetail.tsx` 删除了 4 个模块：
