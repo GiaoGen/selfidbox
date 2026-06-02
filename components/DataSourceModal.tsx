@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ScreenshotReportUploader } from "@/components/profile/ScreenshotReportUploader";
 import { SwipeToDeleteSourceRow } from "@/components/profile/SwipeToDeleteSourceRow";
+import { SourceDetailModal } from "@/components/profile/SourceDetailModal";
 import type { ProfileSourceEntry } from "@/lib/user-profile-db";
 
 export type { ProfileSourceEntry } from "@/lib/user-profile-db";
@@ -38,6 +39,9 @@ export function DataSourceModal({
     type: "success" | "error";
     message: string;
   } | null>(null);
+
+  /* ---- Source detail state ---- */
+  const [detailSource, setDetailSource] = useState<ProfileSourceEntry | null>(null);
 
   /* Auto-dismiss feedback after 3 seconds */
   useEffect(() => {
@@ -292,7 +296,10 @@ export function DataSourceModal({
                   disabled={deleting || deleteTarget !== null}
                   className=""
                 >
-                  <div>
+                  <div
+                    onClick={() => setDetailSource(src)}
+                    className="cursor-pointer"
+                  >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-medium text-[#0a0a0a]/45">
                         {formatDate(src.created_at)}
@@ -318,6 +325,16 @@ export function DataSourceModal({
           )}
         </div>
       </div>
+
+      {/* Source Detail Modal */}
+      {detailSource && (
+        <SourceDetailModal
+          open={detailSource !== null}
+          onClose={() => setDetailSource(null)}
+          sourceType={detailSource.source_type}
+          sourceId={detailSource.id}
+        />
+      )}
     </div>
   );
 }

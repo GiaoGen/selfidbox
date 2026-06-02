@@ -21,7 +21,7 @@ export async function GET() {
   /* ---- 2. Query creator's quizzes ---- */
   const { data, error } = await supabase
     .from("quizzes")
-    .select("id, slug, title, hook, status, created_at")
+    .select("id, slug, title, hook, status, attempt_count, created_at")
     .eq("creator_user_id", user.id)
     .order("created_at", { ascending: false });
 

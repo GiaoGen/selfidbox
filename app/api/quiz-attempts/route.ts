@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { rebuildUserProfile } from "@/lib/rebuild-user-profile";
+import { MAX_SANDBOX_ATTEMPTS } from "@/lib/quiz-runtime";
 import type {
   AnswerRecord,
   RankedRuntimeResult,
@@ -45,6 +46,20 @@ export async function POST(request: Request) {
   const top = ranking[0];
 
   console.log("[QuizAttempt] finalResult", top?.result.key ?? "(none)");
+
+  /* ---- 2.5 Sandbox limit check ---- */
+  const { data: quizRow } = await supabase
+    .from("quizzes")
+    .select("status, attempt_count")
+    .eq("id", quizId)
+    .single();
+
+  if (quizRow && quizRow.status === "sandbox" && (quizRow.attempt_count ?? 0) >= MAX_SANDBOX_ATTEMPTS) {
+    return NextResponse.json(
+      { ok: false, error: "SANDBOX_LIMIT_REACHED" },
+      { status: 403 },
+    );
+  }
 
   /* ---- 3. Insert quiz_attempts ---- */
   console.log("[QuizAttempt] inserting attempt");
@@ -98,7 +113,26 @@ export async function POST(request: Request) {
     console.log("[QuizAttempt] answers saved");
   }
 
-  /* ---- 5. Update user_profile ---- */
+  /* ---- 5. Increment quiz attempt_count ---- */
+  try {
+    const { data: quizRow } = await supabase
+      .from("quizzes")
+      .select("attempt_count")
+      .eq("id", quizId)
+      .single();
+
+    const newCount = (quizRow?.attempt_count ?? 0) + 1;
+    await supabase
+      .from("quizzes")
+      .update({ attempt_count: newCount })
+      .eq("id", quizId);
+
+    console.log("[QuizAttempt] attempt_count incremented to", newCount);
+  } catch (err) {
+    console.warn("[QuizAttempt] increment attempt_count failed", err);
+  }
+
+  /* ---- 6. Update user_profile ---- */
   console.log("[QuizAttempt] updating user_profile");
 
   try {
@@ -114,7 +148,7 @@ export async function POST(request: Request) {
     );
   }
 
-  /* ---- 6. Return ---- */
+  /* ---- 7. Return ---- */
   return NextResponse.json({
     ok: true,
     attemptId: attempt.id,

@@ -6,6 +6,182 @@ Last updated: 2026-06-02
 
 ## Recent — 2026-06-02
 
+### Profile — 数据来源详情页（Source Detail Modal）
+
+- **新建 `lib/source-detail-db.ts`** — `getSourceDetail(userId, sourceType, id)`
+  - `ReportDetailData`：report_type, main_result, created_at, input_type, image_url, normalized_summary, core_vector, social_vector
+  - `QuizDetailData`：quiz_title, quiz_slug, final_result_name/key, result_subtitle/description/image_url/traits, user_vector
+  - Quiz detail 自动 JOIN `quizzes` 和 `quiz_results` 获取标题、slug、结果详情
+
+- **新建 `app/api/profile/source-detail/route.ts`** — GET
+  - `?source_type=report|quiz&id=...`
+  - auth check → 401；数据不存在 → 404
+
+- **新建 `components/profile/SourceDetailModal.tsx`** — 全屏 Modal
+  - 顶部：返回箭头 + "数据来源详情" 标题
+  - 内容可滚动，最大宽度 640px 居中
+  - 风格与 DataSourceModal 一致（`bg-[#fffaf0]`）
+  - 根据 source_type 渲染 ReportDetail 或 QuizDetail
+
+- **新建 `components/profile/ReportDetail.tsx`**
+  - 测评类型 / 结果 / 时间 / 来源标签（截图导入）
+  - OCR 原图大图预览（有图）/ "未保存原始截图"（无图）
+  - OCR Summary（normalized_summary，无则"暂无摘要"）
+  - 核心人格维度：名称 + 进度条 + 数值，支持 `{value}` 和 `DimOut` 两种格式
+  - 社交人格维度：同上
+
+- **新建 `components/profile/QuizDetail.tsx`**
+  - Quiz 标题 / 结果名称 / 副标题 / 描述
+  - 结果图片（如有）
+  - Traits 标签列表
+  - "重新查看结果" 按钮 → `/quiz/[slug]`
+
+- **修改 `components/DataSourceModal.tsx`**
+  - 每条 source row 可点击 → 打开 SourceDetailModal
+  - 新增 `detailSource` 状态
+  - 点击内容区域（不触发 swipe），传递 source_type + id
+
+- **交互流程**：
+  ```
+  Profile → 数据来源弹窗 → 点击任意 row → Source Detail Modal（全屏）
+                                                      ├─ Report Detail
+                                                      └─ Quiz Detail
+  ```
+
+- **未修改**：OCR、Quiz Runtime、Quiz Studio、Auth、Explore、Supabase schema
+
+### Quiz Studio — 编辑功能（复用现有 Studio）
+
+- **新增 `lib/quizzes-db.ts` — `getQuizForEdit(quizId, userId)`**
+  - 读取 quizzes + quiz_results + quiz_factors + quiz_questions + quiz_options
+  - 返回 `SaveQuizInput` 格式，可直接 setState 到 Quiz Studio
+  - 内置 ownership 校验（`creator_user_id !== userId` → null）
+
+- **新增 `lib/quizzes-db.ts` — `updateQuizSchema(input, quizId)`**
+  - 更新 quizzes 行（title, hook, slug 等）
+  - 删除旧 sub-rows：quiz_options → quiz_questions → quiz_results → quiz_factors
+  - 重新插入当前 state 的所有 sub-rows
+  - slug 冲突 → 抛错
+
+- **新增 `app/api/quiz-studio/edit/route.ts`** — GET
+  - `?quiz_id=xxx`
+  - auth + ownership（`getQuizForEdit` 内置）→ 404 if not found/not owner
+
+- **修改 `app/api/quiz-studio/save/route.ts`**
+  - body 新增可选 `quizId` 字段
+  - `quizId` 存在 → `updateQuizSchema()`（编辑模式）
+  - `quizId` 不存在 → `saveQuizSchema()`（新建模式）
+
+- **修改 `app/create/page.tsx`**
+  - 从 `useSearchParams()` 读取 `quiz_id`
+  - `quiz_id` 存在 → `useEffect` 调用 `/api/quiz-studio/edit` 加载数据到 state
+  - Hero 区域显示 "✎ 编辑模式 — 正在编辑 Quiz"
+  - Save 区域新增 "← 返回创建模式" 按钮（`router.push("/create")` 清空参数）
+  - 包裹在 `<Suspense>` 中（Next.js 16 `useSearchParams` 要求）
+  - 传递 `editMode` + `editQuizId` 给 `SaveQuizButton`
+
+- **修改 `components/quiz-engine/SaveQuizButton.tsx`**
+  - 新增 props：`editMode`、`editQuizId`
+  - 编辑模式：按钮文字 "确认编辑" / "更新中..." / "编辑已保存" / "重试编辑"
+  - 编辑模式不显示 slug + "发布试玩版" 按钮（保存后仍可发布）
+  - body 中携带 `quizId` 触发服务端 update path
+
+- **修改 `components/quiz-runtime/MyQuizzesModal.tsx`**
+  - 滑动操作新增 "编辑" 按钮（violet `Pencil`，最左侧第一个）
+  - 适用于 draft / sandbox / submitted
+  - 点击 → `router.push(/create?quiz_id=xxx)` → 关闭弹窗
+
+- **编辑流程**：
+  ```
+  MyQuizzesModal → 左滑 → 编辑 → /create?quiz_id=xxx
+  → 加载数据到 state → 编辑 → 确认编辑 → POST /api/quiz-studio/save { quizId, ... }
+  → updateQuizSchema → 删除旧数据 + 重新插入
+  ```
+
+- **未修改**：Quiz Runtime、OCR、Profile、Explore、Auth、AI Generation、Studio 结构
+
+### Quiz Studio — 滑动操作 + submitted 状态 + 删除
+
+- **新建 `supabase/migrations/add_submitted_status.sql`**
+  - 更新 `quizzes.status` CHECK constraint 加入 `submitted`：`draft | sandbox | submitted | published | archived`
+
+- **新建 `components/quiz-runtime/QuizSwipeActionRow.tsx`**
+  - 通用 swipe-to-reveal 组件，参考 Profile 的 `SwipeToDeleteSourceRow` 交互
+  - `overflow-hidden` 容器 + 多个 action button 藏在右后方
+  - framer-motion `drag="x"` + spring 动画
+  - 按钮从右向左排列，支持 `hidden`/`disabled` 控制
+  - 父组件通过 `isOpen`/`onOpenChange` 管理单行展开
+
+- **新建 `app/api/my-quizzes/status/route.ts`**：POST
+  - auth + ownership 校验
+  - 状态转换规则：`draft → sandbox`，`sandbox → draft | submitted`，`submitted` 不可回退
+  - 非法转换 → 400
+
+- **新建 `app/api/my-quizzes/delete/route.ts`**：POST
+  - auth + ownership 校验
+  - 逐级删除：`quiz_attempt_answers → quiz_attempts → quiz_options → quiz_questions → quiz_results → quiz_factors → quizzes`
+
+- **重写 `components/quiz-runtime/MyQuizzesModal.tsx`**
+  - 每条 Quiz 用 `QuizSwipeActionRow` 包裹
+  - 按状态动态生成操作按钮：
+    - `draft`：试玩（蓝 `Play`）+ 删除（红 `Trash2`）
+    - `sandbox`：隐藏（灰 `EyeOff`）+ 提交审核（橙 `Send`）+ 删除
+    - `submitted`：仅删除
+    - `published`/`archived`：无操作按钮
+  - 状态切换即时更新本地列表
+  - 删除即时移除行
+  - 操作反馈区（红色错误提示）
+
+- **状态流转图**：
+  ```
+  draft ⇄ sandbox → submitted → (管理员) → published
+                    ↘ archived
+  ```
+
+- **未修改**：Quiz Runtime、OCR、Profile、Auth、AI Generation、Explore
+
+### Quiz 发布系统 — sandbox 状态 + 试玩次数限制
+
+- **新建 `supabase/migrations/add_sandbox_status.sql`**
+  - 更新 `quizzes.status` CHECK constraint：`draft | sandbox | published | archived`
+  - 新增 `quizzes.attempt_count integer DEFAULT 0` 列
+
+- **修改 `lib/quiz-runtime.ts`**
+  - `QuizRuntimeData` 新增 `status: string`、`attempt_count: number`
+  - 新增常量 `MAX_SANDBOX_ATTEMPTS = 20`
+
+- **修改 `lib/quizzes-db.ts`**
+  - `getQuizBySlug`：select 增加 `status` + `attempt_count`；`draft`/`archived` → 返回 `null`（`notFound()`）
+  - `CreatorQuizRow`：新增 `attempt_count`
+  - `getQuizzesByCreator`：select 增加 `attempt_count`
+
+- **修改 `app/api/quiz-attempts/route.ts`**
+  - 保存 attempt 前检查 sandbox 限制：`attempt_count >= 20` → 403 `SANDBOX_LIMIT_REACHED`
+  - 保存 attempt 后递增 `quizzes.attempt_count`
+
+- **修改 `components/quiz-runtime/QuizPlayer.tsx`**
+  - `sandbox` + `attempt_count >= 20` → 显示"试玩次数已满，等待作者提交审核"，不展示题目
+
+- **新建 `app/api/quiz-studio/sandbox/route.ts`**
+  - POST：验证 auth + 所有权 → `draft → sandbox`
+  - 非 draft 状态 → 400，非 owner → 403
+
+- **修改 `components/quiz-engine/SaveQuizButton.tsx`**
+  - 保存后显示"发布试玩版"按钮（gradient 样式）
+  - 新增 `publishing` / `published` 状态，发布后显示分享链接 `/quiz/{slug}`
+
+- **修改 `components/quiz-runtime/MyQuizzesModal.tsx`**
+  - status 徽章：Draft（灰）/ Sandbox（蓝）/ Published（绿）
+  - sandbox quiz 显示 `试玩 N / 20`
+
+- **访问控制汇总**：
+  - `sandbox` / `published` → 可访问、答题、保存 attempt、进入 profile、分享
+  - `draft` / `archived` → `notFound()`
+  - `sandbox` 达 20 次 → 客户端拦截 + 服务端 403
+  - Explore / 搜索 → 仅 `published`（quizzes 暂未接入这些页面）
+
+- **未修改**：Quiz Runtime 结果逻辑、OCR、Profile、Explore UI、Auth、AI 生成逻辑
+
 ### Quiz Studio 接入 Supabase Auth — creator_user_id
 
 - **修改 `lib/quizzes-db.ts` — `saveQuizSchema`**

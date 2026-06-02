@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { QuizRuntimeData, AnswerRecord, RankedRuntimeResult } from "@/lib/quiz-runtime";
-import { calculateUserVector, rankRuntimeResults } from "@/lib/quiz-runtime";
+import { calculateUserVector, rankRuntimeResults, MAX_SANDBOX_ATTEMPTS } from "@/lib/quiz-runtime";
 import { createClient } from "@/lib/supabase/client";
 import { QuizProgress } from "./QuizProgress";
 import { QuestionCard } from "./QuestionCard";
@@ -107,6 +107,39 @@ export function QuizPlayer({ quiz }: Props) {
     setCurrentIndex((i) => i - 1);
     setSelectedOptionId(null);
   }, [currentIndex]);
+
+  // Sandbox limit check
+  const sandboxReached =
+    quiz.status === "sandbox" && quiz.attempt_count >= MAX_SANDBOX_ATTEMPTS;
+
+  if (sandboxReached) {
+    return (
+      <div className="mx-auto w-full max-w-[560px] py-20 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--ink)]/8">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-[var(--muted)]"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8v4M12 16h.01" />
+          </svg>
+        </div>
+        <h2 className="mt-6 text-xl font-semibold tracking-[-0.02em] text-[var(--ink)]">
+          试玩次数已满
+        </h2>
+        <p className="mt-3 text-[15px] leading-relaxed text-[var(--muted)]">
+          该 Quiz 已达到试玩次数上限（{MAX_SANDBOX_ATTEMPTS} 次），等待作者提交审核。
+        </p>
+      </div>
+    );
+  }
 
   if (phase === "result" && ranking && userVector) {
     return (

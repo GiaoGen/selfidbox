@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Library, Sparkles, Wand, Settings } from "lucide-react";
 import { TopNavbar } from "@/components/layout/TopNavbar";
 import { QuizMetaCard } from "@/components/quiz-engine/QuizMetaCard";
@@ -99,7 +100,11 @@ function CountSelector({
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */
 
-export default function CreatePage() {
+function CreatePageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const editQuizId = searchParams.get("quiz_id");
+
   const [quiz, setQuiz] = useState<QuizState>({
     meta: emptyMeta,
     results: [],
@@ -107,6 +112,30 @@ export default function CreatePage() {
     resultVectors: [],
     questions: [],
   });
+
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState("");
+  const isEditMode = editQuizId !== null;
+
+  // Load quiz data for editing
+  useEffect(() => {
+    if (!editQuizId) return;
+
+    setEditLoading(true);
+    setEditError("");
+
+    fetch(`/api/quiz-studio/edit?quiz_id=${editQuizId}`)
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          setEditError(data.error ?? "加载失败");
+          return;
+        }
+        setQuiz(data.quiz);
+      })
+      .catch(() => setEditError("网络错误"))
+      .finally(() => setEditLoading(false));
+  }, [editQuizId]);
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
@@ -630,6 +659,17 @@ export default function CreatePage() {
           <h1 className="mt-2 text-4xl font-semibold leading-none tracking-[-0.04em] text-[var(--ink)] sm:text-5xl">
             AI Quiz Studio
           </h1>
+          {isEditMode && (
+            <p className="mt-2 text-sm font-medium text-[var(--muted)]">
+              ✎ 编辑模式 — 正在编辑 Quiz
+            </p>
+          )}
+          {editLoading && (
+            <p className="mt-2 text-sm text-[var(--muted)]">加载编辑数据...</p>
+          )}
+          {editError && (
+            <p className="mt-2 text-sm text-red-500">{editError}</p>
+          )}
           <p className="mt-3 max-w-2xl text-base leading-7 text-[var(--body)] sm:text-lg">
             用向量空间创建一个更稳定、更有解释力的人格测试。
           </p>
@@ -1074,7 +1114,16 @@ export default function CreatePage() {
         <CoverageValidator questions={questions} factors={factors} />
 
         {/* Save */}
-        <section className="flex justify-center pb-16 pt-8">
+        <section className="flex flex-col items-center gap-4 pb-16 pt-8">
+          {isEditMode && (
+            <button
+              type="button"
+              onClick={() => router.push("/create")}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ink)]/12 bg-white px-5 py-2.5 text-sm font-semibold text-[var(--muted)] transition-all hover:text-[var(--ink)] hover:border-[var(--ink)]/25"
+            >
+              ← 返回创建模式
+            </button>
+          )}
           <SaveQuizButton
             quiz={{
               meta,
@@ -1083,9 +1132,25 @@ export default function CreatePage() {
               resultVectors,
               questions,
             }}
+            editMode={isEditMode}
+            editQuizId={editQuizId}
           />
         </section>
       </div>
     </main>
+  );
+}
+
+export default function CreatePage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
+        <div className="flex items-center justify-center py-20">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--ink)]/15 border-t-[var(--ink)]/50" />
+        </div>
+      </main>
+    }>
+      <CreatePageContent />
+    </Suspense>
   );
 }

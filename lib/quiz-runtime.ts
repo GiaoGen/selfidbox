@@ -1,6 +1,12 @@
 import { calculateDistance } from "./quiz-vector";
 
 /* ------------------------------------------------------------------ */
+/*  Constants                                                           */
+/* ------------------------------------------------------------------ */
+
+export const MAX_SANDBOX_ATTEMPTS = 20;
+
+/* ------------------------------------------------------------------ */
 /*  Runtime types (Supabase data shapes)                               */
 /* ------------------------------------------------------------------ */
 
@@ -41,6 +47,8 @@ export interface QuizRuntimeData {
   title: string;
   hook: string;
   quiz_type: string;
+  status: string;
+  attempt_count: number;
   factors: QuizFactorData[];
   results: QuizResultData[];
   questions: QuizQuestionData[];

@@ -1,47 +1,190 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Library } from "lucide-react";
+import { X, Library, EyeOff, Play, Send, Trash2, Pencil } from "lucide-react";
 import type { CreatorQuizRow } from "@/lib/quizzes-db";
+import { MAX_SANDBOX_ATTEMPTS } from "@/lib/quiz-runtime";
+import { QuizSwipeActionRow, type ActionButton } from "./QuizSwipeActionRow";
 
 interface Props {
   open: boolean;
   onClose: () => void;
 }
 
+function statusLabel(s: string): string {
+  if (s === "published") return "Published";
+  if (s === "sandbox") return "Sandbox";
+  if (s === "submitted") return "已提交";
+  return "Draft";
+}
+
+function statusBadgeClass(s: string): string {
+  if (s === "published") return "bg-green-100 text-green-700";
+  if (s === "sandbox") return "bg-blue-100 text-blue-700";
+  if (s === "submitted") return "bg-orange-100 text-orange-700";
+  return "bg-[var(--ink)]/6 text-[var(--muted)]";
+}
+
+const BTN_ICON_SIZE = 14;
+
 export function MyQuizzesModal({ open, onClose }: Props) {
   const router = useRouter();
   const [quizzes, setQuizzes] = useState<CreatorQuizRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [openSwipeId, setOpenSwipeId] = useState<string | null>(null);
+  const [actionMsg, setActionMsg] = useState("");
+
+  /* ---- Fetch ---- */
+  const fetchQuizzes = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/my-quizzes");
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 401) {
+          setError("请先登录后查看你创建的 Quiz。");
+        } else {
+          setError(data.error ?? "加载失败，请重试");
+        }
+        setQuizzes([]);
+        return;
+      }
+      setQuizzes(data.quizzes ?? []);
+    } catch {
+      setError("加载失败，请重试");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
-    setError("");
-    fetch("/api/my-quizzes")
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          if (res.status === 401) {
-            setError("请先登录后查看你创建的 Quiz。");
-          } else {
-            setError(data.error ?? "加载失败，请重试");
-          }
-          setQuizzes([]);
-          return;
-        }
-        setQuizzes(data.quizzes ?? []);
-      })
-      .catch(() => setError("加载失败，请重试"))
-      .finally(() => setLoading(false));
-  }, [open]);
+    fetchQuizzes();
+  }, [open, fetchQuizzes]);
 
-  function handleClick(quiz: CreatorQuizRow) {
+  /* ---- Status change ---- */
+  async function handleStatusChange(quizId: string, newStatus: string) {
+    setActionMsg("");
+    try {
+      const res = await fetch("/api/my-quizzes/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quizId, status: newStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setActionMsg(data.error ?? "操作失败");
+        return;
+      }
+      // Optimistic-ish: update local state
+      setQuizzes((prev) =>
+        prev.map((q) => (q.id === quizId ? { ...q, status: newStatus } : q)),
+      );
+    } catch {
+      setActionMsg("网络错误，请重试");
+    }
+  }
+
+  /* ---- Delete ---- */
+  async function handleDelete(quizId: string) {
+    setActionMsg("");
+    try {
+      const res = await fetch("/api/my-quizzes/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quizId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setActionMsg(data.error ?? "删除失败");
+        return;
+      }
+      setQuizzes((prev) => prev.filter((q) => q.id !== quizId));
+    } catch {
+      setActionMsg("网络错误，请重试");
+    }
+  }
+
+  /* ---- Build action buttons per quiz status ---- */
+  function buildButtons(quiz: CreatorQuizRow): ActionButton[] {
+    // published / archived not in scope — no swipe actions
+    if (quiz.status === "published" || quiz.status === "archived") {
+      return [];
+    }
+
+    const all: ActionButton[] = [];
+
+    // 编辑 (draft / sandbox / submitted)
+    all.push({
+      key: "edit",
+      label: "编辑",
+      icon: <Pencil size={BTN_ICON_SIZE} />,
+      bgClass: "bg-violet-100 text-violet-600",
+      hoverClass: "hover:bg-violet-200",
+      onClick: () => {
+        if (quiz.slug || quiz.id) {
+          router.push(`/create?quiz_id=${quiz.id}`);
+          onClose();
+        }
+      },
+    });
+
+    // 隐藏 → draft (only from sandbox)
+    if (quiz.status === "sandbox") {
+      all.push({
+        key: "draft",
+        label: "隐藏",
+        icon: <EyeOff size={BTN_ICON_SIZE} />,
+        bgClass: "bg-gray-100 text-gray-600",
+        hoverClass: "hover:bg-gray-200",
+        onClick: () => handleStatusChange(quiz.id, "draft"),
+      });
+    }
+
+    // 试玩 → sandbox (only from draft)
+    if (quiz.status === "draft") {
+      all.push({
+        key: "sandbox",
+        label: "试玩",
+        icon: <Play size={BTN_ICON_SIZE} />,
+        bgClass: "bg-blue-100 text-blue-600",
+        hoverClass: "hover:bg-blue-200",
+        onClick: () => handleStatusChange(quiz.id, "sandbox"),
+      });
+    }
+
+    // 提交审核 → submitted (only from sandbox)
+    if (quiz.status === "sandbox") {
+      all.push({
+        key: "submitted",
+        label: "提交审核",
+        icon: <Send size={BTN_ICON_SIZE} />,
+        bgClass: "bg-orange-100 text-orange-600",
+        hoverClass: "hover:bg-orange-200",
+        onClick: () => handleStatusChange(quiz.id, "submitted"),
+      });
+    }
+
+    // 删除 (draft / sandbox / submitted)
+    all.push({
+      key: "delete",
+      label: "删除",
+      icon: <Trash2 size={BTN_ICON_SIZE} />,
+      bgClass: "bg-red-100 text-red-600",
+      hoverClass: "hover:bg-red-200",
+      onClick: () => handleDelete(quiz.id),
+    });
+
+    return all;
+  }
+
+  function handleNavigate(quiz: CreatorQuizRow) {
     if (!quiz.slug) {
-      setError("该测试缺少 slug，无法跳转");
+      setActionMsg("该测试缺少 slug，无法跳转");
       return;
     }
     router.push(`/quiz/${quiz.slug}`);
@@ -88,6 +231,15 @@ export function MyQuizzesModal({ open, onClose }: Props) {
             {/* divider */}
             <div className="mx-6 border-t border-[var(--ink)]/6 sm:mx-8" />
 
+            {/* action feedback */}
+            {actionMsg && (
+              <div className="mx-6 mt-3 sm:mx-8">
+                <p className="rounded-xl bg-[#fef2f2] px-4 py-2 text-[13px] font-medium text-[#dc2626]">
+                  {actionMsg}
+                </p>
+              </div>
+            )}
+
             {/* content */}
             <div className="flex-1 overflow-y-auto px-6 py-4 sm:px-8">
               {loading && (
@@ -114,41 +266,53 @@ export function MyQuizzesModal({ open, onClose }: Props) {
 
               {!loading &&
                 quizzes.map((quiz) => (
-                  <button
+                  <QuizSwipeActionRow
                     key={quiz.id}
-                    type="button"
-                    onClick={() => handleClick(quiz)}
-                    className="mb-2 w-full rounded-2xl border border-[var(--ink)]/8 bg-white px-5 py-4 text-left transition-all hover:border-[var(--ink)]/20 hover:shadow-[0_4px_16px_rgba(10,10,10,0.04)] active:scale-[0.99]"
+                    buttons={buildButtons(quiz)}
+                    isOpen={openSwipeId === quiz.id}
+                    onOpenChange={(open) =>
+                      setOpenSwipeId(open ? quiz.id : null)
+                    }
+                    className="mb-2"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="truncate text-[15px] font-semibold text-[var(--ink)]">
-                          {quiz.title}
-                        </h3>
-                        {quiz.hook && (
-                          <p className="mt-0.5 truncate text-sm text-[var(--muted)]">
-                            {quiz.hook}
-                          </p>
+                    <button
+                      type="button"
+                      onClick={() => handleNavigate(quiz)}
+                      className="w-full rounded-2xl border border-[var(--ink)]/8 bg-white px-5 py-4 text-left transition-all hover:border-[var(--ink)]/20 hover:shadow-[0_4px_16px_rgba(10,10,10,0.04)] active:scale-[0.99]"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate text-[15px] font-semibold text-[var(--ink)]">
+                            {quiz.title}
+                          </h3>
+                          {quiz.hook && (
+                            <p className="mt-0.5 truncate text-sm text-[var(--muted)]">
+                              {quiz.hook}
+                            </p>
+                          )}
+                        </div>
+                        <span
+                          className={`mt-0.5 shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide ${statusBadgeClass(quiz.status)}`}
+                        >
+                          {statusLabel(quiz.status)}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex items-center gap-3 text-[11px] text-[var(--muted)]">
+                        <span>
+                          {new Date(quiz.created_at).toLocaleDateString("zh-CN", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </span>
+                        {quiz.status === "sandbox" && (
+                          <span className="font-medium">
+                            试玩 {quiz.attempt_count ?? 0} / {MAX_SANDBOX_ATTEMPTS}
+                          </span>
                         )}
                       </div>
-                      <span
-                        className={`mt-0.5 shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                          quiz.status === "published"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-[var(--ink)]/6 text-[var(--muted)]"
-                        }`}
-                      >
-                        {quiz.status === "published" ? "已发布" : quiz.status}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-[11px] text-[var(--muted)]">
-                      {new Date(quiz.created_at).toLocaleDateString("zh-CN", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </p>
-                  </button>
+                    </button>
+                  </QuizSwipeActionRow>
                 ))}
             </div>
           </motion.div>
