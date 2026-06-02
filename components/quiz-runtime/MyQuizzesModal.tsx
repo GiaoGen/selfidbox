@@ -22,8 +22,19 @@ export function MyQuizzesModal({ open, onClose }: Props) {
     setLoading(true);
     setError("");
     fetch("/api/my-quizzes")
-      .then((res) => res.json())
-      .then((data) => setQuizzes(data))
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          if (res.status === 401) {
+            setError("请先登录后查看你创建的 Quiz。");
+          } else {
+            setError(data.error ?? "加载失败，请重试");
+          }
+          setQuizzes([]);
+          return;
+        }
+        setQuizzes(data.quizzes ?? []);
+      })
       .catch(() => setError("加载失败，请重试"))
       .finally(() => setLoading(false));
   }, [open]);

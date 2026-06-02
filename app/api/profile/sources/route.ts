@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
 import { getProfileSources } from "@/lib/user-profile-db";
-
-const DEV_USER_ID = "b64cd3ef-2982-429e-b546-585d156774b6";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
   try {
-    const sources = await getProfileSources(DEV_USER_ID);
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { ok: false, error: "未登录", sources: [] },
+        { status: 401 },
+      );
+    }
+
+    const sources = await getProfileSources(user.id);
     return NextResponse.json({ ok: true, sources });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

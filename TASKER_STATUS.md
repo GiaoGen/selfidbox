@@ -1,10 +1,120 @@
 # TASKER STATUS
 
-Last updated: 2026-06-01
+Last updated: 2026-06-02
 
 ---
 
+## Recent — 2026-06-02
+
+### Quiz Studio 接入 Supabase Auth — creator_user_id
+
+- **修改 `lib/quizzes-db.ts` — `saveQuizSchema`**
+  - 新增 `creatorUserId: string` 参数，替换硬编码的 `DEV_USER_ID`
+  - `saveQuizAttempt` 未修改（Quiz Runtime 已在上一轮迁移到 API route）
+
+- **新建 `app/api/quiz-studio/save/route.ts`**：POST handler
+  - 使用 `lib/supabase/server` 的 `createClient()` 获取 `supabase.auth.getUser()`
+  - 未登录 → 401 `{ ok: false, error: "NOT_AUTHENTICATED" }`
+  - 调用 `saveQuizSchema(body, user.id)` — `creator_user_id = user.id`
+  - 日志：`[QuizStudio] saving quiz for user`、`[QuizStudio] creator_user_id`
+
+- **修改 `components/quiz-engine/SaveQuizButton.tsx`**
+  - 移除 `saveQuizSchema` 直接导入
+  - 改为 `fetch("/api/quiz-studio/save", ...)` POST
+  - 401 → "请先登录后再保存 Quiz。"
+
+- **修改 `app/api/my-quizzes/route.ts`**
+  - 移除 `DEV_USER_ID` 导入
+  - 使用 server supabase client 获取 `user.id`
+  - 未登录 → 401 `{ ok: false, error: "NOT_AUTHENTICATED", quizzes: [] }`
+  - 查询 `.eq("creator_user_id", user.id)` 不再用 `DEV_USER_ID`
+  - 返回格式改为 `{ ok, quizzes }`（之前是裸数组）
+  - 日志：`[MyQuizzes] userId`、`[MyQuizzes] count`
+
+- **修改 `components/quiz-runtime/MyQuizzesModal.tsx`**
+  - 适配新响应格式 `data.quizzes`
+  - 401 → "请先登录后查看你创建的 Quiz。"
+  - 空数组 → "还没有创建过 Quiz。"（保持不变）
+
+- **未修改**：Profile、OCR、Quiz Runtime attempt 保存、Explore/Admin、Supabase schema、AI generate APIs、Quiz Studio UI 大结构
+
+### Quiz Runtime 接入 Supabase Auth — attempt 保存
+
+- **新建 `app/api/quiz-attempts/route.ts`**：POST handler
+  - 使用 `lib/supabase/server` 的 `createClient()` 获取 `supabase.auth.getUser()`
+  - 未登录 → 401 `{ ok: false, error: "NOT_AUTHENTICATED" }`
+  - 写入 `quiz_attempts`（`user_id = user.id`，不再使用 `DEV_USER_ID`）
+  - 写入 `quiz_attempt_answers`（每个回答一行）
+  - 保存成功后调用 `rebuildUserProfile(user.id)` 增量更新个人图谱
+  - 关键日志：`[QuizAttempt] userId/quizId/finalResult/inserting attempt/attempt saved/answers saved/updating user_profile`
+
+- **修改 `components/quiz-runtime/QuizPlayer.tsx`**
+  - 移除 `saveQuizAttempt`、`DEV_USER_ID`、`rebuildUserProfile` 直接导入
+  - 改用浏览器 `createClient()` 检查 `supabase.auth.getUser()`
+  - 已登录 → `fetch("/api/quiz-attempts", ...)` 走服务端 API
+  - 未登录 → 仅展示结果，不尝试写数据库
+  - 新增 `syncStatus` / `syncError` 状态传递给 `QuizResult`
+
+- **修改 `components/quiz-runtime/QuizResult.tsx`**
+  - 新增可选 props：`syncStatus`、`syncError`
+  - 新增 `SyncBanner` 组件，四种状态：
+    - `syncing` — 旋转动画 "正在同步到个人图谱..."
+    - `synced` — 绿色对号 "已同步到个人图谱"
+    - `not-authenticated` — "登录后保存结果到个人图谱" + 登录按钮（/login）
+    - `error` — 红色错误提示
+
+- **未修改**：Quiz Studio、AI APIs、OCR、Explore/Profile/Admin、Supabase schema、UI 大结构
+
+### auth.users → public.users 同步迁移
+
+- 新增 `supabase/migrations/sync_auth_users_to_public.sql`：
+  1. `CREATE TABLE IF NOT EXISTS public.users (id uuid PK, email text, created_at timestamptz)` — 确保表存在
+  2. `handle_new_auth_user()` 函数 — auth.users insert 后自动同步到 public.users，`ON CONFLICT DO NOTHING`
+  3. `on_auth_user_created` trigger — `AFTER INSERT ON auth.users`
+  4. Backfill — 将已存在于 auth.users 但不在 public.users 的用户补入
+- 无 UI / 业务逻辑改动
+
+### 邮箱验证 rate limit 提醒
+
+开发阶段注册报 `email rate limit exceeded` 的两种解法：
+1. Supabase Dashboard → Authentication → Settings → **关闭 "Confirm email"**（临时）
+2. 换一个邮箱地址，或等待限流窗口过期
+
 ## Recent — 2026-06-01
+
+### Profile 接入 Supabase Auth（替换 DEV_USER_ID）
+
+- **`app/profile/page.tsx`**：server component 中通过 `createClient().auth.getUser()` 获取真实用户，未登录 → `redirect("/login")`，`getUserProfile(user.id)`
+- **`app/api/profile/sources/route.ts`**：GET 从 auth 获取 user，`getProfileSources(user.id)`，未登录返回 401
+- **`app/api/profile/sources/delete/route.ts`**：POST 从 auth 获取 user，`user.id` 作为 delete 条件（`.eq("user_id", userId)`），未登录返回 401
+- **`app/api/screenshot-report/route.ts`**：server 从 auth 获取 user.id 代替 client 传入的 `user_id`（安全：客户端无法伪造），未登录返回 401
+- **`components/profile/ScreenshotReportUploader.tsx`**：移除 `DEV_USER_ID`，不再在 FormData 中发送 `user_id`（server 自行从 auth 获取）
+- 保留 `lib/dev-user.ts` 不动（Quiz Runtime / Quiz Studio / explore 仍使用 DEV_USER_ID）
+
+### Supabase Auth 登录页面
+
+- 新增 `app/login/page.tsx` — client component 登录/注册页面
+  - 登录：`signInWithPassword` → 成功跳转 `/profile` + `router.refresh()`
+  - 注册：`signUp` → 自动确认则直接跳转，否则显示"请检查邮箱验证后登录"
+  - 已登录状态：显示当前邮箱 + "进入个人图谱"按钮 + "退出登录"
+  - 退出：`signOut` → 清空本地状态 + `router.refresh()`
+- UI 风格与现有 SelfIDBox 一致：
+  - canvas 底色（#fffaf0），surface-card 卡片容器（#f5f0e0）
+  - 大圆角（32px 卡片、14px 输入框、pill 按钮）
+  - 细边框输入框（hairline #e5e5e5），min-height 48px
+  - 主按钮 bg-[var(--ink)] + 白色文字，次按钮白色底 + 细边框
+  - 错误/成功消息页面内显示（红色/绿色 pill），无 alert
+  - 底部小字"你的数据只用于生成个人图谱。"
+- 未改动：profile / OCR / quiz / explore / DEV_USER_ID / RLS / middleware
+
+### Supabase Auth 基础设施
+
+- 新增 `lib/supabase/client.ts` — browser client（`createBrowserClient`），供 client component 使用
+- 新增 `lib/supabase/server.ts` — server client（`createServerClient` + `next/headers` cookies），供 server component / route handler 使用
+- 新增 `middleware.ts` — 仅刷新 auth session（`supabase.auth.getUser()`），不保护路由，不 redirect
+  - matcher 排除 `_next/static`、`_next/image`、`favicon.ico`、静态资源
+- 新增 `app/auth-debug/page.tsx` — server component，调用 `getUser()` 显示 user.id / user.email 或 "Not logged in"
+- 保留旧 `lib/supabase.ts` 不动，业务逻辑（profile / OCR / quiz / explore / DEV_USER_ID）全部不受影响
 
 ### Quiz Result 分享卡片 & 保存图片
 

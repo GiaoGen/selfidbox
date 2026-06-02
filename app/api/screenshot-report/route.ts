@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { rebuildUserProfile } from "@/lib/rebuild-user-profile";
+import { createClient } from "@/lib/supabase/server";
 
 const OCR_API_BASE_URL = process.env.OCR_API_BASE_URL;
 const OCR_API_KEY = process.env.OCR_API_KEY;
@@ -13,18 +14,29 @@ export async function POST(request: Request) {
   }
 
   try {
-    const formData = await request.formData();
-    const rawUserId = formData.get("user_id");
-    const file = formData.get("file");
+    /* ---- auth ---- */
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!rawUserId || !file) {
+    if (!user) {
       return NextResponse.json(
-        { ok: false, error: "缺少 user_id 或 file" },
-        { status: 400 },
+        { ok: false, error: "未登录" },
+        { status: 401 },
       );
     }
 
-    const userId = String(rawUserId);
+    const userId = user.id;
+
+    /* ---- parse form ---- */
+    const formData = await request.formData();
+    const file = formData.get("file");
+
+    if (!file) {
+      return NextResponse.json(
+        { ok: false, error: "缺少 file" },
+        { status: 400 },
+      );
+    }
 
     console.log("[OCR Proxy] received upload");
     console.log(`[OCR Proxy] userId: ${userId}`);

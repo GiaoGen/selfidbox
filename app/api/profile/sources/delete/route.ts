@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { DEV_USER_ID } from "@/lib/dev-user";
+import { createClient } from "@/lib/supabase/server";
 import { rebuildUserProfileFromAllSources } from "@/lib/rebuild-user-profile";
 
 /* ================================================================== */
@@ -8,7 +8,7 @@ import { rebuildUserProfileFromAllSources } from "@/lib/rebuild-user-profile";
 /*                                                                      */
 /*  Body: { source_type: "report" | "quiz", id: string }                */
 /*                                                                      */
-/*  Deletes the record from the matching table (scoped to DEV_USER_ID)  */
+/*  Deletes the record from the matching table (scoped to auth user)      */
 /*  then does a FULL rebuild of user_profile from all remaining data.   */
 /* ================================================================== */
 
@@ -48,7 +48,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userId = DEV_USER_ID; // TODO: replace with Supabase Auth user id
+    const authSupabase = await createClient();
+    const { data: { user } } = await authSupabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { ok: false, error: "未登录" },
+        { status: 401 },
+      );
+    }
+
+    const userId = user.id;
 
     /* ---- 2. Delete from the correct table ---- */
 

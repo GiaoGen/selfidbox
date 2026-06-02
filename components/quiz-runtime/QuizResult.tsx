@@ -1,17 +1,22 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toPng } from "html-to-image";
 import { X } from "lucide-react";
 import type { RankedRuntimeResult } from "@/lib/quiz-runtime";
 import { QuizResultShareCard } from "@/components/share/QuizResultShareCard";
 
+type SyncStatus = "idle" | "syncing" | "synced" | "not-authenticated" | "error";
+
 interface Props {
   ranking: RankedRuntimeResult[];
   quizTitle: string;
   quizSlug: string;
   userVector: Record<string, number>;
+  syncStatus?: SyncStatus;
+  syncError?: string;
 }
 
 const container = {
@@ -26,7 +31,7 @@ const child = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0, 0, 0.2, 1] as const } },
 };
 
-export function QuizResult({ ranking, quizTitle, quizSlug, userVector }: Props) {
+export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatus, syncError }: Props) {
   const top = ranking[0];
   const secondary = ranking.slice(1, 3).filter((r) => r.similarity > 0);
 
@@ -211,6 +216,13 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector }: Props) 
             分享结果
           </button>
         </motion.div>
+
+        {/* Sync status */}
+        {syncStatus && syncStatus !== "idle" && (
+          <motion.div variants={child} className="mt-6">
+            <SyncBanner status={syncStatus} error={syncError} />
+          </motion.div>
+        )}
       </motion.div>
 
       {/* ---- share modal ---- */}
@@ -288,4 +300,85 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector }: Props) 
       </AnimatePresence>
     </>
   );
+}
+
+/* ------------------------------------------------------------------ */
+/*  SyncBanner                                                         */
+/* ------------------------------------------------------------------ */
+
+function SyncBanner({ status, error }: { status: SyncStatus; error?: string }) {
+  switch (status) {
+    case "syncing":
+      return (
+        <div className="flex items-center gap-2 rounded-2xl bg-[var(--ink)]/4 px-4 py-3">
+          <svg
+            className="animate-spin"
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+          >
+            <circle
+              cx="8"
+              cy="8"
+              r="6"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeDasharray="28"
+              strokeDashoffset="8"
+            />
+          </svg>
+          <span className="text-sm font-medium text-[var(--ink)]">
+            正在同步到个人图谱...
+          </span>
+        </div>
+      );
+    case "synced":
+      return (
+        <div className="flex items-center gap-2 rounded-2xl bg-[#f0fdf4] px-4 py-3">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+          >
+            <circle cx="8" cy="8" r="6" stroke="#16a34a" strokeWidth="1.2" />
+            <path
+              d="M5 8l2 2 4-4"
+              stroke="#16a34a"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="text-sm font-medium text-[#16a34a]">
+            已同步到个人图谱
+          </span>
+        </div>
+      );
+    case "not-authenticated":
+      return (
+        <div className="rounded-2xl bg-[var(--surface-card)] px-4 py-4 text-center">
+          <p className="text-sm text-[var(--muted)]">
+            登录后保存结果到个人图谱
+          </p>
+          <Link
+            href="/login"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-6 py-2.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            登录
+          </Link>
+        </div>
+      );
+    case "error":
+      return (
+        <div className="rounded-2xl bg-[#fef2f2] px-4 py-3">
+          <p className="text-sm font-medium text-[#dc2626]">
+            {error || "同步失败，请稍后重试"}
+          </p>
+        </div>
+      );
+    default:
+      return null;
+  }
 }

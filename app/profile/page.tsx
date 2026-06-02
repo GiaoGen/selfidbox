@@ -1,11 +1,11 @@
+import { redirect } from "next/navigation";
 import { getUserProfile } from "@/lib/user-profile-db";
 import { ProfileRadar, type RadarPoint } from "@/components/ProfileRadar";
 import { ProfileInteractions } from "@/components/profile/ProfileInteractions";
 import { ScreenshotReportUploader } from "@/components/profile/ScreenshotReportUploader";
 import { TopNavbar } from "@/components/layout/TopNavbar";
-
-// TODO: replace DEV_USER_ID with Supabase Auth user id
-const DEV_USER_ID = "b64cd3ef-2982-429e-b546-585d156774b6";
+import { UserMenu } from "@/components/auth/UserMenu";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +71,14 @@ function toRadarPoints(vector: Record<string, unknown>): RadarPoint[] {
 /* ------------------------------------------------------------------ */
 
 export default async function ProfilePage() {
-  const profile = await getUserProfile(DEV_USER_ID);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const profile = await getUserProfile(user.id);
   const hasProfile =
     profile != null &&
     (profile.selfid_profile != null || profile.summary != null);
@@ -84,7 +91,7 @@ export default async function ProfilePage() {
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
-        <TopNavbar />
+        <TopNavbar rightSlot={<UserMenu />} />
 
         {hasProfile ? (
           <ProfileInteractions

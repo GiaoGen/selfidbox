@@ -4,20 +4,20 @@ import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { QuizRuntimeData, AnswerRecord, RankedRuntimeResult } from "@/lib/quiz-runtime";
 import { calculateUserVector, rankRuntimeResults } from "@/lib/quiz-runtime";
-import { saveQuizAttempt } from "@/lib/quizzes-db";
-import { DEV_USER_ID } from "@/lib/dev-user";
-import { rebuildUserProfile } from "@/lib/rebuild-user-profile";
+import { createClient } from "@/lib/supabase/client";
 import { QuizProgress } from "./QuizProgress";
 import { QuestionCard } from "./QuestionCard";
 import { QuizResult } from "./QuizResult";
 
 type Phase = "quiz" | "result";
+type SyncStatus = "idle" | "syncing" | "synced" | "not-authenticated" | "error";
 
 interface Props {
   quiz: QuizRuntimeData;
 }
 
 export function QuizPlayer({ quiz }: Props) {
+  const supabase = createClient();
   const [phase, setPhase] = useState<Phase>("quiz");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerRecord[]>([]);
@@ -25,6 +25,8 @@ export function QuizPlayer({ quiz }: Props) {
   const [direction, setDirection] = useState(1);
   const [ranking, setRanking] = useState<RankedRuntimeResult[] | null>(null);
   const [userVector, setUserVector] = useState<Record<string, number> | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
+  const [syncError, setSyncError] = useState<string>("");
   const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const questions = quiz.questions;
@@ -40,27 +42,40 @@ export function QuizPlayer({ quiz }: Props) {
       setRanking(ranked);
       setPhase("result");
 
+      // Attempt to save via API route if authenticated
+      setSyncStatus("syncing");
       try {
-        await saveQuizAttempt({
-          quizId: quiz.id,
-          userVector: vector,
-          ranking: ranked,
-          answers: finalAnswers,
-        });
-      } catch {
-        // best-effort, result already shown
-      }
+        const { data: authData } = await supabase.auth.getUser();
+        if (!authData.user) {
+          setSyncStatus("not-authenticated");
+          return;
+        }
 
-      console.log("[Quiz Runtime] calling rebuildUserProfile");
-      rebuildUserProfile(DEV_USER_ID)
-        .then((result) => {
-          console.log(`[Quiz Runtime] profile_rebuild_result: ${JSON.stringify(result)}`);
-        })
-        .catch((err) => {
-          console.warn("[Quiz Runtime] profile_rebuild_result: failed —", err);
+        const res = await fetch("/api/quiz-attempts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            quizId: quiz.id,
+            userVector: vector,
+            ranking: ranked,
+            answers: finalAnswers,
+          }),
         });
+
+        if (res.ok) {
+          setSyncStatus("synced");
+        } else {
+          const errBody = await res.json().catch(() => ({}));
+          setSyncStatus("error");
+          setSyncError(errBody.error ?? "保存失败");
+        }
+      } catch (err) {
+        console.warn("[QuizPlayer] sync attempt failed", err);
+        setSyncStatus("error");
+        setSyncError(err instanceof Error ? err.message : "网络错误");
+      }
     },
-    [factorKeys, quiz.id, quiz.results],
+    [factorKeys, quiz.id, quiz.results, supabase],
   );
 
   const handleSelect = useCallback(
@@ -100,6 +115,8 @@ export function QuizPlayer({ quiz }: Props) {
         quizTitle={quiz.title}
         quizSlug={quiz.slug}
         userVector={userVector}
+        syncStatus={syncStatus}
+        syncError={syncError}
       />
     );
   }

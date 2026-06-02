@@ -181,6 +181,7 @@ function slugify(text: string): string {
 
 export async function saveQuizSchema(
   input: SaveQuizInput,
+  creatorUserId: string,
 ): Promise<SaveQuizResult> {
   const slug = slugify(input.meta.title);
 
@@ -193,7 +194,7 @@ export async function saveQuizSchema(
       quiz_type: input.meta.quiz_type,
       audience: input.meta.audience,
       tone: input.meta.tone,
-      creator_user_id: DEV_USER_ID,
+      creator_user_id: creatorUserId,
     })
     .select("id")
     .single();

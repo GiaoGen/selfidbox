@@ -4,9 +4,6 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-// TODO: replace DEV_USER_ID with Supabase Auth user id
-const DEV_USER_ID = "b64cd3ef-2982-429e-b546-585d156774b6";
-
 interface SuccessData {
   duplicate: false;
   report_id: number;
@@ -50,7 +47,6 @@ export function ScreenshotReportUploader({
 
     try {
       const form = new FormData();
-      form.append("user_id", DEV_USER_ID);
       form.append("file", state.file);
 
       const res = await fetch("/api/screenshot-report", {

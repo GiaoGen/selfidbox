@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { saveQuizSchema } from "@/lib/quizzes-db";
-import type { SaveQuizInput } from "@/lib/quizzes-db";
 
-export function SaveQuizButton({ quiz }: { quiz: SaveQuizInput }) {
+export function SaveQuizButton({ quiz }: { quiz: Record<string, unknown> }) {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [savedSlug, setSavedSlug] = useState("");
@@ -14,13 +12,31 @@ export function SaveQuizButton({ quiz }: { quiz: SaveQuizInput }) {
     setMessage("");
 
     try {
-      const result = await saveQuizSchema(quiz);
+      const res = await fetch("/api/quiz-studio/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(quiz),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          setStatus("error");
+          setMessage("请先登录后再保存 Quiz。");
+        } else {
+          setStatus("error");
+          setMessage(data.error ?? "保存失败");
+        }
+        return;
+      }
+
       setStatus("success");
-      setSavedSlug(result.slug);
+      setSavedSlug(data.slug);
       setMessage("测试已保存");
-    } catch (err) {
+    } catch {
       setStatus("error");
-      setMessage(err instanceof Error ? err.message : "保存失败");
+      setMessage("网络错误，请重试");
     }
   }
 
