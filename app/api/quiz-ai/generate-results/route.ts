@@ -12,6 +12,28 @@ Rules:
 - Traits should be 3-5 Chinese adjectives.
 - All text must be in Chinese except the "key" field which must be English snake_case.
 
+STYLE CONTROLS: You will receive 4 numeric style parameters (0-100). Adjust your output accordingly:
+
+abstractness (0=真实/realistic, 100=抽象/abstract):
+- High values: use more metaphors, imaginative scenarios, symbolic language; avoid mundane real-life references.
+- Low values: stick to concrete, everyday situations and literal descriptions.
+- This affects: result name, description.
+
+seriousness (0=搞怪/playful, 100=严肃/serious):
+- High values: use formal, thoughtful, analytical tone; avoid humor or whimsy.
+- Low values: use humorous, quirky, entertaining expressions; feel free to be silly or unexpected.
+- This affects: result name, description, share_text.
+
+depth (0=轻松/light, 100=深度/deep):
+- High values: probe values, inner conflicts, philosophical angles; avoid superficial preferences.
+- Low values: stay on surface-level preferences, light topics, everyday choices.
+- This affects: result description.
+
+poeticness (0=直白/direct, 100=文艺/poetic):
+- High values: use lyrical, imagery-rich, evocative language with literary flair.
+- Low values: use plain, straightforward, declarative sentences.
+- This affects: description, share_text.
+
 PINNED RESULTS: Some results may already be fixed (pinned) by the user. You will receive a list of pinned results. You MUST:
 - NOT generate any result with the same key as a pinned result.
 - NOT generate results that are semantically similar or thematically overlapping with pinned results (e.g. if "旧钢琴" is pinned, do not generate "老风琴" or "古典钢琴").
@@ -47,6 +69,10 @@ export async function POST(request: NextRequest) {
     audience?: string[];
     tone?: string[];
     result_count?: number;
+    abstractness?: number;
+    seriousness?: number;
+    depth?: number;
+    poeticness?: number;
     pinned_results?: { key: string; name: string; traits: string[] }[];
   };
 
@@ -56,7 +82,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { title, hook, quiz_type, audience, tone, result_count, pinned_results } = body;
+  const { title, hook, quiz_type, audience, tone, result_count, abstractness, seriousness, depth, poeticness, pinned_results } = body;
 
   if (!title || typeof title !== "string") {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
@@ -73,12 +99,19 @@ export async function POST(request: NextRequest) {
   const hookStr = hook || "";
   const typeStr = quiz_type || "personality";
 
+  const a = abstractness ?? 50;
+  const s = seriousness ?? 50;
+  const d = depth ?? 50;
+  const p = poeticness ?? 50;
+
   let pinnedSection = "";
   if (pinned_results && pinned_results.length > 0) {
     pinnedSection = `\n以下结果人格已经被用户固定，千万不要重复或生成语义相似的结果：\n${pinned_results
       .map((p) => `- ${p.name}（key: ${p.key}，特质：${p.traits.join("、")}）`)
       .join("\n")}\n`;
   }
+
+  let styleSection = `\n风格控制参数：\n- 抽象度 = ${a}/100 ${a >= 70 ? "（多用隐喻和想象场景，减少现实场景）" : a <= 30 ? "（使用真实日常场景和直白表达）" : "（平衡真实与抽象）"}\n- 严肃度 = ${s}/100 ${s >= 70 ? "（正式、分析性表达，不要搞怪）" : s <= 30 ? "（加入搞怪、娱乐化元素，轻松有趣）" : "（平衡严肃与轻松）"}\n- 深度 = ${d}/100 ${d >= 70 ? "（关注价值观、内在冲突、哲学性问题）" : d <= 30 ? "（关注表面偏好、轻松话题）" : "（平衡深度与轻松）"}\n- 文艺度 = ${p}/100 ${p >= 70 ? "（使用有画面感、文学感的表达，如诗歌般的语言）" : p <= 30 ? "（使用直白、简洁的陈述句）" : "（平衡文艺与直白）"}\n`;
 
   const userMessage = `设计一个人格测试的结果类型。
 
@@ -88,8 +121,8 @@ export async function POST(request: NextRequest) {
 目标受众：${audienceStr}
 语气风格：${toneStr}
 结果数量：${result_count} 个
-${pinnedSection}
-请生成 ${result_count} 个有明显区分度的人格结果。${pinned_results?.length ? "新生成的结果必须与上述固定结果有明显区分度，不能重复或高度相似。" : ""}每个结果的 key 使用英文 snake_case。`;
+${styleSection}${pinnedSection}
+请生成 ${result_count} 个有明显区分度的人格结果。${pinned_results?.length ? "新生成的结果必须与上述固定结果有明显区分度，不能重复或高度相似。" : ""}每个结果的 key 使用英文 snake_case。请严格按照风格控制参数调整生成内容的抽象度、严肃度、深度和文艺度。`;
 
   try {
     const dsResponse = await fetch(DEEPSEEK_CHAT_URL, {

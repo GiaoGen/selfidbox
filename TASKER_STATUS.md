@@ -1,10 +1,56 @@
 # TASKER STATUS
 
-Last updated: 2026-06-02
+Last updated: 2026-06-03
+
+---
+
+## Recent — 2026-06-03
+
+### AI Quiz Studio — Quiz Style Controls（全局风格变量）
+
+- **新增 4 个全局风格控制变量**（0–100 无极 Slider）：
+  - `abstractness`（抽象度：真实 ←→ 抽象）— 影响 Question、Result、Description
+  - `seriousness`（严肃度：搞怪 ←→ 严肃）— 影响 Question、Result、Share Text
+  - `depth`（深度：轻松 ←→ 深度）— 影响 Question
+  - `poeticness`（文艺度：直白 ←→ 文艺）— 影响 Result Description、Share Text
+
+- **新文件**：
+  - `components/quiz-engine/QuizStyleControls.tsx` — 4-slider 卡片 UI 组件，复用 `EditableSlider`
+  - `supabase/migrations/add_quiz_style_controls.sql` — 4 columns（integer default 50）
+
+- **修改文件**：
+  - `lib/mock-quiz-engine.ts` — 新增 `QuizStyleControls` 接口 + `DEFAULT_STYLE` 常量
+  - `app/create/page.tsx` — QuizState 新增 4 字段；`updateStyle` handler；传递到 Results/Questions API 和 SaveQuizButton；渲染 QuizStyleControls 卡片（Step 1 下方）
+  - `lib/quizzes-db.ts` — SaveQuizInput 新增 4 可选字段；saveQuizSchema / updateQuizSchema 写入；getQuizForEdit 读取
+  - `app/api/quiz-ai/generate-results/route.ts` — 接收 4 参数；System Prompt 新增 STYLE CONTROLS 段；User Message 新增风格参数块
+  - `app/api/quiz-ai/generate-questions/route.ts` — 同上，接收参数并写入 Prompt
+
+- **未修改**：Quiz Runtime、Profile、OCR、Explore、Auth、Factors API、Result Vectors API
 
 ---
 
 ## Recent — 2026-06-02
+
+### AI Quiz Studio — 生成数量范围扩展
+
+- **替换 `CountSelector` → `RangeSelector`**（`app/create/page.tsx`）
+  - 接受 `min` / `max` / `value` / `onChange`，自动生成连续整数选项
+  - 水平可滚动容器（`overflow-x-auto`，隐藏滚动条），`max-w-[260px] sm:max-w-[360px]`
+  - 小 pills 保持 `shrink-0` 不换行，超出区域自然滚动
+  - 风格与原有 `CountSelector` 完全一致（`rounded-full bg-[var(--ink)]/6` + 白色选中态）
+
+- **数量范围更新**：
+
+  | 模块 | 旧范围 | 新范围 | 默认值 |
+  |------|--------|--------|--------|
+  | 结果人格 (Results) | 4, 6, 8 | 4–16 | 6 |
+  | 影响因子 (Factors) | 4, 5, 6, 8 | 4–16 | 5 |
+  | 题目数量 (Questions) | 6, 8, 10, 12 | 4–20 | 8 |
+  | 选项数量 (Options) | 3, 4 | 2–6 | 4 |
+
+- **参数传递**：所有 AI API 调用自动使用最新 state 值（无需额外修改）
+
+- **未修改**：AI Prompt、Quiz Runtime、OCR、Profile、Explore、Auth、Supabase schema
 
 ### Profile — 数据来源详情页（Source Detail Modal）
 

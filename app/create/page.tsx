@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Library, Sparkles, Wand, Settings } from "lucide-react";
 import { TopNavbar } from "@/components/layout/TopNavbar";
 import { QuizMetaCard } from "@/components/quiz-engine/QuizMetaCard";
+import { QuizStyleControls } from "@/components/quiz-engine/QuizStyleControls";
 import { ResultCard } from "@/components/quiz-engine/ResultCard";
 import { FactorList } from "@/components/quiz-engine/FactorList";
 import { ResultVectorCard } from "@/components/quiz-engine/ResultVectorCard";
@@ -13,10 +14,11 @@ import { QuestionEffectsCard } from "@/components/quiz-engine/QuestionEffectsCar
 import { CoverageValidator } from "@/components/quiz-engine/CoverageValidator";
 import { SaveQuizButton } from "@/components/quiz-engine/SaveQuizButton";
 import { MyQuizzesModal } from "@/components/quiz-runtime/MyQuizzesModal";
-import { mapAIResults } from "@/lib/mock-quiz-engine";
+import { mapAIResults, DEFAULT_STYLE } from "@/lib/mock-quiz-engine";
 import { SELFID_FACTORS } from "@/lib/selfid-factors";
 import type {
   QuizMeta,
+  QuizStyleControls as QuizStyleControlsType,
   Result,
   Factor,
   ResultVector,
@@ -34,6 +36,10 @@ interface QuizState {
   factors: Factor[];
   resultVectors: ResultVector[];
   questions: Question[];
+  abstractness: number;
+  seriousness: number;
+  depth: number;
+  poeticness: number;
 }
 
 const emptyMeta: QuizMeta = {
@@ -64,26 +70,33 @@ function StepLabel({ num, label }: { num: number; label: string }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Count selector pill                                                */
+/*  Range selector — scrollable number pills                            */
 /* ------------------------------------------------------------------ */
 
-function CountSelector({
-  options,
+function RangeSelector({
+  min,
+  max,
   value,
   onChange,
 }: {
-  options: number[];
+  min: number;
+  max: number;
   value: number;
   onChange: (v: number) => void;
 }) {
+  const options: number[] = [];
+  for (let i = min; i <= max; i++) options.push(i);
+
   return (
-    <span className="inline-flex items-center gap-0.5 rounded-full bg-[var(--ink)]/6 p-0.5 text-xs">
+    <span className="inline-flex items-center gap-0.5 rounded-full bg-[var(--ink)]/6 p-0.5 text-xs overflow-x-auto max-w-[260px] sm:max-w-[360px]"
+      style={{ scrollbarWidth: "none" }}
+    >
       {options.map((n) => (
         <button
           key={n}
           type="button"
           onClick={() => onChange(n)}
-          className={`rounded-full px-2 py-0.5 font-semibold transition-all ${
+          className={`shrink-0 rounded-full px-2 py-0.5 font-semibold transition-all ${
             value === n
               ? "bg-white text-[var(--ink)] shadow-sm"
               : "text-[var(--muted)] hover:text-[var(--ink)]"
@@ -111,6 +124,7 @@ function CreatePageContent() {
     factors: [],
     resultVectors: [],
     questions: [],
+    ...DEFAULT_STYLE,
   });
 
   const [editLoading, setEditLoading] = useState(false);
@@ -158,6 +172,10 @@ function CreatePageContent() {
 
   const updateMeta = useCallback((patch: Partial<QuizMeta>) => {
     setQuiz((prev) => ({ ...prev, meta: { ...prev.meta, ...patch } }));
+  }, []);
+
+  const updateStyle = useCallback((patch: Partial<QuizStyleControlsType>) => {
+    setQuiz((prev) => ({ ...prev, ...patch }));
   }, []);
 
   /* ---- Results ---- */
@@ -360,6 +378,10 @@ function CreatePageContent() {
             .map((s) => s.trim())
             .filter(Boolean),
           result_count: remaining,
+          abstractness: quiz.abstractness,
+          seriousness: quiz.seriousness,
+          depth: quiz.depth,
+          poeticness: quiz.poeticness,
           pinned_results: pinnedResults.map((r) => ({
             key: r.id,
             name: r.name,
@@ -581,6 +603,10 @@ function CreatePageContent() {
             .split("/")
             .map((s) => s.trim())
             .filter(Boolean),
+          abstractness: quiz.abstractness,
+          seriousness: quiz.seriousness,
+          depth: quiz.depth,
+          poeticness: quiz.poeticness,
           results: quiz.results.map((r) => ({
             key: r.id,
             name: r.name,
@@ -713,6 +739,17 @@ function CreatePageContent() {
           <QuizMetaCard meta={meta} onChange={updateMeta} />
         </section>
 
+        {/* Quiz Style Controls */}
+        <QuizStyleControls
+          style={{
+            abstractness: quiz.abstractness,
+            seriousness: quiz.seriousness,
+            depth: quiz.depth,
+            poeticness: quiz.poeticness,
+          }}
+          onChange={updateStyle}
+        />
+
         {/* Step 2: Results */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
@@ -755,8 +792,9 @@ function CreatePageContent() {
           <div className="border-t border-[var(--ink)]/5 pt-4 pl-3">
             <div className="flex items-center justify-between">
               <div className="flex flex-wrap items-center gap-2">
-                <CountSelector
-                  options={[4, 6, 8]}
+                <RangeSelector
+                  min={4}
+                  max={16}
                   value={resultCount}
                   onChange={setResultCount}
                 />
@@ -831,8 +869,9 @@ function CreatePageContent() {
           </div>
           <div className="border-t border-[var(--ink)]/5 pt-4 pl-3">
             <div className="flex flex-wrap items-center gap-2">
-              <CountSelector
-                options={[4, 5, 6, 8]}
+              <RangeSelector
+                min={4}
+                max={16}
                 value={factorCount}
                 onChange={setFactorCount}
               />
@@ -1011,14 +1050,16 @@ function CreatePageContent() {
           <div className="border-t border-[var(--ink)]/5 pt-4 pl-3">
             <div className="flex items-center justify-between">
               <div className="flex flex-wrap items-center gap-2">
-                <CountSelector
-                  options={[6, 8, 10, 12]}
+                <RangeSelector
+                  min={4}
+                  max={20}
                   value={questionCount}
                   onChange={setQuestionCount}
                 />
                 <span className="text-xs text-[var(--muted)]">题</span>
-                <CountSelector
-                  options={[3, 4]}
+                <RangeSelector
+                  min={2}
+                  max={6}
                   value={optionsPerQuestion}
                   onChange={setOptionsPerQuestion}
                 />
@@ -1131,6 +1172,10 @@ function CreatePageContent() {
               factors,
               resultVectors,
               questions,
+              abstractness: quiz.abstractness,
+              seriousness: quiz.seriousness,
+              depth: quiz.depth,
+              poeticness: quiz.poeticness,
             }}
             editMode={isEditMode}
             editQuizId={editQuizId}

@@ -19,6 +19,28 @@ QUESTION RULES:
 - Written in natural Chinese.
 - Each question should probe different combinations of factors.
 
+STYLE CONTROLS: You will receive 4 numeric style parameters (0-100). Adjust your output accordingly:
+
+abstractness (0=真实/realistic, 100=抽象/abstract):
+- High values: use metaphorical scenarios, imaginative situations, symbolic questions (e.g. "如果你是一颗漂浮在宇宙中的种子？").
+- Low values: use concrete, everyday, realistic scenarios (e.g. "今天下班后你会做什么？").
+- This affects: question text, option text.
+
+seriousness (0=搞怪/playful, 100=严肃/serious):
+- High values: use formal, thoughtful question topics; avoid humor (e.g. "你的决策风格是什么？").
+- Low values: use quirky, humorous, unexpected questions (e.g. "你是哪种冰箱人格？").
+- This affects: question text, option text.
+
+depth (0=轻松/light, 100=深度/deep):
+- High values: probe values, moral dilemmas, inner conflicts (e.g. "当价值观冲突时你会如何选择？").
+- Low values: stay on surface preferences, light daily choices (e.g. "你喜欢猫还是狗？").
+- This affects: question text, option framing.
+
+poeticness (0=直白/direct, 100=文艺/poetic):
+- High values: use lyrical, imagery-rich option text with literary quality.
+- Low values: use plain, direct option text.
+- This affects: option text wording.
+
 OPTION EFFECT RULES:
 - Each option must affect 1–3 factors.
 - Effects are small integers from -3 to +3.
@@ -69,6 +91,10 @@ export async function POST(request: NextRequest) {
     quiz_type?: string;
     audience?: string[];
     tone?: string[];
+    abstractness?: number;
+    seriousness?: number;
+    depth?: number;
+    poeticness?: number;
     results?: { key: string; name: string; description: string; traits: string[] }[];
     factors?: { key: string; name: string; description?: string }[];
     result_vectors?: Record<string, Record<string, number>>;
@@ -89,6 +115,10 @@ export async function POST(request: NextRequest) {
     quiz_type,
     audience,
     tone,
+    abstractness,
+    seriousness,
+    depth,
+    poeticness,
     results,
     factors,
     result_vectors,
@@ -133,6 +163,11 @@ export async function POST(request: NextRequest) {
   const toneStr = tone?.length ? tone.join("、") : "中性";
   const hookStr = hook ?? "";
   const typeStr = quiz_type ?? "personality";
+
+  const a = abstractness ?? 50;
+  const s = seriousness ?? 50;
+  const d = depth ?? 50;
+  const p = poeticness ?? 50;
 
   const resultsText = results
     .map(
@@ -190,6 +225,12 @@ export async function POST(request: NextRequest) {
 题目数量：${qc} 题
 每题选项：${opq} 个（标签：${labels}）
 
+风格控制参数：
+- 抽象度 = ${a}/100 ${a >= 70 ? "（多用隐喻和想象场景，减少现实场景）" : a <= 30 ? "（使用真实日常场景和直白表达）" : "（平衡真实与抽象）"}
+- 严肃度 = ${s}/100 ${s >= 70 ? "（正式、分析性表达，不要搞怪）" : s <= 30 ? "（加入搞怪、娱乐化元素，轻松有趣）" : "（平衡严肃与轻松）"}
+- 深度 = ${d}/100 ${d >= 70 ? "（关注价值观、内在冲突、哲学性问题）" : d <= 30 ? "（关注表面偏好、轻松话题）" : "（平衡深度与轻松）"}
+- 文艺度 = ${p}/100 ${p >= 70 ? "（选项文本使用有画面感、文学感的表达）" : p <= 30 ? "（选项文本使用直白、简洁的表达）" : "（平衡文艺与直白）"}
+
 结果人格：
 ${resultsText}
 
@@ -207,7 +248,8 @@ ${pinnedSection}
 - 值在 -3 到 +3 之间
 - 不同选项应推动不同方向
 - 所有 ${factorKeys.length} 个因子在整个题目集中都要有涉及
-- 题目要场景化、有画面感、容易选、适合分享${
+- 题目要场景化、有画面感、容易选、适合分享
+- 严格按照风格控制参数调整题目的抽象度、严肃度、深度和选项的文艺度${
     pinned_questions?.length ? "\n- 不要生成与上述固定题目高度相似的新题目" : ""
   }`;
 

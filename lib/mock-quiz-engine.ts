@@ -6,6 +6,21 @@ export interface QuizMeta {
   tone: string;
 }
 
+/** Global style knobs that influence AI generation tone. Range 0–100. */
+export interface QuizStyleControls {
+  abstractness: number;  // 0 = 真实, 100 = 抽象
+  seriousness: number;   // 0 = 搞怪, 100 = 严肃
+  depth: number;         // 0 = 轻松, 100 = 深度
+  poeticness: number;    // 0 = 直白, 100 = 文艺
+}
+
+export const DEFAULT_STYLE: QuizStyleControls = {
+  abstractness: 50,
+  seriousness: 50,
+  depth: 50,
+  poeticness: 50,
+};
+
 export interface Result {
   id: string;
   name: string;

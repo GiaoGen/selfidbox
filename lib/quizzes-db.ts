@@ -171,6 +171,10 @@ export interface SaveQuizInput {
   factors: Factor[];
   resultVectors: ResultVector[];
   questions: Question[];
+  abstractness?: number;
+  seriousness?: number;
+  depth?: number;
+  poeticness?: number;
 }
 
 export interface SaveQuizResult {
@@ -202,6 +206,10 @@ export async function saveQuizSchema(
       audience: input.meta.audience,
       tone: input.meta.tone,
       creator_user_id: creatorUserId,
+      abstractness: input.abstractness ?? 50,
+      seriousness: input.seriousness ?? 50,
+      depth: input.depth ?? 50,
+      poeticness: input.poeticness ?? 50,
     })
     .select("id")
     .single();
@@ -339,7 +347,7 @@ export async function getQuizForEdit(
   // 1. Quiz meta
   const { data: quiz, error: quizError } = await supabase
     .from("quizzes")
-    .select("title, hook, quiz_type, audience, tone, creator_user_id")
+    .select("title, hook, quiz_type, audience, tone, creator_user_id, abstractness, seriousness, depth, poeticness")
     .eq("id", quizId)
     .single();
 
@@ -398,6 +406,10 @@ export async function getQuizForEdit(
       audience: quiz.audience ?? "",
       tone: quiz.tone ?? "",
     },
+    abstractness: (quiz as Record<string, unknown>).abstractness as number ?? 50,
+    seriousness: (quiz as Record<string, unknown>).seriousness as number ?? 50,
+    depth: (quiz as Record<string, unknown>).depth as number ?? 50,
+    poeticness: (quiz as Record<string, unknown>).poeticness as number ?? 50,
     results: (resultRows ?? []).map((r: Record<string, unknown>) => ({
       id: r.key as string,
       name: r.name as string,
@@ -443,6 +455,10 @@ export async function updateQuizSchema(
       quiz_type: input.meta.quiz_type,
       audience: input.meta.audience,
       tone: input.meta.tone,
+      abstractness: input.abstractness ?? 50,
+      seriousness: input.seriousness ?? 50,
+      depth: input.depth ?? 50,
+      poeticness: input.poeticness ?? 50,
     })
     .eq("id", quizId);
 
