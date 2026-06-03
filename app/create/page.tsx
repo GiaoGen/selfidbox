@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Library, Sparkles, Wand, Settings } from "lucide-react";
+import { Library } from "lucide-react";
 import { TopNavbar } from "@/components/layout/TopNavbar";
 import { QuizMetaCard } from "@/components/quiz-engine/QuizMetaCard";
 import { QuizStyleControls } from "@/components/quiz-engine/QuizStyleControls";
@@ -25,6 +25,85 @@ import type {
   Question,
   AIResult,
 } from "@/lib/mock-quiz-engine";
+
+/* ------------------------------------------------------------------ */
+/*  Nippon Colors — all from Nippon_Colors.md                          */
+/* ------------------------------------------------------------------ */
+
+const NIPPON_COLORS = [
+  "#DC9FB4","#E16B8C","#8E354A","#F8C3CD","#F4A7B9","#64363C","#F596AA","#B5495B","#E87A90","#D05A6E",
+  "#DB4D6D","#FEDFE1","#9E7A7A","#D0104C","#9F353A","#CB1B45","#EEA9A9","#BF6766","#86473F","#B19693",
+  "#EB7A77","#954A45","#A96360","#CB4042","#AB3B3A","#D7C4BB","#904840","#734338","#C73E3A","#554236",
+  "#994639","#F19483","#B54434","#B9887D","#F17C67","#884C3A","#E83015","#D75455","#B55D4C","#854836",
+  "#A35E47","#CC543A","#724832","#F75C2F","#6A4028","#9A5034","#C46243","#AF5F3C","#FB966E","#724938",
+  "#B47157","#DB8E71","#F05E1C","#ED784A","#CA7853","#B35C37","#563F2E","#E3916E","#8F5A3C","#F0A986",
+  "#A0674B","#C1693C","#FB9966","#947A6D","#A36336","#E79460","#7D532C","#C78550","#985F2A","#E1A679",
+  "#855B32","#FC9F4D","#FFBA84","#E98B2A","#E9A368","#B17844","#96632E","#43341B","#CA7A2C","#ECB88A",
+  "#78552B","#B07736","#967249","#E2943B","#C7802D","#9B6E23","#6E552F","#EBB471","#D7B98E","#82663A",
+  "#B68E55","#BC9F77","#876633","#C18A26","#FFB11B","#D19826","#DDA52D","#C99833","#F9BF45","#DCB879",
+  "#BA9132","#E8B647","#F7C242","#7D6C46","#DAC9A6","#FAD689","#D9AB42","#F6C555","#FFC408","#EFBB24",
+  "#CAAD5F","#8D742A","#B4A582","#877F6C","#897D55","#74673E","#A28C37","#6C6024","#867835","#62592C",
+  "#E9CD4C","#F7D94C","#FBE251","#D9CD90","#ADA142","#DDD23B","#A5A051","#BEC23F","#6C6A2D","#939650",
+  "#838A2D","#B1B479","#616138","#4B4E2A","#5B622E","#4D5139","#89916B","#90B44B","#91AD70","#B5CAA0",
+  "#646A58","#7BA23F","#86C166","#4A593D","#42602D","#516E41","#91B493","#808F7C","#1B813E","#5DAC81",
+  "#36563C","#227D51","#A8D8B9","#6A8372","#2D6D4B","#465D4C","#24936E","#86A697","#00896C","#096148",
+  "#20604F","#0F4C3A","#4F726C","#00AA90","#69B0AC","#26453D","#66BAB7","#268785","#405B55","#305A56",
+  "#78C2C4","#376B6D","#A5DEE4","#77969A","#6699A1","#81C7D4","#33A6B8","#0C4842","#0D5661","#0089A7",
+  "#336774","#255359","#1E88A8","#566C73","#577C8A","#58B2DC","#2B5F75","#3A8FB7","#2E5C6E","#006284",
+  "#7DB9DE","#51A8DD","#2EA9DF","#0B1013","#0F2540","#08192D","#005CAF","#0B346E","#7B90D2","#6E75A4",
+  "#261E47","#113285","#4E4F97","#211E55","#8B81C3","#70649A","#9B90C2","#8A6BBE","#6A4C9C","#8F77B5",
+  "#533D5B","#B28FCE","#986DB2","#77428D","#3C2F41","#4A225D","#66327C","#592C63","#6F3381","#574C57",
+  "#B481BB","#3F2B36","#572A3F","#5E3D50","#72636E","#622954","#6D2E5B","#C1328E","#A8497A","#562E37",
+  "#E03C8A","#60373E","#FCFAF2","#FFFFFB","#BDC0BA","#91989F","#787878","#828282","#787D7B","#707C74",
+  "#656765","#535953","#4F4F48","#52433D","#373C38","#3A3226","#434343","#1C1C1C","#080808","#0C0C0C",
+];
+
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/* ------------------------------------------------------------------ */
+/*  Nippon Theme — background colors only, client-randomized            */
+/* ------------------------------------------------------------------ */
+
+function isLight(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55;
+}
+
+function textOn(hex: string): string {
+  return isLight(hex) ? "var(--ink)" : "#ffffff";
+}
+
+function subtleOn(hex: string): string {
+  return isLight(hex) ? "var(--muted)" : "rgba(255,255,255,0.65)";
+}
+
+const SSR_DEFAULT_BG = "#DAC9A6"; // 鳥の子 — warm neutral for SSR
+
+interface NipponTheme {
+  heroBg: string;
+  /** 7 step backgrounds + 1 for Style Controls */
+  sectionBgs: string[];
+}
+
+function useNipponTheme(): NipponTheme {
+  const [theme, setTheme] = useState<NipponTheme>(() => ({
+    heroBg: SSR_DEFAULT_BG,
+    sectionBgs: Array.from({ length: 8 }, () => SSR_DEFAULT_BG),
+  }));
+
+  useEffect(() => {
+    setTheme({
+      heroBg: pickRandom(NIPPON_COLORS),
+      sectionBgs: Array.from({ length: 8 }, () => pickRandom(NIPPON_COLORS)),
+    });
+  }, []);
+
+  return theme;
+}
 
 /* ------------------------------------------------------------------ */
 /*  State type                                                         */
@@ -55,22 +134,24 @@ function defaultVector(factors: Factor[]): Record<string, number> {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Step label                                                         */
+/*  Step label — always black number circle                            */
 /* ------------------------------------------------------------------ */
 
-function StepLabel({ num, label }: { num: number; label: string }) {
+function StepLabel({ num, label, inverted }: { num: number; label: string; inverted?: boolean }) {
   return (
     <div className="flex items-center gap-3">
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-sm font-semibold text-white">
         {num}
       </span>
-      <h2 className="text-xl font-semibold tracking-[-0.02em]">{label}</h2>
+      <h2 className={`text-xl font-semibold tracking-[-0.02em] ${inverted ? "text-white" : "text-[var(--ink)]"}`}>
+        {label}
+      </h2>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Range selector — scrollable number pills                            */
+/*  Range selector — compact, always black selected                    */
 /* ------------------------------------------------------------------ */
 
 function RangeSelector({
@@ -78,34 +159,124 @@ function RangeSelector({
   max,
   value,
   onChange,
+  inverted,
 }: {
   min: number;
   max: number;
   value: number;
   onChange: (v: number) => void;
+  inverted?: boolean;
 }) {
   const options: number[] = [];
   for (let i = min; i <= max; i++) options.push(i);
 
+  const trackBg = inverted ? "rgba(255,255,255,0.15)" : "var(--ink)";
+  const trackOpacity = inverted ? 1 : 0.06;
+  const unselectedColor = inverted ? "rgba(255,255,255,0.5)" : "var(--muted)";
+  const hoverColor = inverted ? "rgba(255,255,255,0.85)" : "var(--ink)";
+
   return (
-    <span className="inline-flex items-center gap-0.5 rounded-full bg-[var(--ink)]/6 p-0.5 text-xs overflow-x-auto max-w-[260px] sm:max-w-[360px]"
-      style={{ scrollbarWidth: "none" }}
+    <span
+      className="inline-flex items-center gap-px rounded-full p-px text-[10px] overflow-x-auto max-w-[220px] sm:max-w-[300px]"
+      style={{ scrollbarWidth: "none", backgroundColor: trackBg, opacity: trackOpacity }}
     >
       {options.map((n) => (
         <button
           key={n}
           type="button"
           onClick={() => onChange(n)}
-          className={`shrink-0 rounded-full px-2 py-0.5 font-semibold transition-all ${
+          className="shrink-0 rounded-full px-1.5 py-0 font-semibold transition-all"
+          style={
             value === n
-              ? "bg-white text-[var(--ink)] shadow-sm"
-              : "text-[var(--muted)] hover:text-[var(--ink)]"
-          }`}
+              ? { backgroundColor: "var(--ink)", color: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
+              : { color: unselectedColor }
+          }
+          onMouseEnter={(e) => { if (value !== n) (e.target as HTMLElement).style.color = hoverColor; }}
+          onMouseLeave={(e) => { if (value !== n) (e.target as HTMLElement).style.color = unselectedColor; }}
         >
           {n}
         </button>
       ))}
     </span>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Shared sub-components for Step sections                             */
+/* ------------------------------------------------------------------ */
+
+function StepSection({
+  bg,
+  children,
+}: {
+  bg: string;
+  children: React.ReactNode;
+}) {
+  const light = isLight(bg);
+  return (
+    <section
+      className="overflow-hidden rounded-[28px] p-5 sm:p-6 space-y-4"
+      style={{ backgroundColor: bg, color: light ? "var(--ink)" : "#ffffff" }}
+    >
+      {children}
+    </section>
+  );
+}
+
+function AIGenerateBtn({ loading, onClick, inverted }: { loading: boolean; onClick: () => void; inverted?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
+      className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-sm font-semibold shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50 ${
+        inverted ? "bg-white text-[var(--ink)]" : "bg-[var(--ink)] text-white"
+      }`}
+    >
+      {loading ? (
+        <>
+          <svg className="h-3.5 w-3.5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          AI 生成中...
+        </>
+      ) : (
+        "AI 生成"
+      )}
+    </button>
+  );
+}
+
+function AddBtn({ onClick, label, inverted }: { onClick: () => void; label: string; inverted?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-all active:scale-95 ${
+        inverted ? "bg-white/20 text-white hover:bg-white/30" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
+      }`}
+      title={label}
+    >
+      +
+    </button>
+  );
+}
+
+function StepDivider({ inverted }: { inverted?: boolean }) {
+  return (
+    <div
+      className="border-t"
+      style={{ borderColor: inverted ? "rgba(255,255,255,0.12)" : "var(--ink)" }}
+    />
+  );
+}
+
+function StepDesc({ children, inverted }: { children: React.ReactNode; inverted?: boolean }) {
+  return (
+    <p className={`text-sm leading-6 ${inverted ? "text-white/70" : "text-[var(--body)]"}`}>
+      {children}
+    </p>
   );
 }
 
@@ -117,6 +288,12 @@ function CreatePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editQuizId = searchParams.get("quiz_id");
+
+  const theme = useNipponTheme();
+  const [bgHero, bgS1, bgS2, bgS3, bgS4, bgS5, bgS6, bgS7, bgStyle] = [
+    theme.heroBg,
+    ...theme.sectionBgs,
+  ];
 
   const [quiz, setQuiz] = useState<QuizState>({
     meta: emptyMeta,
@@ -674,152 +851,101 @@ function CreatePageContent() {
 
   const { meta, results, factors, resultVectors, questions } = quiz;
 
+  // Determine inversion for each section
+  const invHero = !isLight(bgHero);
+  const inv1 = !isLight(bgS1);
+  const inv2 = !isLight(bgS2);
+  const inv3 = !isLight(bgS3);
+  const inv4 = !isLight(bgS4);
+  const inv5 = !isLight(bgS5);
+  const inv6 = !isLight(bgS6);
+  const inv7 = !isLight(bgS7);
+  const invStyle = !isLight(bgStyle);
+
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
         <TopNavbar />
 
-        {/* Hero */}
-        <section className="overflow-hidden rounded-[36px] border border-[var(--ink)]/8 bg-white p-6 shadow-[0_8px_30px_rgba(10,10,10,0.04)] sm:p-10">
-          <p className="text-sm font-semibold text-[var(--muted)]">AI Quiz Studio</p>
-          <h1 className="mt-2 text-4xl font-semibold leading-none tracking-[-0.04em] text-[var(--ink)] sm:text-5xl">
-            AI Quiz Studio
-          </h1>
+        {/* ── Hero ── */}
+        <section
+          className="overflow-hidden rounded-[36px] p-6 sm:p-8 shadow-[0_8px_30px_rgba(10,10,10,0.04)]"
+          style={{ backgroundColor: bgHero, color: textOn(bgHero) }}
+        >
+          <div className="flex items-center justify-between">
+            <h1 className={`text-4xl font-semibold leading-none tracking-[-0.04em] sm:text-5xl ${invHero ? "text-white" : "text-[var(--ink)]"}`}>
+              AI Quiz Studio
+            </h1>
+            <button
+              type="button"
+              onClick={() => setMyQuizzesOpen(true)}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all active:scale-95 ${
+                invHero ? "hover:bg-white/10 text-white" : "hover:bg-[var(--ink)]/8 text-[var(--ink)]"
+              }`}
+              title="创建过的 Quiz"
+            >
+              <Library size={20} />
+            </button>
+          </div>
           {isEditMode && (
-            <p className="mt-2 text-sm font-medium text-[var(--muted)]">
+            <p className={`mt-3 text-sm font-medium ${invHero ? "text-white/60" : "text-[var(--muted)]"}`}>
               ✎ 编辑模式 — 正在编辑 Quiz
             </p>
           )}
           {editLoading && (
-            <p className="mt-2 text-sm text-[var(--muted)]">加载编辑数据...</p>
+            <p className={`mt-2 text-sm ${invHero ? "text-white/50" : "text-[var(--muted)]"}`}>加载编辑数据...</p>
           )}
           {editError && (
-            <p className="mt-2 text-sm text-red-500">{editError}</p>
+            <p className="mt-2 text-sm text-red-400">{editError}</p>
           )}
-          <p className="mt-3 max-w-2xl text-base leading-7 text-[var(--body)] sm:text-lg">
-            用向量空间创建一个更稳定、更有解释力的人格测试。
-          </p>
-
-          {/* Action grid */}
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-            <button
-              type="button"
-              onClick={() => setMyQuizzesOpen(true)}
-              className="group flex aspect-[4/3] items-center justify-center rounded-2xl border border-[var(--ink)]/10 bg-[var(--canvas)] transition-all hover:border-[var(--ink)]/25 hover:bg-[var(--ink)]/4 hover:shadow-[0_4px_16px_rgba(10,10,10,0.06)] active:scale-[0.98]"
-            >
-              <Library
-                size={28}
-                className="text-[var(--ink)] transition-transform group-hover:scale-110 sm:size-8"
-              />
-            </button>
-
-            <div className="flex aspect-[4/3] items-center justify-center rounded-2xl border border-[var(--ink)]/6 bg-[var(--canvas)] opacity-50">
-              <Sparkles size={28} className="text-[var(--muted)] sm:size-8" />
-            </div>
-
-            <div className="flex aspect-[4/3] items-center justify-center rounded-2xl border border-[var(--ink)]/6 bg-[var(--canvas)] opacity-50">
-              <Wand size={28} className="text-[var(--muted)] sm:size-8" />
-            </div>
-
-            <div className="flex aspect-[4/3] items-center justify-center rounded-2xl border border-[var(--ink)]/6 bg-[var(--canvas)] opacity-50">
-              <Settings size={28} className="text-[var(--muted)] sm:size-8" />
-            </div>
-          </div>
         </section>
 
         {/* My Quizzes Modal */}
-        <MyQuizzesModal
-          open={myQuizzesOpen}
-          onClose={() => setMyQuizzesOpen(false)}
+        <MyQuizzesModal open={myQuizzesOpen} onClose={() => setMyQuizzesOpen(false)} />
+
+        {/* ── Step 1: Quiz Meta — QuizMetaCard IS the step card */}
+        <QuizMetaCard
+          meta={meta}
+          onChange={updateMeta}
+          bgColor={bgS1}
+          stepNumber={1}
+          stepLabel="测试基础信息"
         />
 
-        {/* Step 1: Quiz Meta */}
-        <section className="space-y-4">
-          <StepLabel num={1} label="测试基础信息" />
-          <QuizMetaCard meta={meta} onChange={updateMeta} />
+        {/* ── Quiz Style Controls ── */}
+        <section
+          className="overflow-hidden rounded-[28px] p-5 sm:p-6 space-y-4"
+          style={{ backgroundColor: bgStyle, color: textOn(bgStyle) }}
+        >
+          <QuizStyleControls
+            style={{ abstractness: quiz.abstractness, seriousness: quiz.seriousness, depth: quiz.depth, poeticness: quiz.poeticness }}
+            onChange={updateStyle}
+            accentColor={undefined}
+            inverted={invStyle}
+          />
         </section>
 
-        {/* Quiz Style Controls */}
-        <QuizStyleControls
-          style={{
-            abstractness: quiz.abstractness,
-            seriousness: quiz.seriousness,
-            depth: quiz.depth,
-            poeticness: quiz.poeticness,
-          }}
-          onChange={updateStyle}
-        />
-
-        {/* Step 2: Results */}
-        <section className="space-y-4">
+        {/* ── Step 2: Results ── */}
+        <section
+          className="overflow-hidden rounded-[28px] p-5 sm:p-6 space-y-4"
+          style={{ backgroundColor: bgS2, color: textOn(bgS2) }}
+        >
           <div className="flex items-center justify-between">
-            <StepLabel num={2} label="结果人格" />
-            <button
-              type="button"
-              onClick={handleGenerateResults}
-              disabled={aiLoading}
-              className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
-            >
-              {aiLoading ? (
-                <>
-                  <svg
-                    className="h-3.5 w-3.5 animate-spin"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                  AI 生成中...
-                </>
-              ) : (
-                "AI 生成"
-              )}
-            </button>
+            <StepLabel num={2} label="结果人格" inverted={inv2} />
+            <AIGenerateBtn loading={aiLoading} onClick={handleGenerateResults} inverted={inv2} />
           </div>
-          <div className="border-t border-[var(--ink)]/5 pt-4 pl-3">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                <RangeSelector
-                  min={4}
-                  max={16}
-                  value={resultCount}
-                  onChange={setResultCount}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={addResult}
-                className="inline-flex h-9 items-center gap-1 rounded-full bg-[var(--ink)]/6 px-4 text-sm font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12"
-              >
-                + 添加
-              </button>
+          <StepDivider inverted={inv2} />
+          <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <RangeSelector min={4} max={16} value={resultCount} onChange={setResultCount} inverted={inv2} />
             </div>
+            <AddBtn onClick={addResult} label="添加" inverted={inv2} />
           </div>
-          <div className="rounded-2xl bg-[var(--surface-card)] px-5 py-4 shadow-[0_8px_30px_rgba(10,10,10,0.04)]">
-            <p className="text-sm leading-6 text-[var(--body)]">
-              定义测试可能产生的结果人格，每个结果有独立的名称、描述和特质标签。
-            </p>
-          </div>
-          {aiError && <p className="text-sm text-red-600">{aiError}</p>}
+          <StepDesc inverted={inv2}>定义测试可能产生的结果人格，每个结果有独立的名称、描述和特质标签。</StepDesc>
+          {aiError && <p className="text-sm text-red-400">{aiError}</p>}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {results.map((result, i) => (
-              <ResultCard
-                key={result.id}
-                result={result}
-                index={i}
+              <ResultCard key={result.id} result={result} index={i}
                 onChange={(r) => updateResult(i, r)}
                 onDelete={results.length > 1 ? () => deleteResult(i) : undefined}
                 onTogglePin={() => togglePin(i)}
@@ -828,94 +954,48 @@ function CreatePageContent() {
           </div>
         </section>
 
-        {/* Step 3: Factors */}
-        <section className="space-y-4">
+        {/* ── Step 3: Factors ── */}
+        <section
+          className="overflow-hidden rounded-[28px] p-5 sm:p-6 space-y-4"
+          style={{ backgroundColor: bgS3, color: textOn(bgS3) }}
+        >
           <div className="flex items-center justify-between">
-            <StepLabel num={3} label="影响因子" />
-            <button
-              type="button"
-              onClick={handleGenerateFactors}
-              disabled={aiFactorsLoading}
-              className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
-            >
-              {aiFactorsLoading ? (
-                <>
-                  <svg
-                    className="h-3.5 w-3.5 animate-spin"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                  AI 生成中...
-                </>
-              ) : (
-                "AI 生成"
-              )}
-            </button>
+            <StepLabel num={3} label="影响因子" inverted={inv3} />
+            <AIGenerateBtn loading={aiFactorsLoading} onClick={handleGenerateFactors} inverted={inv3} />
           </div>
-          <div className="border-t border-[var(--ink)]/5 pt-4 pl-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <RangeSelector
-                min={4}
-                max={16}
-                value={factorCount}
-                onChange={setFactorCount}
-              />
-            </div>
+          <StepDivider inverted={inv3} />
+          <div className="flex flex-wrap items-center gap-2">
+            <RangeSelector min={4} max={16} value={factorCount} onChange={setFactorCount} inverted={inv3} />
           </div>
-          {aiFactorsError && (
-            <p className="text-sm text-red-600">{aiFactorsError}</p>
-          )}
+          {aiFactorsError && <p className="text-sm text-red-400">{aiFactorsError}</p>}
           <FactorList
             factors={factors}
             onChange={updateFactor}
             onAdd={addFactor}
             onDelete={factors.length > 1 ? deleteFactor : undefined}
             onTogglePin={toggleFactorPin}
+            noCard
           />
 
           {showFactorPicker && (() => {
             const usedKeys = new Set(factors.map((f) => f.id));
             const available = SELFID_FACTORS.filter((sf) => !usedKeys.has(sf.key));
             if (available.length === 0) {
-              return (
-                <p className="mt-2 text-sm text-[var(--muted)]">所有 Selfid 因子已添加完毕。</p>
-              );
+              return <p className={`text-sm ${inv3 ? "text-white/50" : "text-[var(--muted)]"}`}>所有 Selfid 因子已添加完毕。</p>;
             }
             return (
-              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-[var(--surface-card)] p-4">
-                <span className="w-full text-xs text-[var(--muted)]">从因子库中选择：</span>
+              <div className={`flex flex-wrap items-center gap-2 rounded-2xl p-4 ${inv3 ? "bg-white/10" : "bg-[var(--ink)]/5"}`}>
+                <span className={`w-full text-xs ${inv3 ? "text-white/50" : "text-[var(--muted)]"}`}>从因子库中选择：</span>
                 {available.map((sf) => (
-                  <button
-                    key={sf.key}
-                    type="button"
-                    onClick={() => selectFactor(sf.key)}
+                  <button key={sf.key} type="button" onClick={() => selectFactor(sf.key)}
                     className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-strong)] px-3 py-1.5 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--ink)]/12"
                   >
                     {sf.name}
-                    <span className="text-[10px] text-[var(--muted)]">
-                      {sf.group === "core" ? "核心" : "社交"}
-                    </span>
+                    <span className="text-[10px] text-[var(--muted)]">{sf.group === "core" ? "核心" : "社交"}</span>
                   </button>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => setShowFactorPicker(false)}
-                  className="text-xs text-[var(--muted)] hover:text-[var(--ink)] ml-1"
+                <button type="button" onClick={() => setShowFactorPicker(false)}
+                  className={`ml-1 text-xs ${inv3 ? "text-white/50 hover:text-white" : "text-[var(--muted)] hover:text-[var(--ink)]"}`}
                 >
                   取消
                 </button>
@@ -924,68 +1004,25 @@ function CreatePageContent() {
           })()}
         </section>
 
-        {/* Step 4: Result Vectors */}
-        <section className="space-y-4">
+        {/* ── Step 4: Result Vectors ── */}
+        <section
+          className="overflow-hidden rounded-[28px] p-5 sm:p-6 space-y-4"
+          style={{ backgroundColor: bgS4, color: textOn(bgS4) }}
+        >
           <div className="flex items-center justify-between">
-            <StepLabel num={4} label="结果向量" />
-            <button
-              type="button"
-              onClick={handleGenerateResultVectors}
-              disabled={aiVectorsLoading}
-              className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
-            >
-              {aiVectorsLoading ? (
-                <>
-                  <svg
-                    className="h-3.5 w-3.5 animate-spin"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                  AI 生成中...
-                </>
-              ) : (
-                "AI 生成"
-              )}
-            </button>
+            <StepLabel num={4} label="结果向量" inverted={inv4} />
+            <AIGenerateBtn loading={aiVectorsLoading} onClick={handleGenerateResultVectors} inverted={inv4} />
           </div>
-          <div className="border-t border-[var(--ink)]/5 pt-4 pl-3" />
-          {aiVectorsError && (
-            <p className="text-sm text-red-600">{aiVectorsError}</p>
-          )}
-          <div className="rounded-2xl bg-[var(--surface-card)] px-5 py-4 shadow-[0_8px_30px_rgba(10,10,10,0.04)]">
-            <p className="text-sm leading-6 text-[var(--body)]">
-              为每个结果在每个因子维度上设定 0-100 的位置，构成该结果的人格向量。
-            </p>
-          </div>
+          <StepDivider inverted={inv4} />
+          {aiVectorsError && <p className="text-sm text-red-400">{aiVectorsError}</p>}
+          <StepDesc inverted={inv4}>为每个结果在每个因子维度上设定 0-100 的位置，构成该结果的人格向量。</StepDesc>
           <div className="grid gap-4 lg:grid-cols-2">
             {resultVectors.map((rv, i) => {
               const result = results.find((r) => r.id === rv.resultId);
               if (!result) return null;
               return (
-                <ResultVectorCard
-                  key={rv.resultId}
-                  result={result}
-                  vector={rv}
-                  factors={factors}
-                  index={i}
-                  onValueChange={(factorId, value) =>
-                    updateResultVectorValue(rv.resultId, factorId, value)
-                  }
+                <ResultVectorCard key={rv.resultId} result={result} vector={rv} factors={factors} index={i}
+                  onValueChange={(factorId, value) => updateResultVectorValue(rv.resultId, factorId, value)}
                   onTogglePin={() => toggleResultVectorPin(rv.resultId)}
                 />
               );
@@ -993,136 +1030,81 @@ function CreatePageContent() {
           </div>
         </section>
 
-        {/* Step 5: Distance Validator */}
-        <section className="space-y-4">
-          <StepLabel num={5} label="结果区分度检查" />
-          <div className="border-t border-[var(--ink)]/5 pt-4 pl-3" />
-          <div className="rounded-2xl bg-[var(--surface-card)] px-5 py-4 shadow-[0_8px_30px_rgba(10,10,10,0.04)]">
-            <p className="text-sm leading-6 text-[var(--body)]">
-              基于欧氏距离计算结果向量之间的相似程度。相似度 &gt; 55% 表示两个人格位置较接近。
-            </p>
-          </div>
-          <DistanceValidator
-            resultVectors={resultVectors}
-            results={results}
-          />
+        {/* ── Step 5: Distance Validator ── */}
+        <section
+          className="overflow-hidden rounded-[28px] p-5 sm:p-6 space-y-4"
+          style={{ backgroundColor: bgS5, color: textOn(bgS5) }}
+        >
+          <StepLabel num={5} label="结果区分度检查" inverted={inv5} />
+          <StepDivider inverted={inv5} />
+          <StepDesc inverted={inv5}>
+            基于欧氏距离计算结果向量之间的相似程度。相似度 &gt; 55% 表示两个人格位置较接近。
+          </StepDesc>
+          <DistanceValidator resultVectors={resultVectors} results={results} />
         </section>
 
-        {/* Step 6: Questions + Option Effects */}
-        <section className="space-y-4">
+        {/* ── Step 6: Questions ── */}
+        <section
+          className="overflow-hidden rounded-[28px] p-5 sm:p-6 space-y-4"
+          style={{ backgroundColor: bgS6, color: textOn(bgS6) }}
+        >
           <div className="flex items-center justify-between">
-            <StepLabel num={6} label="题目与选项影响" />
-            <button
-              type="button"
-              onClick={handleGenerateQuestions}
-              disabled={aiQuestionsLoading}
-              className="inline-flex h-9 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)] disabled:opacity-50"
-            >
-              {aiQuestionsLoading ? (
-                <>
-                  <svg
-                    className="h-3.5 w-3.5 animate-spin"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                  AI 生成中...
-                </>
-              ) : (
-                "AI 生成"
-              )}
-            </button>
+            <StepLabel num={6} label="题目与选项影响" inverted={inv6} />
+            <AIGenerateBtn loading={aiQuestionsLoading} onClick={handleGenerateQuestions} inverted={inv6} />
           </div>
-          <div className="border-t border-[var(--ink)]/5 pt-4 pl-3">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                <RangeSelector
-                  min={4}
-                  max={20}
-                  value={questionCount}
-                  onChange={setQuestionCount}
-                />
-                <span className="text-xs text-[var(--muted)]">题</span>
-                <RangeSelector
-                  min={2}
-                  max={6}
-                  value={optionsPerQuestion}
-                  onChange={setOptionsPerQuestion}
-                />
-                <span className="text-xs text-[var(--muted)]">选</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  addQuestion();
-                  setQuestionIndex(questions.length);
-                }}
-                className="inline-flex h-9 items-center gap-1 rounded-full bg-[var(--ink)]/6 px-4 text-sm font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12"
-              >
-                + 添加
-              </button>
+          <StepDivider inverted={inv6} />
+          <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <RangeSelector min={4} max={20} value={questionCount} onChange={setQuestionCount} inverted={inv6} />
+              <span className={`text-[10px] ${inv6 ? "text-white/50" : "text-[var(--muted)]"}`}>题</span>
+              <RangeSelector min={2} max={6} value={optionsPerQuestion} onChange={setOptionsPerQuestion} inverted={inv6} />
+              <span className={`text-[10px] ${inv6 ? "text-white/50" : "text-[var(--muted)]"}`}>选</span>
             </div>
+            <AddBtn
+              onClick={() => { addQuestion(); setQuestionIndex(questions.length); }}
+              label="添加" inverted={inv6}
+            />
           </div>
-          {aiQuestionsError && (
-            <p className="text-sm text-red-600">{aiQuestionsError}</p>
-          )}
-          <div className="rounded-2xl bg-[var(--surface-card)] px-5 py-4 shadow-[0_8px_30px_rgba(10,10,10,0.04)]">
-            <p className="text-sm leading-6 text-[var(--body)]">
-              每道题的每个选项都会在特定因子上产生增量效果，用户的最终向量是所有选项效果的累加。
-            </p>
-          </div>
+          {aiQuestionsError && <p className="text-sm text-red-400">{aiQuestionsError}</p>}
+          <StepDesc inverted={inv6}>每道题的每个选项都会在特定因子上产生增量效果，用户的最终向量是所有选项效果的累加。</StepDesc>
 
           {questions.length > 0 && (
             <>
               {/* Navigation */}
               <div className="flex items-center justify-between">
-                <button
-                  type="button"
+                <button type="button"
                   onClick={() => setQuestionIndex((i) => Math.max(0, i - 1))}
                   disabled={questionIndex === 0}
-                  className="inline-flex h-8 items-center gap-1 rounded-full bg-[var(--ink)]/6 px-3 text-xs font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12 disabled:opacity-30"
+                  className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-xs font-semibold transition-all disabled:opacity-30 ${
+                    inv6 ? "bg-white/15 text-white hover:bg-white/25" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
+                  }`}
                 >
                   ← 上一题
                 </button>
 
                 <div className="flex items-center gap-1.5">
                   {questions.map((_, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setQuestionIndex(i)}
-                      className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-all ${
+                    <button key={i} type="button" onClick={() => setQuestionIndex(i)}
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-all"
+                      style={
                         i === questionIndex
-                          ? "bg-[var(--ink)] text-white shadow-sm"
-                          : "bg-[var(--ink)]/6 text-[var(--muted)] hover:bg-[var(--ink)]/12 hover:text-[var(--ink)]"
-                      }`}
+                          ? { backgroundColor: "var(--ink)", color: "#fff" }
+                          : inv6
+                            ? { backgroundColor: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.5)" }
+                            : { backgroundColor: "var(--ink)", opacity: 0.06, color: "var(--muted)" }
+                      }
                     >
                       {i + 1}
                     </button>
                   ))}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    setQuestionIndex((i) => Math.min(questions.length - 1, i + 1))
-                  }
+                <button type="button"
+                  onClick={() => setQuestionIndex((i) => Math.min(questions.length - 1, i + 1))}
                   disabled={questionIndex >= questions.length - 1}
-                  className="inline-flex h-8 items-center gap-1 rounded-full bg-[var(--ink)]/6 px-3 text-xs font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12 disabled:opacity-30"
+                  className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-xs font-semibold transition-all disabled:opacity-30 ${
+                    inv6 ? "bg-white/15 text-white hover:bg-white/25" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
+                  }`}
                 >
                   下一题 →
                 </button>
@@ -1137,12 +1119,7 @@ function CreatePageContent() {
                 onChange={(updated) => updateQuestion(questionIndex, updated)}
                 onDelete={
                   questions.length > 1
-                    ? () => {
-                        deleteQuestion(questionIndex);
-                        setQuestionIndex((i) =>
-                          Math.max(0, Math.min(i, questions.length - 2)),
-                        );
-                      }
+                    ? () => { deleteQuestion(questionIndex); setQuestionIndex((i) => Math.max(0, Math.min(i, questions.length - 2))); }
                     : undefined
                 }
                 onTogglePin={() => toggleQuestionPin(questionIndex)}
@@ -1151,34 +1128,28 @@ function CreatePageContent() {
           )}
         </section>
 
-        {/* Step 7: Coverage Validator */}
-        <CoverageValidator questions={questions} factors={factors} />
+        {/* ── Step 7: Coverage Validator ── */}
+        <section
+          className="overflow-hidden rounded-[28px] p-5 sm:p-6 space-y-4"
+          style={{ backgroundColor: bgS7, color: textOn(bgS7) }}
+        >
+          <CoverageValidator questions={questions} factors={factors} bgColor={bgS7} noCard />
+        </section>
 
-        {/* Save */}
+        {/* ── Save ── */}
         <section className="flex flex-col items-center gap-4 pb-16 pt-8">
           {isEditMode && (
-            <button
-              type="button"
-              onClick={() => router.push("/create")}
+            <button type="button" onClick={() => router.push("/create")}
               className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ink)]/12 bg-white px-5 py-2.5 text-sm font-semibold text-[var(--muted)] transition-all hover:text-[var(--ink)] hover:border-[var(--ink)]/25"
             >
               ← 返回创建模式
             </button>
           )}
           <SaveQuizButton
-            quiz={{
-              meta,
-              results,
-              factors,
-              resultVectors,
-              questions,
-              abstractness: quiz.abstractness,
-              seriousness: quiz.seriousness,
-              depth: quiz.depth,
-              poeticness: quiz.poeticness,
-            }}
+            quiz={{ meta, results, factors, resultVectors, questions, abstractness: quiz.abstractness, seriousness: quiz.seriousness, depth: quiz.depth, poeticness: quiz.poeticness }}
             editMode={isEditMode}
             editQuizId={editQuizId}
+            accentColor={undefined}
           />
         </section>
       </div>

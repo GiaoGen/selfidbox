@@ -7,6 +7,8 @@ import { EditableSlider } from "@/components/quiz-studio/EditableSlider";
 type Props = {
   style: QuizStyleControls;
   onChange: (patch: Partial<QuizStyleControls>) => void;
+  accentColor?: string;
+  inverted?: boolean;
 };
 
 const SLIDERS: {
@@ -21,12 +23,16 @@ const SLIDERS: {
   { key: "poeticness", label: "文艺度", left: "直白", right: "文艺" },
 ];
 
-export function QuizStyleControls({ style, onChange }: Props) {
+export function QuizStyleControls({ style, onChange, accentColor, inverted }: Props) {
+  const mutedClass = inverted ? "text-white/55" : "text-[var(--muted)]";
+  const bodyClass = inverted ? "text-white/80" : "text-[var(--body)]";
+  const subtleClass = inverted ? "text-white/35" : "text-[var(--muted)]/60";
+
   return (
-    <section className="overflow-hidden rounded-[28px] border border-[var(--ink)]/8 bg-white p-5 shadow-[0_8px_30px_rgba(10,10,10,0.04)]">
-      <div className="flex items-center gap-2 mb-4">
-        <Sliders size={18} className="text-[var(--muted)]" />
-        <p className="text-sm font-semibold text-[var(--muted)]">
+    <>
+      <div className="flex items-center gap-2 mb-1">
+        <Sliders size={18} className={mutedClass} />
+        <p className={`text-sm font-semibold ${mutedClass}`}>
           Quiz Style Controls
         </p>
       </div>
@@ -35,24 +41,26 @@ export function QuizStyleControls({ style, onChange }: Props) {
         {SLIDERS.map((s) => (
           <div key={s.key}>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-semibold text-[var(--body)]">
+              <span className={`text-sm font-semibold ${bodyClass}`}>
                 {s.label}
               </span>
-              <span className="text-xs text-[var(--muted)] tabular-nums">
+              <span className={`text-xs tabular-nums ${mutedClass}`}>
                 {style[s.key]}
               </span>
             </div>
             <EditableSlider
               value={style[s.key]}
               onChange={(v) => onChange({ [s.key]: v })}
+              accentColor={accentColor}
+              inverted={inverted}
             />
             <div className="flex items-center justify-between mt-0.5">
-              <span className="text-[10px] text-[var(--muted)]/60">{s.left}</span>
-              <span className="text-[10px] text-[var(--muted)]/60">{s.right}</span>
+              <span className={`text-[10px] ${subtleClass}`}>{s.left}</span>
+              <span className={`text-[10px] ${subtleClass}`}>{s.right}</span>
             </div>
           </div>
         ))}
       </div>
-    </section>
+    </>
   );
 }

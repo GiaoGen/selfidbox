@@ -10,21 +10,25 @@ type Props = {
   onAdd?: () => void;
   onDelete?: (index: number) => void;
   onTogglePin?: (index: number) => void;
+  bgColor?: string;
+  noCard?: boolean;
 };
 
 const btnBase = "flex h-5 w-5 items-center justify-center rounded-full transition-all";
 const btnVisible = "bg-black/8 text-[var(--ink)]/60 hover:bg-black/16 hover:text-[var(--ink)]";
 
-export function FactorList({ factors, onChange, onAdd, onDelete, onTogglePin }: Props) {
+export function FactorList({ factors, onChange, onAdd, onDelete, onTogglePin, bgColor, noCard }: Props) {
   const isEditing = !!onChange;
 
-  return (
-    <section className="rounded-[32px] bg-[var(--surface-card)] p-6 sm:p-8">
-      <p className="text-sm font-semibold text-[var(--muted)]">Factors</p>
-      <p className="mt-2 text-base leading-7 text-[var(--body)]">
-        这些影响因子构成了这个测试的人格空间。每个因子都是一个维度，题目选项会在这些维度上移动用户的向量位置。
-      </p>
-      <div className="mt-5 flex flex-wrap gap-3">
+  const content = (
+    <>
+      {!noCard && <p className="text-sm font-semibold text-[var(--muted)]">Factors</p>}
+      {!noCard && (
+        <p className="mt-2 text-base leading-7 text-[var(--body)]">
+          这些影响因子构成了这个测试的人格空间。每个因子都是一个维度，题目选项会在这些维度上移动用户的向量位置。
+        </p>
+      )}
+      <div className={`flex flex-wrap gap-3 ${noCard ? "" : "mt-5"}`}>
         {factors.map((f, i) => {
           const pinned = f.isPinned;
           return (
@@ -77,12 +81,24 @@ export function FactorList({ factors, onChange, onAdd, onDelete, onTogglePin }: 
           <button
             type="button"
             onClick={onAdd}
-            className="inline-flex h-9 items-center gap-1 rounded-full bg-[var(--ink)]/6 px-4 text-sm font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ink)]/6 text-sm font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12 active:scale-95"
+            title="添加因子"
           >
-            + 添加因子
+            +
           </button>
         )}
       </div>
+    </>
+  );
+
+  if (noCard) return content;
+
+  return (
+    <section
+      className="rounded-[32px] p-6 sm:p-8"
+      style={{ backgroundColor: bgColor ? `${bgColor}12` : "var(--surface-card)" }}
+    >
+      {content}
     </section>
   );
 }

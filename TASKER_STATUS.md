@@ -4,6 +4,72 @@ Last updated: 2026-06-03
 
 ---
 
+## Recent — 2026-06-03 (evening 2)
+
+### AI Quiz Studio — Flat Design（消除嵌套卡片，纯色扁平化）
+
+- **消除所有嵌套卡片**：移除 Step 外框 → 内框 → 内容框 的三层嵌套结构。每个 Step 现在是一个完整的纯色背景卡片，所有内容（Header / Divider / Description / Controls / Content）直接放在同一个 section 内。
+- **Step 1**：QuizMetaCard 本身即为 Step 卡片，StepLabel 通过 `stepNumber`/`stepLabel` props 内嵌到 QuizMetaCard 顶部
+- **Step 2–6**：每个 Step 使用 `<section>` + Nippon 纯色背景，内部无额外卡片包装。说明文字、RangeSelector、内容网格全部平铺
+- **Step 7**：CoverageValidator 支持 `noCard` 模式，内容由外层 Step section 提供背景
+- **QuizStyleControls**：移除自身白色卡片包装，由外层 section 提供 Nippon 纯色背景；支持 `inverted` prop 控制文字颜色
+- **FactorList**：新增 `noCard` prop，隐藏时内容直接继承父容器背景
+- **颜色系统重构**：
+  - Step 背景：每个 Step 独立随机 Nippon 纯色（solid，非 tinted）
+  - 按钮：统一 `bg-[var(--ink)]` 黑色 + 白色文字
+  - AI 生成按钮：黑色背景 + 白色文字
+  - 添加按钮：黑色 `+`
+  - Step Number 圆圈：黑色背景
+  - RangeSelector 选中态：黑色
+  - Slider 轨道：统一黑色（不再使用随机 accentColor）
+  - 不再使用绿色/渐变色
+- **暗色背景自适应**：`isLight()` 函数判断 Nippon 色亮度 → 浅色背景使用深色文字，深色背景使用白色文字
+- **Hydration 修复**：`useNipponTheme` 使用 SSR_DEFAULT → `useEffect` 客户端随机化模式，避免 Math.random() 在 SSR 阶段执行
+- **修改文件**：
+  - `app/create/page.tsx` — 主题 hook 重构（9 个独立 bg）、StepSection/AIGenerateBtn/AddBtn/StepDivider/StepDesc 辅助组件、所有 Step 平铺渲染
+  - `components/quiz-engine/QuizMetaCard.tsx` — 新增 `stepNumber`/`stepLabel` props + `isLight` 自适应
+  - `components/quiz-engine/QuizStyleControls.tsx` — 移除自身卡片包装 + `inverted` prop
+  - `components/quiz-engine/FactorList.tsx` — 新增 `noCard` prop
+  - `components/quiz-engine/CoverageValidator.tsx` — 新增 `noCard` prop + 集成 StepLabel
+  - `components/quiz-studio/EditableSlider.tsx` — 新增 `inverted` prop + 黑色轨道/thumb
+  - `components/quiz-engine/SaveQuizButton.tsx` — 默认 fallback 从 `#b8a4ed` 改为 `#0a0a0a`
+
+- **未修改**：AI 逻辑、Quiz Runtime、Profile、OCR、Explore、Auth、数据库结构、业务逻辑
+
+---
+
+## Recent — 2026-06-03 (evening)
+
+### AI Quiz Studio — Nippon Colors UI（纯色日式杂志风）
+
+- **Nippon Colors 颜色系统**：从 `Nippon_Colors.md` 提取全部 250 个传统日色 HEX，建为本地静态数组；`useNipponTheme()` hook 使用 `useState` lazy init 在页面刷新时随机抽取 3 个颜色（`hero`/`accent`/`accentAlt`），本次页面生命周期内固定
+- **Hero 卡片简化**：删除副标题、说明文字、操作 icon grid；仅保留 `AI Quiz Studio` 标题 + 右侧 Library icon 按钮（打开 MyQuizzesModal）；背景改为 Nippon 纯色（hero color @ 10% opacity）
+- **Step 统一卡片**：新增 `StepCard` 组件 — 所有 Step 1–7 包裹在统一的大圆角（28px）纯色背景卡片中（accent color @ 8% opacity），内含 Header / Divider / Controls / Description / Content
+- **QuizMetaCard**：从渐变色改为纯色背景；新增可选 `bgColor` prop，传入时使用 Nippon 色，未传入时回退到原渐变色（Quiz Runtime 不受影响）
+- **添加按钮**：全部 "+ 添加" / "+ 添加因子" / "+ 添加选项" 改为仅 "+"；按钮宽度同步缩小为 `h-8 w-8` 圆形
+- **AI 生成按钮**：新增 `AIGenerateButton` 组件 — 从渐变色改为 Nippon 纯色背景；保留大小、位置、loading spinner 和 hover/active 效果
+- **RangeSelector 紧凑化**：padding 从 `p-0.5` 缩为 `p-px`，chip padding 从 `px-2 py-0.5` 缩为 `px-1.5 py-0`，字体从 `text-xs` 缩为 `text-[10px]`，max-width 缩小；Question Count + Options Per Question 现在可并排显示
+- **EditableSlider**：新增可选 `accentColor` prop — 传入时 active track fill + thumb 使用 Nippon 颜色，未传入时回退到 `currentColor`（Quiz Runtime 不受影响）
+- **QuizStyleControls**：接收 `accentColor` 并传递给 EditableSlider
+- **FactorList / CoverageValidator**：新增可选 `bgColor` prop，传入时使用 Nippon 色背景
+- **SaveQuizButton**：新增可选 `accentColor` prop，"发布试玩版" 按钮从渐变色改为 Nippon 纯色
+- **Step Number**：`StepLabel` 新增可选 `color` prop，数字圆圈使用 Nippon 色
+- **Question 导航圆点**：选中态使用 Nippon accent 色
+- **Nippon Colors 应用范围**：Hero Card ✓ / Step 背景 ✓ / Step Number ✓ / AI 按钮 ✓ / 添加按钮 ✓ / Slider Active Track ✓ / Chip Selected State ✓ / 发布按钮 ✓
+
+- **修改文件**：
+  - `app/create/page.tsx` — 几乎所有 UI 重写：新增 `NIPPON_COLORS` 数组（250 色）、`useNipponTheme` hook、`StepCard` 组件、`AIGenerateButton` 组件、`StepLabel` 增强、`RangeSelector` 紧凑化 + 颜色支持、所有 Step 使用 StepCard 包裹
+  - `components/quiz-engine/QuizMetaCard.tsx` — 新增可选 `bgColor` prop
+  - `components/quiz-engine/QuizStyleControls.tsx` — 新增可选 `accentColor` prop，传递至 EditableSlider
+  - `components/quiz-engine/FactorList.tsx` — 新增可选 `bgColor` prop；添加按钮改为 "+"
+  - `components/quiz-engine/CoverageValidator.tsx` — 新增可选 `bgColor` prop
+  - `components/quiz-engine/SaveQuizButton.tsx` — 新增可选 `accentColor` prop
+  - `components/quiz-studio/EditableSlider.tsx` — 新增可选 `accentColor` prop
+
+- **未修改**：AI 逻辑、Quiz Runtime、Profile、OCR、Explore、Auth、数据库结构、业务逻辑
+
+---
+
 ## Recent — 2026-06-03
 
 ### AI Quiz Studio — Quiz Style Controls（全局风格变量）

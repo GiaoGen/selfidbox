@@ -6,10 +6,12 @@ export function SaveQuizButton({
   quiz,
   editMode = false,
   editQuizId,
+  accentColor,
 }: {
   quiz: Record<string, unknown>;
   editMode?: boolean;
   editQuizId?: string | null;
+  accentColor?: string;
 }) {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error" | "publishing" | "published">("idle");
   const [message, setMessage] = useState("");
@@ -146,7 +148,8 @@ export function SaveQuizButton({
               <button
                 type="button"
                 onClick={handlePublishSandbox}
-                className="inline-flex h-12 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-8 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)]"
+                className="inline-flex h-12 items-center gap-2 rounded-full px-8 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)]"
+                style={{ backgroundColor: accentColor || "#0a0a0a" }}
               >
                 发布试玩版
               </button>
@@ -156,7 +159,10 @@ export function SaveQuizButton({
       )}
 
       {status === "publishing" && (
-        <div className="inline-flex h-12 items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_100%)] px-8 text-sm font-semibold text-white opacity-70">
+        <div
+          className="inline-flex h-12 items-center gap-2 rounded-full px-8 text-sm font-semibold text-white opacity-70"
+          style={{ backgroundColor: accentColor || "#0a0a0a" }}
+        >
           <svg
             className="h-4 w-4 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
