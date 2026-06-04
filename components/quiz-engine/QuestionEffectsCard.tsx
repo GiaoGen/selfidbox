@@ -5,13 +5,19 @@ import type { Question, Factor } from "@/lib/mock-quiz-engine";
 import type { OptionEffect } from "@/lib/mock-quiz-engine";
 import { InlineEditableInput } from "@/components/quiz-studio/InlineEditableInput";
 
-const EFFECT_COLORS: Record<string, string> = {
-  sensitivity: "bg-[#ffb084]/20 text-[#8b5e3c]",
-  expressiveness: "bg-[#ff4d8b]/15 text-[#b8315a]",
-  imagination: "bg-[#b8a4ed]/25 text-[#5a3e9e]",
-  drive: "bg-[#e8b94a]/20 text-[#8b6f1a]",
-  orderliness: "bg-[#1a3a3a]/15 text-[#1a3a3a]",
-};
+function getEffectStyle(hex: string): React.CSSProperties {
+  return {
+    backgroundColor: `${hex}20`,
+    color: hex,
+  };
+}
+
+function isLight(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55;
+}
 
 function getFactorName(factorId: string, factors: Factor[]): string {
   return factors.find((f) => f.id === factorId)?.name ?? factorId;
@@ -29,6 +35,7 @@ type Props = {
   onChange?: (question: Question) => void;
   onDelete?: () => void;
   onTogglePin?: () => void;
+  accentColors?: string[];
 };
 
 const btnBase = "flex h-7 w-7 items-center justify-center rounded-full transition-all";
@@ -41,6 +48,7 @@ export function QuestionEffectsCard({
   onChange,
   onDelete,
   onTogglePin,
+  accentColors,
 }: Props) {
   const isEditing = !!onChange;
   const update = onChange ?? (() => {});
@@ -118,12 +126,7 @@ export function QuestionEffectsCard({
         )}
       </div>
 
-      <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-sm font-semibold text-white">
-          {index + 1}
-        </span>
-        <p className="text-sm font-semibold text-[var(--muted)]">Question {index + 1}</p>
-      </div>
+      <p className="text-sm font-semibold text-[var(--muted)]">Question {index + 1}</p>
 
       {isEditing ? (
         <InlineEditableInput
@@ -145,8 +148,8 @@ export function QuestionEffectsCard({
             key={oIndex}
             className="rounded-[16px] bg-[var(--surface-soft)] p-4 group/opt relative"
           >
-            <div className="flex items-start gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-xs font-semibold text-white">
+            <div className="flex items-center gap-3">
+              <span className="shrink-0 text-xl font-bold text-[var(--ink)] leading-none">
                 {option.label}
               </span>
               <div className="min-w-0 flex-1">
@@ -162,12 +165,15 @@ export function QuestionEffectsCard({
                     <div className="flex flex-wrap items-center gap-2">
                       {factors.map((f) => {
                         const delta = option.effects[f.id] ?? 0;
-                        const colorClass =
-                          EFFECT_COLORS[f.id] ?? "bg-[var(--surface-strong)]";
+                        const efIdx = factors.findIndex((x) => x.id === f.id);
+                        const efColor = accentColors?.[efIdx % (accentColors?.length || 1)] ?? "#888888";
+                        const efStyle = getEffectStyle(efColor);
+                        const efDark = isLight(efColor);
                         return (
                           <span
                             key={f.id}
-                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${colorClass}`}
+                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                            style={{ backgroundColor: `${efColor}20`, color: efDark ? "var(--ink)" : efColor }}
                           >
                             {f.name}
                             <input
@@ -192,12 +198,13 @@ export function QuestionEffectsCard({
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {Object.entries(option.effects).map(([factorId, delta]) => {
                         if (delta === 0) return null;
-                        const colorClass =
-                          EFFECT_COLORS[factorId] ?? "bg-[var(--surface-strong)]";
+                        const efIdx = factors.findIndex((f) => f.id === factorId);
+                        const efColor = accentColors?.[efIdx % (accentColors?.length || 1)] ?? "#888888";
                         return (
                           <span
                             key={factorId}
-                            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${colorClass}`}
+                            className="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                            style={{ backgroundColor: `${efColor}20`, color: efColor }}
                           >
                             {getFactorName(factorId, factors)} {formatDelta(delta)}
                           </span>

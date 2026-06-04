@@ -22,10 +22,26 @@ type Props = {
   onChange?: (result: Result) => void;
   onDelete?: () => void;
   onTogglePin?: () => void;
+  cardColor?: string;
 };
 
-export function ResultCard({ result, index, onChange, onDelete, onTogglePin }: Props) {
-  const color = COLORS[index % COLORS.length];
+function isLight(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55;
+}
+
+export function ResultCard({ result, index, onChange, onDelete, onTogglePin, cardColor }: Props) {
+  const hasColor = !!cardColor;
+  const darkText = hasColor && isLight(cardColor!);
+  const colorClass = hasColor
+    ? ""
+    : COLORS[index % COLORS.length];
+  const cardStyle = hasColor
+    ? { backgroundColor: cardColor, color: darkText ? "var(--ink)" : "#ffffff" } as React.CSSProperties
+    : undefined;
+
   const isEditing = !!onChange;
   const update = onChange ?? (() => {});
   const pinned = result.isPinned;
@@ -34,7 +50,12 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin }: P
   const [uploadState, setUploadState] = useState<"idle" | "loading" | "error">("idle");
 
   const btnBase = "flex h-7 w-7 items-center justify-center rounded-full transition-all";
-  const btnVisible = "bg-white/20 text-current/80 hover:bg-white/35 hover:text-current";
+  const btnVisible = hasColor
+    ? darkText ? "bg-black/10 text-[var(--ink)]/70 hover:bg-black/20 hover:text-[var(--ink)]" : "bg-white/20 text-current/80 hover:bg-white/35 hover:text-current"
+    : "bg-white/20 text-current/80 hover:bg-white/35 hover:text-current";
+  const pinActive = hasColor
+    ? darkText ? "bg-black/15 text-[var(--ink)]" : "bg-white/30 text-current"
+    : "bg-white/30 text-current";
 
   function handleUploadClick() {
     fileInputRef.current?.click();
@@ -56,11 +77,15 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin }: P
     }
   }
 
+  const opacityClass = hasColor ? (darkText ? "opacity-50" : "opacity-60") : "opacity-50";
+  const descClass = hasColor ? (darkText ? "opacity-70" : "opacity-80") : "opacity-80";
+
   return (
     <article
-      className={`rounded-[28px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.07)] ${color} relative group/card transition-shadow ${
+      className={`rounded-[28px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.07)] ${colorClass} relative group/card transition-shadow ${
         pinned ? "ring-2 ring-white/40 shadow-[0_0_24px_rgba(255,255,255,0.18)]" : ""
       }`}
+      style={cardStyle}
     >
       <div className="absolute right-3 top-3 flex items-center gap-0.5">
         {isEditing && (
@@ -94,9 +119,7 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin }: P
             type="button"
             onClick={onTogglePin}
             className={`${btnBase} ${
-              pinned
-                ? "bg-white/30 text-current"
-                : btnVisible
+              pinned ? pinActive : btnVisible
             }`}
             title={pinned ? "取消固定" : "固定此结果"}
           >
@@ -132,10 +155,10 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin }: P
           value={result.subtitle ?? ""}
           onChange={(v) => update({ ...result, subtitle: v })}
           placeholder="副标题"
-          className="text-xs font-semibold opacity-50"
+          className={`text-xs font-semibold ${opacityClass}`}
         />
       ) : result.subtitle ? (
-        <p className="text-xs font-semibold opacity-50">{result.subtitle}</p>
+        <p className={`text-xs font-semibold ${opacityClass}`}>{result.subtitle}</p>
       ) : null}
 
       {/* name */}
@@ -156,10 +179,10 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin }: P
           value={result.description}
           onChange={(v) => update({ ...result, description: v })}
           placeholder="结果描述…"
-          className="mt-3 text-sm leading-6 opacity-80"
+          className={`mt-3 text-sm leading-6 ${descClass}`}
         />
       ) : (
-        <p className="mt-3 text-sm leading-6 opacity-80">{result.description}</p>
+        <p className={`mt-3 text-sm leading-6 ${descClass}`}>{result.description}</p>
       )}
 
       <div className="mt-4">
@@ -186,14 +209,14 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin }: P
             value={result.shareText ?? ""}
             onChange={(v) => update({ ...result, shareText: v })}
             placeholder="分享文案（可选）"
-            className="w-full text-xs opacity-50"
+            className={`w-full text-xs ${opacityClass}`}
           />
         </div>
       )}
 
       {/* upload error feedback */}
       {uploadState === "error" && (
-        <p className="mt-2 text-xs opacity-60">上传失败，请重试</p>
+        <p className={`mt-2 text-xs ${opacityClass}`}>上传失败，请重试</p>
       )}
     </article>
   );

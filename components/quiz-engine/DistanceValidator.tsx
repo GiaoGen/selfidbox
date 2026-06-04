@@ -1,25 +1,35 @@
 import type { Result, ResultVector } from "@/lib/mock-quiz-engine";
 import { validateResultDistances } from "@/lib/quiz-vector";
 
+function getReadableTextColor(bgHex: string): string {
+  const r = parseInt(bgHex.slice(1, 3), 16);
+  const g = parseInt(bgHex.slice(3, 5), 16);
+  const b = parseInt(bgHex.slice(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.55 ? "#1a1a1a" : "#ffffff";
+}
+
 export function DistanceValidator({
   resultVectors,
   results,
+  accentColors,
 }: {
   resultVectors: ResultVector[];
   results: Result[];
+  accentColors?: string[];
 }) {
-  const { pairs, threshold } = validateResultDistances(resultVectors, results);
+  const { pairs } = validateResultDistances(resultVectors, results);
 
   const closePairs = pairs.filter((p) => p.close);
   const distinctPairs = pairs.filter((p) => !p.close);
 
-  if (pairs.length === 0 && results.length < 2) {
-    return (
-      <div className="rounded-2xl bg-[var(--surface-card)] px-5 py-4 text-sm text-[var(--muted)]">
-        至少需要 2 个结果才能进行区分度检查。
-      </div>
-    );
-  }
+  if (pairs.length === 0) return null;
+
+  // Solid Nippon color — one unified bg for all items in this step
+  const itemBg = accentColors?.[5] ?? "#b8a4ed";
+  const textColor = getReadableTextColor(itemBg);
+  const isDark = textColor === "#1a1a1a";
+  const mutedText = isDark ? "rgba(10,10,10,0.6)" : "rgba(255,255,255,0.7)";
 
   return (
     <>
@@ -31,14 +41,15 @@ export function DistanceValidator({
           {closePairs.map((pair) => (
             <div
               key={`${pair.resultA.id}-${pair.resultB.id}`}
-              className="rounded-[20px] bg-[#fff5e8] border border-[#e8b94a]/30 p-4"
+              className="rounded-[20px] p-4"
+              style={{ backgroundColor: itemBg }}
             >
-              <p className="text-sm leading-6 text-[var(--body)]">
-                <span className="font-semibold text-[var(--ink)]">{pair.resultA.name}</span>
+              <p className="text-sm leading-6" style={{ color: mutedText }}>
+                <span className="font-semibold" style={{ color: textColor }}>{pair.resultA.name}</span>
                 {" 和 "}
-                <span className="font-semibold text-[var(--ink)]">{pair.resultB.name}</span>
+                <span className="font-semibold" style={{ color: textColor }}>{pair.resultB.name}</span>
                 {" 人格位置较接近（相似度 "}
-                <span className="font-semibold">{pair.similarity}%</span>
+                <span className="font-semibold" style={{ color: textColor }}>{pair.similarity}%</span>
                 {"），可能会产生相似结果。"}
               </p>
             </div>
@@ -54,14 +65,15 @@ export function DistanceValidator({
           {distinctPairs.map((pair) => (
             <div
               key={`${pair.resultA.id}-${pair.resultB.id}`}
-              className="rounded-[20px] bg-[#e8f5ec] border border-[#a4d4c5]/30 p-4"
+              className="rounded-[20px] p-4"
+              style={{ backgroundColor: itemBg }}
             >
-              <p className="text-sm leading-6 text-[var(--body)]">
-                <span className="font-semibold text-[var(--ink)]">{pair.resultA.name}</span>
+              <p className="text-sm leading-6" style={{ color: mutedText }}>
+                <span className="font-semibold" style={{ color: textColor }}>{pair.resultA.name}</span>
                 {" 和 "}
-                <span className="font-semibold text-[var(--ink)]">{pair.resultB.name}</span>
+                <span className="font-semibold" style={{ color: textColor }}>{pair.resultB.name}</span>
                 {" 区分度良好（相似度 "}
-                <span className="font-semibold">{pair.similarity}%</span>
+                <span className="font-semibold" style={{ color: textColor }}>{pair.similarity}%</span>
                 {"）。"}
               </p>
             </div>

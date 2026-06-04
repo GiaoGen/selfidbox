@@ -1,22 +1,61 @@
 "use client";
 
+import { useState } from "react";
+import { CircleHelp } from "lucide-react";
 import type { QuizMeta } from "@/lib/mock-quiz-engine";
 import { InlineEditableInput } from "@/components/quiz-studio/InlineEditableInput";
 import { InlineEditableTextarea } from "@/components/quiz-studio/InlineEditableTextarea";
 
 /* ------------------------------------------------------------------ */
-/*  Mini StepLabel (inline, no extra import needed)                     */
+/*  Mini StepLabel — plain number + optional help popover                */
 /* ------------------------------------------------------------------ */
 
-function StepLabel({ num, label, light }: { num: number; label: string; light?: boolean }) {
+function StepLabel({ num, label, light, description }: {
+  num: number;
+  label: string;
+  light?: boolean;
+  description?: string;
+}) {
+  const textColor = light ? "text-white" : "text-[var(--ink)]";
+  const [helpOpen, setHelpOpen] = useState(false);
+
   return (
     <div className="flex items-center gap-3">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-sm font-semibold text-white">
+      <span className={`shrink-0 text-xl font-semibold tracking-[-0.02em] ${textColor}`}>
         {num}
       </span>
-      <h2 className={`text-xl font-semibold tracking-[-0.02em] ${light ? "text-white" : "text-[var(--ink)]"}`}>
+      <h2 className={`text-xl font-semibold tracking-[-0.02em] ${textColor}`}>
         {label}
       </h2>
+      {description && (
+        <>
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            className={`shrink-0 rounded-full transition-opacity ${
+              light ? "text-white/35 hover:text-white/65" : "text-[var(--ink)]/25 hover:text-[var(--ink)]/50"
+            }`}
+            title="查看说明"
+          >
+            <CircleHelp size={15} />
+          </button>
+          {helpOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setHelpOpen(false)} />
+              <div className="fixed bottom-6 left-4 right-4 z-50 mx-auto max-w-sm rounded-2xl bg-[var(--surface-card)] p-5 shadow-[0_12px_50px_rgba(10,10,10,0.15)] ring-1 ring-[var(--ink)]/6">
+                <p className="text-sm leading-6 text-[var(--body)]">{description}</p>
+                <button
+                  type="button"
+                  onClick={() => setHelpOpen(false)}
+                  className="mt-3 text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
+                >
+                  关闭
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }

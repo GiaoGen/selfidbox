@@ -1,10 +1,82 @@
 # TASKER STATUS
 
-Last updated: 2026-06-03
+Last updated: 2026-06-04
 
 ---
 
-## Recent — 2026-06-03 (evening 2)
+## Recent — 2026-06-04
+
+### AI Quiz Studio UI 优化 #5 — 移除描边 + Step 解释折叠 + 帮助 Popover
+
+1. **Step 5 & Step 7 移除描边**：删除所有 `border` class 和 `borderColor`/`itemBorder` style。只保留纯色背景 + 圆角，视觉更干净。
+2. **Step 解释默认隐藏**：所有 `StepDesc` 从页面中移除。页面默认更紧凑。
+3. **帮助图标**：StepLabel 新增 `description` prop，有描述时标题右侧显示 `CircleHelp` 图标（小尺寸、低视觉权重）。
+4. **点击查看 Popover**：点击帮助图标弹出解释卡（`fixed` 底部定位 + 全屏透明遮罩），Mobile-first 的小卡片设计，含「关闭」按钮。
+5. **QuizMetaCard StepLabel 同步更新**：Step 1 的 Mini StepLabel 同样支持帮助图标。
+
+修改文件：
+- `components/quiz-engine/DistanceValidator.tsx` — 移除 border + borderColor
+- `components/quiz-engine/CoverageValidator.tsx` — 移除 border + itemBorder
+- `app/create/page.tsx` — StepLabel 重写（CircleHelp + Popover）、StepDesc 移除、描述文本上移为 StepLabel prop
+- `components/quiz-engine/QuizMetaCard.tsx` — StepLabel 同步更新 + 新增 useState/CircleHelp import
+
+### AI Quiz Studio UI 优化 #4 — Step 5 & Step 7 纯色背景
+
+1. **Step 5 距离区分度检查**：所有 item 统一使用一个 Nippon 纯色背景（`accentColors[5]`）。移除 `${warnColor}15`/`${goodColor}15` 等半透明背景，改用 solid color + `getReadableTextColor()` 确保文字可读。close/distinct pairs 通过 section header 区分。
+2. **Step 7 题目覆盖检查**：所有覆盖提醒 item 统一使用一个 Nippon 纯色背景（`accentColors[2]`）。移除 `${coveredColor}15`/`${uncoveredColor}15` 半透明背景。图标颜色自适应明暗，check/X 路径描边自动反差。底部未覆盖汇总框也同步使用纯色。
+3. **无 rgba/blur/glassmorphism**：两个 Step 均不再使用任何半透明、模糊或玻璃效果。
+
+修改文件：
+- `components/quiz-engine/DistanceValidator.tsx` — 新增 `getReadableTextColor` + 纯色 item 背景 + 自适应文字
+- `components/quiz-engine/CoverageValidator.tsx` — 新增 `getReadableTextColor` + 纯色 item 背景 + 图标自适应
+
+### AI Quiz Studio UI 优化 #3 — Carousel、选项字母、全卡片颜色
+
+1. **Question Header**：删除左侧黑色圆形数字，保留 "Question N" 文本左对齐。
+2. **选项字母 A/B/C/D**：放大为 `text-xl font-bold`，移除黑色圆形背景，使用 `items-center` 垂直居中，视觉权重更高。
+3. **Step 2 Result Carousel**：从多列网格改为单卡片轮播。顶部 ← 上一个 | 数字圆点 | 下一个 → 导航。支持按钮切换，删除时自动调整索引。
+4. **Step 4 Vector Carousel**：同步 Step 2 的 `resultIndex`，切换 Result 时 Vector 自动跟随。导航中间显示当前 Result 名称。
+5. **Vector Card 全卡片颜色**：从左侧小边条改为整张卡片使用 Result Color 背景。`getReadableTextColor()` 自动判断所有文字颜色（黑/白），按钮、badge、slider 轨道自适应明暗。Slider 保持黑色。
+6. **联动**：Step 2 和 Step 4 共享 `resultIndex` 状态，切换任一即同步。
+
+修改文件：
+- `components/quiz-engine/QuestionEffectsCard.tsx` — 删除数字圆 + 放大选项字母
+- `components/quiz-engine/ResultVectorCard.tsx` — 全卡片背景色 + 自适应文字
+- `app/create/page.tsx` — resultIndex 状态 + Step 2/4 轮播导航
+
+### AI Quiz Studio UI 优化 #2（纯 UI，不改逻辑）
+
+## Recent — 2026-06-04
+
+### AI Quiz Studio UI 优化 #2（纯 UI，不改逻辑）
+
+1. **RangeSelector 可读性修复**：移除 `inverted` 对颜色的影响。
+   - 轨道背景固定白色 `#fff`
+   - 未选中数字固定黑色 `var(--ink)`
+   - 选中态：黑色圆形背景 + 白色数字（保持不变）
+   - 移除 mouseEnter/mouseLeave hover 逻辑，简化代码
+   - 不再受 Step 背景颜色深浅影响
+2. **Step Header 改用纯数字**：从骰子符号改回纯数字，无圆形背景。
+   - 数字字号与标题一致（`text-xl font-semibold`）
+   - 数字颜色与标题一致（浅色背景 `var(--ink)`，深色背景白色）
+   - 移除 DICE 映射常量
+
+修改文件：
+- `app/create/page.tsx` — RangeSelector 重构 + StepLabel 重写
+- `components/quiz-engine/QuizMetaCard.tsx` — Mini StepLabel 同步更新
+
+### AI Quiz Studio UI 优化（纯 UI，不改逻辑）
+
+1. **Step 5 空状态**：删除「至少需要 2 个结果才能进行区分度检查」提示卡片。结果不足时 DistanceValidator 返回 null，保持干净空状态。
+2. **Step 4 Result Name 可读性**：`ResultVectorCard` h3 标题新增 `getReadableTextColor()` 函数，根据卡片背景自动选择 `#1a1a1a` 或 `#ffffff`，确保 Result Name 始终可见。
+3. **Step Header 骰子符号**：将黑色圆形数字 ①②③④⑤⑥ 替换为 Unicode 骰子面 ⚀⚁⚂⚃⚄⚅，7+ 不显示符号。
+4. **移除黑色圆背景**：骰子符号无背景圆，使用 40-50% 透明度与标题对齐，风格更轻盈。
+
+修改文件：
+- `components/quiz-engine/DistanceValidator.tsx` — 删除不足 2 结果时的提示卡片，直接 return null
+- `components/quiz-engine/ResultVectorCard.tsx` — 新增 `getReadableTextColor()` + h3 inline style
+- `app/create/page.tsx` — StepLabel 重构：DICE 映射 + 骰子符号 + 移除黑色圆背景
+- `components/quiz-engine/QuizMetaCard.tsx` — StepLabel 同步更新
 
 ### AI Quiz Studio — Flat Design（消除嵌套卡片，纯色扁平化）
 
