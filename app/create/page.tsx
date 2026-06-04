@@ -2,19 +2,18 @@
 
 import { useState, useCallback, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Library, CircleHelp } from "lucide-react";
+import { Library, CircleHelp, Check, AlertTriangle, AlertCircle, Minus } from "lucide-react";
 import { TopNavbar } from "@/components/layout/TopNavbar";
 import { QuizMetaCard } from "@/components/quiz-engine/QuizMetaCard";
 import { QuizStyleControls } from "@/components/quiz-engine/QuizStyleControls";
 import { ResultCard } from "@/components/quiz-engine/ResultCard";
 import { FactorList } from "@/components/quiz-engine/FactorList";
 import { ResultVectorCard } from "@/components/quiz-engine/ResultVectorCard";
-import { DistanceValidator } from "@/components/quiz-engine/DistanceValidator";
 import { QuestionEffectsCard } from "@/components/quiz-engine/QuestionEffectsCard";
-import { CoverageValidator } from "@/components/quiz-engine/CoverageValidator";
 import { SaveQuizButton } from "@/components/quiz-engine/SaveQuizButton";
 import { MyQuizzesModal } from "@/components/quiz-runtime/MyQuizzesModal";
 import { mapAIResults, DEFAULT_STYLE } from "@/lib/mock-quiz-engine";
+import { validateResultDistances, validateQuestionCoverage } from "@/lib/quiz-vector";
 import { SELFID_FACTORS } from "@/lib/selfid-factors";
 import type {
   QuizMeta,
@@ -385,6 +384,8 @@ function CreatePageContent() {
   const [resultIndex, setResultIndex] = useState(0);
   const [myQuizzesOpen, setMyQuizzesOpen] = useState(false);
   const [showFactorPicker, setShowFactorPicker] = useState(false);
+  const [discriminationOpen, setDiscriminationOpen] = useState(false);
+  const [coverageOpen, setCoverageOpen] = useState(false);
 
   /* ---- Meta ---- */
 
@@ -905,6 +906,38 @@ function CreatePageContent() {
   const inv7 = !isLight(bgS7);
   const invStyle = !isLight(bgStyle);
 
+  /* ---- Discrimination status (Step 4 button) ---- */
+  const discStatus = (() => {
+    if (quiz.results.length < 2) return "gray" as const;
+    const { pairs } = validateResultDistances(quiz.resultVectors, quiz.results);
+    if (pairs.length === 0) return "gray" as const;
+    const maxSim = Math.max(...pairs.map((p) => p.similarity));
+    if (maxSim >= 85) return "red" as const;
+    if (pairs.some((p) => p.close)) return "yellow" as const;
+    return "green" as const;
+  })();
+
+  const DiscIcon = discStatus === "green" ? Check : discStatus === "yellow" ? AlertTriangle : discStatus === "red" ? AlertCircle : Minus;
+  const discColor = discStatus === "green" ? "#22c55e" : discStatus === "yellow" ? "#f59e0b" : discStatus === "red" ? "#ef4444" : "#9ca3af";
+  const discLabel =
+    discStatus === "green" ? "区分度良好" : discStatus === "yellow" ? "部分结果较接近" : discStatus === "red" ? "区分度较差" : "结果不足";
+
+  /* ---- Coverage status (Step 5 button) ---- */
+  const covStatus = (() => {
+    if (quiz.questions.length === 0 || quiz.factors.length === 0) return "gray" as const;
+    const coverage = validateQuestionCoverage(quiz.questions, quiz.factors);
+    const total = coverage.length;
+    const covered = coverage.filter((c) => c.covered).length;
+    if (total === 0) return "gray" as const;
+    if (covered === total) return "green" as const;
+    if (covered === 0) return "red" as const;
+    return "yellow" as const;
+  })();
+
+  const CovIcon = covStatus === "green" ? Check : covStatus === "yellow" ? AlertTriangle : covStatus === "red" ? AlertCircle : Minus;
+  const covColor = covStatus === "green" ? "#22c55e" : covStatus === "yellow" ? "#f59e0b" : covStatus === "red" ? "#ef4444" : "#9ca3af";
+  const covLabel = covStatus === "green" ? "全部覆盖" : covStatus === "yellow" ? "部分覆盖不足" : covStatus === "red" ? "覆盖严重缺失" : "暂无数据";
+
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -989,21 +1022,21 @@ function CreatePageContent() {
           {results.length > 0 && (
             <>
               {/* Result Navigation */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
                 <button type="button"
                   onClick={() => setResultIndex((i) => Math.max(0, i - 1))}
                   disabled={resultIndex === 0}
-                  className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-xs font-semibold transition-all disabled:opacity-30 ${
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all disabled:opacity-20 ${
                     inv2 ? "bg-white/15 text-white hover:bg-white/25" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
                   }`}
                 >
-                  ← 上一个
+                  ←
                 </button>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex-1 flex items-center gap-1.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
                   {results.map((_, i) => (
                     <button key={i} type="button" onClick={() => setResultIndex(i)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-all"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-all"
                       style={
                         i === resultIndex
                           ? { backgroundColor: "var(--ink)", color: "#fff" }
@@ -1020,11 +1053,11 @@ function CreatePageContent() {
                 <button type="button"
                   onClick={() => setResultIndex((i) => Math.min(results.length - 1, i + 1))}
                   disabled={resultIndex >= results.length - 1}
-                  className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-xs font-semibold transition-all disabled:opacity-30 ${
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all disabled:opacity-20 ${
                     inv2 ? "bg-white/15 text-white hover:bg-white/25" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
                   }`}
                 >
-                  下一个 →
+                  →
                 </button>
               </div>
 
@@ -1103,7 +1136,18 @@ function CreatePageContent() {
         >
           <div className="flex items-center justify-between">
             <StepLabel num={4} label="结果向量" inverted={inv4} description="为每个结果在每个因子维度上设定 0-100 的位置，构成该结果的人格向量。" />
-            <AIGenerateBtn loading={aiVectorsLoading} onClick={handleGenerateResultVectors} inverted={inv4} />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setDiscriminationOpen(true)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all hover:scale-105 active:scale-95"
+                style={{ backgroundColor: `${discColor}20`, color: discColor }}
+                title={discLabel}
+              >
+                <DiscIcon size={15} />
+              </button>
+              <AIGenerateBtn loading={aiVectorsLoading} onClick={handleGenerateResultVectors} inverted={inv4} />
+            </div>
           </div>
           <StepDivider inverted={inv4} />
           {aiVectorsError && <p className="text-sm text-red-400">{aiVectorsError}</p>}
@@ -1127,11 +1171,11 @@ function CreatePageContent() {
                   <button type="button"
                     onClick={() => setResultIndex((idx) => Math.max(0, idx - 1))}
                     disabled={resultIndex === 0}
-                    className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-xs font-semibold transition-all disabled:opacity-30 ${
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all disabled:opacity-20 ${
                       inv4 ? "bg-white/15 text-white hover:bg-white/25" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
                     }`}
                   >
-                    ← 上一个
+                    ←
                   </button>
 
                   <span className={`text-sm font-semibold ${inv4 ? "text-white/70" : "text-[var(--muted)]"}`}>
@@ -1141,11 +1185,11 @@ function CreatePageContent() {
                   <button type="button"
                     onClick={() => setResultIndex((idx) => Math.min(aligned.length - 1, idx + 1))}
                     disabled={resultIndex >= aligned.length - 1}
-                    className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-xs font-semibold transition-all disabled:opacity-30 ${
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all disabled:opacity-20 ${
                       inv4 ? "bg-white/15 text-white hover:bg-white/25" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
                     }`}
                   >
-                    下一个 →
+                    →
                   </button>
                 </div>
 
@@ -1164,24 +1208,25 @@ function CreatePageContent() {
           })()}
         </section>
 
-        {/* ── Step 5: Distance Validator ── */}
-        <section
-          className="overflow-hidden rounded-[28px] p-5 sm:p-6 space-y-4"
-          style={{ backgroundColor: bgS5, color: textOn(bgS5) }}
-        >
-          <StepLabel num={5} label="结果区分度检查" inverted={inv5} description="基于欧氏距离计算结果向量之间的相似程度。相似度 > 55% 表示两个人格位置较接近。" />
-          <StepDivider inverted={inv5} />
-          <DistanceValidator resultVectors={resultVectors} results={results} accentColors={accentColors} />
-        </section>
-
-        {/* ── Step 6: Questions ── */}
+        {/* ── Step 5: Questions ── */}
         <section
           className="overflow-hidden rounded-[28px] p-5 sm:p-6 space-y-4"
           style={{ backgroundColor: bgS6, color: textOn(bgS6) }}
         >
           <div className="flex items-center justify-between">
-            <StepLabel num={6} label="题目与选项影响" inverted={inv6} description="每道题的每个选项都会在特定因子上产生增量效果，用户的最终向量是所有选项效果的累加。" />
-            <AIGenerateBtn loading={aiQuestionsLoading} onClick={handleGenerateQuestions} inverted={inv6} />
+            <StepLabel num={5} label="题目与选项影响" inverted={inv6} description="每道题的每个选项都会在特定因子上产生增量效果，用户的最终向量是所有选项效果的累加。" />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCoverageOpen(true)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all hover:scale-105 active:scale-95"
+                style={{ backgroundColor: `${covColor}20`, color: covColor }}
+                title={covLabel}
+              >
+                <CovIcon size={15} />
+              </button>
+              <AIGenerateBtn loading={aiQuestionsLoading} onClick={handleGenerateQuestions} inverted={inv6} />
+            </div>
           </div>
           <StepDivider inverted={inv6} />
           <div className="flex items-center justify-between">
@@ -1200,21 +1245,21 @@ function CreatePageContent() {
           {questions.length > 0 && (
             <>
               {/* Navigation */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
                 <button type="button"
                   onClick={() => setQuestionIndex((i) => Math.max(0, i - 1))}
                   disabled={questionIndex === 0}
-                  className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-xs font-semibold transition-all disabled:opacity-30 ${
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all disabled:opacity-20 ${
                     inv6 ? "bg-white/15 text-white hover:bg-white/25" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
                   }`}
                 >
-                  ← 上一题
+                  ←
                 </button>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex-1 flex items-center gap-1.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
                   {questions.map((_, i) => (
                     <button key={i} type="button" onClick={() => setQuestionIndex(i)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-all"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-all"
                       style={
                         i === questionIndex
                           ? { backgroundColor: "var(--ink)", color: "#fff" }
@@ -1231,11 +1276,11 @@ function CreatePageContent() {
                 <button type="button"
                   onClick={() => setQuestionIndex((i) => Math.min(questions.length - 1, i + 1))}
                   disabled={questionIndex >= questions.length - 1}
-                  className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-xs font-semibold transition-all disabled:opacity-30 ${
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all disabled:opacity-20 ${
                     inv6 ? "bg-white/15 text-white hover:bg-white/25" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
                   }`}
                 >
-                  下一题 →
+                  →
                 </button>
               </div>
 
@@ -1258,14 +1303,6 @@ function CreatePageContent() {
           )}
         </section>
 
-        {/* ── Step 7: Coverage Validator ── */}
-        <section
-          className="overflow-hidden rounded-[28px] p-5 sm:p-6 space-y-4"
-          style={{ backgroundColor: bgS7, color: textOn(bgS7) }}
-        >
-          <CoverageValidator questions={questions} factors={factors} bgColor={bgS7} noCard accentColors={accentColors} />
-        </section>
-
         {/* ── Save ── */}
         <section className="flex flex-col items-center gap-4 pb-16 pt-8">
           {isEditMode && (
@@ -1283,6 +1320,172 @@ function CreatePageContent() {
           />
         </section>
       </div>
+      {/* ── Discrimination Modal ── */}
+      {discriminationOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/30" onClick={() => setDiscriminationOpen(false)} />
+
+          {/* Sheet */}
+          <div className="relative z-10 w-full max-w-lg max-h-[75vh] overflow-y-auto rounded-t-[28px] sm:rounded-[28px] bg-[var(--surface-card)] p-6 shadow-[0_-8px_40px_rgba(10,10,10,0.12)] sm:m-4">
+            {/* Close handle */}
+            <div className="flex justify-center mb-4 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-[var(--ink)]/15" />
+            </div>
+
+            {/* Content: discrimination check results */}
+            {(() => {
+              const { pairs } = validateResultDistances(quiz.resultVectors, quiz.results);
+              if (pairs.length === 0) {
+                return (
+                  <p className="text-sm text-[var(--muted)] text-center py-8">
+                    至少需要 2 个结果才能检查区分度。
+                  </p>
+                );
+              }
+              const itemBg = accentColors?.[5] ?? "#b8a4ed";
+              const tc = (() => {
+                const r = parseInt(itemBg.slice(1, 3), 16);
+                const g = parseInt(itemBg.slice(3, 5), 16);
+                const b = parseInt(itemBg.slice(5, 7), 16);
+                return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? "#1a1a1a" : "#ffffff";
+              })();
+              const isDark = tc === "#1a1a1a";
+              const mutedText = isDark ? "rgba(10,10,10,0.6)" : "rgba(255,255,255,0.7)";
+              const closePairs = pairs.filter((p) => p.close);
+              const distinctPairs = pairs.filter((p) => !p.close);
+
+              return (
+                <div className="space-y-5">
+                  {closePairs.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-[var(--muted)]">距离较近的结果对（可能存在相似输出）</p>
+                      {closePairs.map((pair) => (
+                        <div key={`${pair.resultA.id}-${pair.resultB.id}`} className="rounded-[20px] p-4" style={{ backgroundColor: itemBg }}>
+                          <p className="text-sm leading-6" style={{ color: mutedText }}>
+                            <span className="font-semibold" style={{ color: tc }}>{pair.resultA.name}</span>
+                            {" 和 "}
+                            <span className="font-semibold" style={{ color: tc }}>{pair.resultB.name}</span>
+                            {" 人格位置较接近（相似度 "}
+                            <span className="font-semibold" style={{ color: tc }}>{pair.similarity}%</span>
+                            {"），可能会产生相似结果。"}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {distinctPairs.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-[var(--muted)]">区分度良好的结果对</p>
+                      {distinctPairs.map((pair) => (
+                        <div key={`${pair.resultA.id}-${pair.resultB.id}`} className="rounded-[20px] p-4" style={{ backgroundColor: itemBg }}>
+                          <p className="text-sm leading-6" style={{ color: mutedText }}>
+                            <span className="font-semibold" style={{ color: tc }}>{pair.resultA.name}</span>
+                            {" 和 "}
+                            <span className="font-semibold" style={{ color: tc }}>{pair.resultB.name}</span>
+                            {" 区分度良好（相似度 "}
+                            <span className="font-semibold" style={{ color: tc }}>{pair.similarity}%</span>
+                            {"）。"}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => setDiscriminationOpen(false)}
+              className="mt-5 w-full rounded-full bg-[var(--ink)]/6 py-2.5 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--ink)]/12"
+            >
+              关闭
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Coverage Modal ── */}
+      {coverageOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setCoverageOpen(false)} />
+
+          <div className="relative z-10 w-full max-w-lg max-h-[75vh] overflow-y-auto rounded-t-[28px] sm:rounded-[28px] bg-[var(--surface-card)] p-6 shadow-[0_-8px_40px_rgba(10,10,10,0.12)] sm:m-4">
+            <div className="flex justify-center mb-4 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-[var(--ink)]/15" />
+            </div>
+
+            {(() => {
+              if (quiz.questions.length === 0 || quiz.factors.length === 0) {
+                return (
+                  <p className="text-sm text-[var(--muted)] text-center py-8">
+                    暂无题目或因子数据，无法检查覆盖情况。
+                  </p>
+                );
+              }
+              const coverage = validateQuestionCoverage(quiz.questions, quiz.factors);
+              const itemBg = accentColors?.[2] ?? "#b8a4ed";
+              const tc = (() => {
+                const r = parseInt(itemBg.slice(1, 3), 16);
+                const g = parseInt(itemBg.slice(3, 5), 16);
+                const b = parseInt(itemBg.slice(5, 7), 16);
+                return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? "#1a1a1a" : "#ffffff";
+              })();
+              const isDark = tc === "#1a1a1a";
+              const mutedText = isDark ? "rgba(10,10,10,0.55)" : "rgba(255,255,255,0.65)";
+              const iconColor = isDark ? "rgba(10,10,10,0.7)" : "rgba(255,255,255,0.85)";
+
+              return (
+                <div className="space-y-5">
+                  <div className="space-y-3">
+                    {coverage.map((item) => (
+                      <div key={item.factor.id} className="flex items-center justify-between rounded-[20px] p-4" style={{ backgroundColor: itemBg }}>
+                        <div className="flex items-center gap-3">
+                          {item.covered ? (
+                            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" className="shrink-0" style={{ color: iconColor }}>
+                              <circle cx="11" cy="11" r="10" fill="currentColor" />
+                              <path d="M7 11.5l2.5 2.5 5-5" stroke={isDark ? "#fff" : "#1a1a1a"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          ) : (
+                            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" className="shrink-0" style={{ color: iconColor }}>
+                              <circle cx="11" cy="11" r="10" fill="currentColor" />
+                              <path d="M8 8l6 6M14 8l-6 6" stroke={isDark ? "#fff" : "#1a1a1a"} strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                          )}
+                          <span className="text-sm font-semibold" style={{ color: tc }}>{item.factor.name}</span>
+                        </div>
+                        <span className="text-sm font-semibold" style={{ color: mutedText }}>
+                          {item.covered ? "已覆盖" : "未覆盖"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {coverage.some((c) => !c.covered) && (
+                    <div className="rounded-[20px] p-4" style={{ backgroundColor: itemBg }}>
+                      <p className="text-sm font-semibold" style={{ color: tc }}>
+                        {coverage.filter((c) => !c.covered).map((c) => `"${c.factor.name}"`).join("、")}
+                        目前没有被任何题目测量。
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            <button
+              type="button"
+              onClick={() => setCoverageOpen(false)}
+              className="mt-5 w-full rounded-full bg-[var(--ink)]/6 py-2.5 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--ink)]/12"
+            >
+              关闭
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

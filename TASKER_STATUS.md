@@ -6,6 +6,38 @@ Last updated: 2026-06-04
 
 ## Recent — 2026-06-04
 
+### AI Quiz Studio UI 优化 #7 — Step 6 隐藏 + 覆盖检查入口 + 导航优化
+
+1. **Step 6 隐藏 + 覆盖检查入口**：移除独立的「题目覆盖检查」Step 卡片。在 Step 5（题目与选项影响）标题栏右侧增加覆盖检查状态圆形按钮（AI 生成按钮左侧）。
+   - 绿色 Check：全部覆盖
+   - 黄色 AlertTriangle：部分覆盖不足
+   - 红色 AlertCircle：覆盖严重缺失
+   - 灰色 Minus：暂无数据
+2. **覆盖检查 Modal**：点击状态按钮打开（与区分度 Modal 相同模式）。内容仅保留覆盖检查结果列表，纯色 Nippon 背景，无描边，无标题/解释/分隔线。底部未覆盖因子汇总框同步显示。
+3. **导航数字区域横向滚动**：Result Carousel 和 Question Carousel 的数字圆点区域改为 `overflow-x-auto` + `flex-1`，大量数字时可横向滑动，不撑爆布局。
+4. **导航按钮只保留箭头**：所有 ← → 按钮从文字标签（「上一题」「下一个」等）改为纯箭头，按钮从 `h-8 px-3` 缩小为 `h-7 w-7` 圆形。
+5. **无跳号**：Step 编号 1-5 连续（Step 5 题目与选项影响为最后一个 Step）。
+
+修改文件：
+- `app/create/page.tsx` — 新增 covStatus/CovIcon/covColor/covLabel、Step 5 header 增加覆盖按钮、移除 Step 6 section + CoverageValidator import、新增 coverage modal、Result/Question/Vector 三处导航重构（scrollable dots + arrow-only buttons）
+- `components/quiz-engine/CoverageValidator.tsx` — 不再被页面直接引用（保留组件以备将来复用）
+
+### AI Quiz Studio UI 优化 #6 — Step 5 隐藏 + 区分度入口 + 编号顺延
+
+1. **隐藏 Step 5 主卡片**：移除页面上独立的「结果区分度检查」Step section。区分度计算逻辑保留，仍在 `validateResultDistances` 中运行。
+2. **Step 4 增加区分度状态按钮**：在「结果向量」标题右侧、AI 生成按钮左侧，增加圆形状态图标按钮。
+   - 绿色 Check：区分度良好
+   - 黄色 AlertTriangle：部分结果较接近
+   - 红色 AlertCircle：区分度较差（相似度 ≥ 85%）
+   - 灰色 Minus：结果不足（< 2 个）
+3. **点击打开 Modal**：固定定位 bottom sheet（移动端）/ 居中卡片（桌面端），半透明遮罩点击关闭，内容 max-h-[75vh] 可滚动。
+4. **Modal 内容**：只保留距离较近/区分度良好的结果对列表，纯色 Nippon 背景，无描边，无 Step 标题/解释/分隔线。空状态显示「至少需要 2 个结果才能检查区分度」。
+5. **Step 编号顺延**：原 Step 6 → 新 Step 5，原 Step 7 → 新 Step 6。CoverageValidator 内部序号同步更新。
+
+修改文件：
+- `app/create/page.tsx` — 移除 Step 5 section、移除 DistanceValidator import、新增 DiscIcon/discColor/discLabel 状态计算、Step 4 header 增加状态按钮、新增 discrimination modal、Step 6/7 重编号
+- `components/quiz-engine/CoverageValidator.tsx` — header 序号 7→6
+
 ### AI Quiz Studio UI 优化 #5 — 移除描边 + Step 解释折叠 + 帮助 Popover
 
 1. **Step 5 & Step 7 移除描边**：删除所有 `border` class 和 `borderColor`/`itemBorder` style。只保留纯色背景 + 圆角，视觉更干净。

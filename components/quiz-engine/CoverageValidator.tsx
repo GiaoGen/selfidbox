@@ -43,7 +43,7 @@ export function CoverageValidator({
       {/* Step header */}
       <div className="flex items-center gap-3">
         <span className={`shrink-0 text-xl font-semibold tracking-[-0.02em] ${titleClass}`}>
-          7
+          6
         </span>
         <h2 className={`text-xl font-semibold tracking-[-0.02em] ${titleClass}`}>
           题目覆盖检查
