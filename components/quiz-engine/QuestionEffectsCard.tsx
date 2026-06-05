@@ -1,32 +1,9 @@
 "use client";
 
-import { Pin, PinOff } from "lucide-react";
+import { useRef, useEffect } from "react";
+import { Pin, PinOff, SlidersHorizontal } from "lucide-react";
 import type { Question, Factor } from "@/lib/mock-quiz-engine";
 import type { OptionEffect } from "@/lib/mock-quiz-engine";
-import { InlineEditableInput } from "@/components/quiz-studio/InlineEditableInput";
-
-function getEffectStyle(hex: string): React.CSSProperties {
-  return {
-    backgroundColor: `${hex}20`,
-    color: hex,
-  };
-}
-
-function isLight(hex: string): boolean {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55;
-}
-
-function getFactorName(factorId: string, factors: Factor[]): string {
-  return factors.find((f) => f.id === factorId)?.name ?? factorId;
-}
-
-function formatDelta(delta: number): string {
-  if (delta === 0) return "0";
-  return delta > 0 ? `+${delta}` : `${delta}`;
-}
 
 type Props = {
   question: Question;
@@ -35,6 +12,7 @@ type Props = {
   onChange?: (question: Question) => void;
   onDelete?: () => void;
   onTogglePin?: () => void;
+  onOptionVectorClick?: (optionIndex: number) => void;
   accentColors?: string[];
 };
 
@@ -48,11 +26,21 @@ export function QuestionEffectsCard({
   onChange,
   onDelete,
   onTogglePin,
+  onOptionVectorClick,
   accentColors,
 }: Props) {
   const isEditing = !!onChange;
   const update = onChange ?? (() => {});
   const pinned = question.isPinned;
+
+  const qTextareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = qTextareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    }
+  }, [question.text]);
 
   function updateOption(
     oIndex: number,
@@ -83,13 +71,6 @@ export function QuestionEffectsCard({
     update({
       ...question,
       options: question.options.filter((_, i) => i !== oIndex),
-    });
-  }
-
-  function updateEffect(oIndex: number, factorId: string, delta: number) {
-    const opt = question.options[oIndex];
-    updateOption(oIndex, {
-      effects: { ...opt.effects, [factorId]: Math.max(-3, Math.min(3, delta)) },
     });
   }
 
@@ -129,12 +110,13 @@ export function QuestionEffectsCard({
       <p className="text-sm font-semibold text-[var(--muted)]">Question {index + 1}</p>
 
       {isEditing ? (
-        <InlineEditableInput
-          block
+        <textarea
+          ref={qTextareaRef}
           value={question.text}
-          onChange={(v) => update({ ...question, text: v })}
+          onChange={(e) => update({ ...question, text: e.target.value })}
+          rows={1}
           placeholder="题目文字"
-          className="mt-3 text-lg font-semibold leading-7 text-[var(--ink)]"
+          className="mt-3 w-full resize-none overflow-hidden bg-transparent border-b border-current/10 hover:border-current/25 focus:border-current/30 focus:outline-none rounded-sm px-1 py-0.5 text-lg font-semibold leading-7 text-[var(--ink)] placeholder:text-current/20"
         />
       ) : (
         <p className="mt-3 text-lg font-semibold leading-7 text-[var(--ink)]">
@@ -154,64 +136,20 @@ export function QuestionEffectsCard({
               </span>
               <div className="min-w-0 flex-1">
                 {isEditing ? (
-                  <div className="space-y-2">
-                    <InlineEditableInput
-                      block
-                      value={option.text}
-                      onChange={(v) => updateOption(oIndex, { text: v })}
-                      placeholder="选项文字"
-                      className="text-sm font-semibold text-[var(--ink)]"
-                    />
-                    <div className="flex flex-wrap items-center gap-2">
-                      {factors.map((f) => {
-                        const delta = option.effects[f.id] ?? 0;
-                        const efIdx = factors.findIndex((x) => x.id === f.id);
-                        const efColor = accentColors?.[efIdx % (accentColors?.length || 1)] ?? "#888888";
-                        const efStyle = getEffectStyle(efColor);
-                        const efDark = isLight(efColor);
-                        return (
-                          <span
-                            key={f.id}
-                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                            style={{ backgroundColor: `${efColor}20`, color: efDark ? "var(--ink)" : efColor }}
-                          >
-                            {f.name}
-                            <input
-                              type="number"
-                              min={-3}
-                              max={3}
-                              value={delta}
-                              onChange={(e) => {
-                                const v = parseInt(e.target.value, 10);
-                                if (!isNaN(v)) updateEffect(oIndex, f.id, v);
-                              }}
-                              className="w-8 bg-transparent text-center text-xs font-semibold tabular-nums focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                            />
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <textarea
+                    value={option.text}
+                    onChange={(e) => updateOption(oIndex, { text: e.target.value })}
+                    onInput={(e) => {
+                      const el = e.currentTarget;
+                      el.style.height = "auto";
+                      el.style.height = el.scrollHeight + "px";
+                    }}
+                    rows={1}
+                    placeholder="选项文字"
+                    className="w-full resize-none overflow-hidden bg-transparent border-b border-current/10 hover:border-current/25 focus:border-current/30 focus:outline-none rounded-sm px-1 py-0.5 text-sm font-semibold text-[var(--ink)] placeholder:text-current/20"
+                  />
                 ) : (
-                  <>
-                    <p className="text-sm font-semibold text-[var(--ink)]">{option.text}</p>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {Object.entries(option.effects).map(([factorId, delta]) => {
-                        if (delta === 0) return null;
-                        const efIdx = factors.findIndex((f) => f.id === factorId);
-                        const efColor = accentColors?.[efIdx % (accentColors?.length || 1)] ?? "#888888";
-                        return (
-                          <span
-                            key={factorId}
-                            className="rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                            style={{ backgroundColor: `${efColor}20`, color: efColor }}
-                          >
-                            {getFactorName(factorId, factors)} {formatDelta(delta)}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </>
+                  <p className="text-sm font-semibold text-[var(--ink)]">{option.text}</p>
                 )}
               </div>
             </div>
@@ -223,6 +161,17 @@ export function QuestionEffectsCard({
                 title="删除选项"
               >
                 ×
+              </button>
+            )}
+            {/* Vector edit button — bottom-right */}
+            {isEditing && onOptionVectorClick && (
+              <button
+                type="button"
+                onClick={() => onOptionVectorClick(oIndex)}
+                className="absolute right-2 bottom-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--ink)]/6 text-[var(--ink)]/45 hover:text-[var(--ink)] hover:bg-[var(--ink)]/12 transition-all"
+                title="编辑选项向量"
+              >
+                <SlidersHorizontal size={12} />
               </button>
             )}
           </div>

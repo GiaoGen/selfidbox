@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import type { QuizRuntimeData, AnswerRecord, RankedRuntimeResult } from "@/lib/quiz-runtime";
 import { calculateUserVector, rankRuntimeResults, MAX_SANDBOX_ATTEMPTS } from "@/lib/quiz-runtime";
 import { createClient } from "@/lib/supabase/client";
+import { useNipponTheme } from "./useNipponTheme";
 import { QuizProgress } from "./QuizProgress";
 import { QuestionCard } from "./QuestionCard";
 import { QuizResult } from "./QuizResult";
@@ -18,6 +18,7 @@ interface Props {
 
 export function QuizPlayer({ quiz }: Props) {
   const supabase = createClient();
+  const theme = useNipponTheme();
   const [phase, setPhase] = useState<Phase>("quiz");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerRecord[]>([]);
@@ -159,6 +160,24 @@ export function QuizPlayer({ quiz }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-[560px]">
+      {/* Themed header */}
+      <div
+        className="mb-10 rounded-[28px] p-6 sm:p-8"
+        style={{ backgroundColor: theme.headerBg, color: theme.headerText }}
+      >
+        <p className="text-sm font-medium opacity-70">
+          {quiz.quiz_type === "personality" ? "人格测试" : quiz.quiz_type === "fun" ? "趣味测试" : "测试"}
+        </p>
+        <h1 className="mt-1 text-xl font-semibold tracking-[-0.02em]">
+          {quiz.title}
+        </h1>
+        {quiz.hook && (
+          <p className="mt-1 text-[15px] leading-relaxed opacity-80">
+            {quiz.hook}
+          </p>
+        )}
+      </div>
+
       {/* Progress */}
       <div className="mb-10">
         <QuizProgress current={currentIndex + 1} total={total} />
@@ -171,6 +190,8 @@ export function QuizPlayer({ quiz }: Props) {
         locked={selectedOptionId !== null}
         direction={direction}
         onSelect={handleSelect}
+        accentColor={theme.accent}
+        accentText={theme.accentText}
       />
 
       {/* Back button */}

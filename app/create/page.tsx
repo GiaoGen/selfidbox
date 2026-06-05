@@ -386,6 +386,7 @@ function CreatePageContent() {
   const [showFactorPicker, setShowFactorPicker] = useState(false);
   const [discriminationOpen, setDiscriminationOpen] = useState(false);
   const [coverageOpen, setCoverageOpen] = useState(false);
+  const [optionVectorEditor, setOptionVectorEditor] = useState<{ qIndex: number; oIndex: number } | null>(null);
 
   /* ---- Meta ---- */
 
@@ -1036,7 +1037,7 @@ function CreatePageContent() {
                 <div className="flex-1 flex items-center gap-1.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
                   {results.map((_, i) => (
                     <button key={i} type="button" onClick={() => setResultIndex(i)}
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-all"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold leading-none transition-all"
                       style={
                         i === resultIndex
                           ? { backgroundColor: "var(--ink)", color: "#fff" }
@@ -1214,7 +1215,7 @@ function CreatePageContent() {
           style={{ backgroundColor: bgS6, color: textOn(bgS6) }}
         >
           <div className="flex items-center justify-between">
-            <StepLabel num={5} label="题目与选项影响" inverted={inv6} description="每道题的每个选项都会在特定因子上产生增量效果，用户的最终向量是所有选项效果的累加。" />
+            <StepLabel num={5} label="题目" inverted={inv6} description="每道题的每个选项都会在特定因子上产生增量效果，用户的最终向量是所有选项效果的累加。" />
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -1259,7 +1260,7 @@ function CreatePageContent() {
                 <div className="flex-1 flex items-center gap-1.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
                   {questions.map((_, i) => (
                     <button key={i} type="button" onClick={() => setQuestionIndex(i)}
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-all"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold leading-none transition-all"
                       style={
                         i === questionIndex
                           ? { backgroundColor: "var(--ink)", color: "#fff" }
@@ -1298,6 +1299,7 @@ function CreatePageContent() {
                     : undefined
                 }
                 onTogglePin={() => toggleQuestionPin(questionIndex)}
+                onOptionVectorClick={(oIndex) => setOptionVectorEditor({ qIndex: questionIndex, oIndex })}
               />
             </>
           )}
@@ -1486,6 +1488,86 @@ function CreatePageContent() {
           </div>
         </div>
       )}
+
+      {/* ── Option Vector Editor Modal ── */}
+      {optionVectorEditor && (() => {
+        const q = quiz.questions[optionVectorEditor.qIndex];
+        if (!q) return null;
+        const opt = q.options[optionVectorEditor.oIndex];
+        if (!opt) return null;
+
+        const handleEffectChange = (factorId: string, value: number) => {
+          const clamped = Math.max(-5, Math.min(5, value));
+          const updatedOptions = q.options.map((o, i) =>
+            i === optionVectorEditor.oIndex
+              ? { ...o, effects: { ...o.effects, [factorId]: clamped } }
+              : o
+          );
+          updateQuestion(optionVectorEditor.qIndex, { ...q, options: updatedOptions });
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+            <div className="absolute inset-0 bg-black/30" onClick={() => setOptionVectorEditor(null)} />
+
+            <div className="relative z-10 w-full max-w-lg max-h-[75vh] overflow-y-auto rounded-t-[28px] sm:rounded-[28px] bg-[var(--surface-card)] p-6 shadow-[0_-8px_40px_rgba(10,10,10,0.12)] sm:m-4">
+              <div className="flex justify-center mb-4 sm:hidden">
+                <div className="w-10 h-1 rounded-full bg-[var(--ink)]/15" />
+              </div>
+
+              <p className="text-sm font-semibold text-[var(--muted)] mb-4">
+                选项 {opt.label} · 因子效果
+              </p>
+
+              <div className="space-y-4">
+                {factors.map((f) => {
+                  const val = opt.effects[f.id] ?? 0;
+                  const pct = ((val + 5) / 10) * 100; // -5→0%, 0→50%, +5→100%
+                  const efIdx = factors.findIndex((x) => x.id === f.id);
+                  const efColor = accentColors?.[efIdx % (accentColors?.length || 1)] ?? "#b8a4ed";
+                  const r = parseInt(efColor.slice(1, 3), 16);
+                  const g = parseInt(efColor.slice(3, 5), 16);
+                  const b = parseInt(efColor.slice(5, 7), 16);
+                  const isLight = (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55;
+                  const tc = isLight ? "#1a1a1a" : "#ffffff";
+                  const mutedText = isLight ? "rgba(10,10,10,0.55)" : "rgba(255,255,255,0.65)";
+                  return (
+                    <div key={f.id} className="rounded-[20px] p-4" style={{ backgroundColor: efColor }}>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold shrink-0 w-20 truncate" style={{ color: tc }}>{f.name}</span>
+                        <input
+                          type="range"
+                          min={-5}
+                          max={5}
+                          step={1}
+                          value={val}
+                          onChange={(e) => handleEffectChange(f.id, parseInt(e.target.value, 10))}
+                          className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
+                          style={{
+                            background: `linear-gradient(to right, ${tc} 0%, ${tc} ${pct}%, ${mutedText} ${pct}%, ${mutedText} 100%)`,
+                            accentColor: tc,
+                          }}
+                        />
+                        <span className="text-sm font-bold tabular-nums shrink-0 w-7 text-right" style={{ color: val === 0 ? mutedText : tc }}>
+                          {val > 0 ? `+${val}` : `${val}`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setOptionVectorEditor(null)}
+                className="mt-5 w-full rounded-full bg-[var(--ink)]/6 py-2.5 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--ink)]/12"
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </main>
   );
 }

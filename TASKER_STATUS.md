@@ -1,10 +1,65 @@
 # TASKER STATUS
 
-Last updated: 2026-06-04
+Last updated: 2026-06-05
 
 ---
 
-## Recent — 2026-06-04
+## Recent — 2026-06-05
+
+### Quiz Runtime UI 优化 — 选项无描边 + Nippon 主题标题 + 主题色选中态
+
+1. **去掉选项卡片描边**：移除所有 `border`/`ring`/`outline`，选项卡片改为纯白背景 + 轻微阴影（idle）/ 主题色填充（selected）。
+2. **Quiz 标题区域加 Nippon 主题背景**：标题卡片使用随机 Nippon Colors 纯色背景，大圆角（28px），文字颜色根据背景亮度自动切换黑/白（WCAG `textColorFor`）。页面刷新时重新随机，页面生命周期内固定。
+3. **选项选中态使用主题色**：选中态不再是固定的 `var(--ink)` 黑色，而是当前随机 theme accent color，文字颜色由 `textColorFor(accent)` 自动适配。
+4. **统一 `useNipponTheme()` hook**：新建 `components/quiz-runtime/useNipponTheme.ts`，复用 `lib/nippon-colors.ts` 和 `lib/random-theme.ts` 的 `textColorFor`。SSR-safe（初始值 `#DAC9A6`，mount 后替换），不 fetch 外部文件。
+5. **QuizPlayer 接管标题渲染**：标题区域从 server component (`page.tsx`) 移至 client component (`QuizPlayer`)，与 theme hook 共享同一个 theme 实例。
+
+修改文件：
+- `components/quiz-runtime/useNipponTheme.ts` — 新增，shared random Nippon theme hook
+- `components/quiz-runtime/OptionButton.tsx` — 移除 border，新增 `accentColor`/`accentText` props，选中态 inline style
+- `components/quiz-runtime/QuestionCard.tsx` — 新增 `accentColor`/`accentText` props，透传 OptionButton
+- `components/quiz-runtime/QuizPlayer.tsx` — 接入 `useNipponTheme()`，渲染主题标题卡片，清理未使用的 framer-motion imports
+- `app/quiz/[slug]/page.tsx` — 移除旧静态标题 div，`<a>` 改为 `<Link>`（lint fix）
+
+未改动：答题逻辑、结果计算、数据库、Profile、Share Card、Supabase schema。
+
+### AI Quiz Studio UI 优化 #10 — Step 5 选项卡片隐藏 Vector Chips
+
+1. **选项卡片默认隐藏 vector chips**：编辑模式下不再显示因子 chip + number input，预览模式下不再显示非零 effect chip。选项卡片仅保留：字母、文本、删除按钮、右下角 Vector 编辑按钮。
+2. **Vector 数据保留**：effect 数据不被删除，Vector 编辑弹窗仍然可用，不影响保存和 AI 生成。
+3. **清理死代码**：移除 `getEffectStyle`、`isLight`、`getFactorName`、`formatDelta`、`updateEffect` 五个仅用于 chip 渲染的 helper。
+
+修改文件：
+- `components/quiz-engine/QuestionEffectsCard.tsx` — 移除编辑态 chip + number input、预览态 chip 列表、5 个死 helper
+
+### AI Quiz Studio UI 优化 #9 — Vector 弹窗颜色匹配 + 按钮移位 + Carousel 居中
+
+1. **Vector 弹窗颜色匹配**：每条 factor slider 行现在复用选项卡片上对应 chip 的颜色（`accentColors[efIdx % n]`），不再使用统一色。
+2. **去掉旧 Vector 指示图标**：移除 option card 左下角的 Sliders 按钮。
+3. **Vector 编辑按钮移至右下角**：新按钮使用 `SlidersHorizontal` 图标，绝对定位 `absolute right-2 bottom-2`，不与删除按钮（top-2）冲突。
+4. **Carousel 数字居中**：Result 和 Question 导航数字圆形按钮统一添加 `leading-none`，修复垂直偏位问题。
+
+修改文件：
+- `app/create/page.tsx` — Option Vector Editor Modal 每行独立取色、Result/Question 导航 dots 加 leading-none
+- `components/quiz-engine/QuestionEffectsCard.tsx` — Sliders → SlidersHorizontal、Vector 按钮从 bottom-left 移到 absolute right-2 bottom-2
+
+### AI Quiz Studio UI 优化 #8 — Step 5 重构：题目文本自动换行 + Option Vector Editor
+
+1. **Step 标题简化**：「题目与选项影响」→「题目」
+2. **Question 文本 textarea 化**：替换 InlineEditableInput 为 `<textarea>`，自动换行不横向滚动，高度随内容自动增长（useEffect + scrollHeight）。
+3. **Option 文本 textarea 化**：同上，使用 `onInput` handler 实现 auto-resize。
+4. **Option Vector 按钮**：每个 Option Card 左下角新增 Sliders 图标按钮（h-6 w-6 圆形），点击打开向量编辑弹窗。
+5. **Option Vector Editor Modal**：与覆盖检查弹窗风格一致（bottom sheet 移动端 / 居中卡片桌面端，半透明遮罩点击关闭）。
+   - 显示当前选项的所有因子效果
+   - 布局：因子名（w-20 truncate）| range slider（-5~+5, step=1）| 数值（右对齐 tabular-nums）
+   - 拖动 slider 实时更新 effect 值
+   - Slider track 使用渐变显示当前位置
+6. **Effect 范围扩大**：因子效果从 [-3, +3] 扩展到 [-5, +5]，步长 1。`updateEffect` 钳位和 number input min/max 同步更新。
+7. **不改动**：Question Carousel、AI 生成逻辑、Prompt、Factor 逻辑均未触及。
+
+修改文件：
+- `app/create/page.tsx` — Step 5 标题改为「题目」、新增 optionVectorEditor state、QuestionEffectsCard 传入 onOptionVectorClick、新增 Option Vector Editor Modal
+- `components/quiz-engine/QuestionEffectsCard.tsx` — 移除 InlineEditableInput 依赖、question/option 文本改用 auto-resize textarea、新增 Sliders Vector 按钮、effect 范围 [-5, +5]
 
 ### AI Quiz Studio UI 优化 #7 — Step 6 隐藏 + 覆盖检查入口 + 导航优化
 

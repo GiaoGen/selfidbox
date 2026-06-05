@@ -10,6 +10,8 @@ interface Props {
   locked: boolean;
   direction: number;
   onSelect: (answer: AnswerRecord) => void;
+  accentColor: string;
+  accentText: string;
 }
 
 export function QuestionCard({
@@ -18,6 +20,8 @@ export function QuestionCard({
   locked,
   direction,
   onSelect,
+  accentColor,
+  accentText,
 }: Props) {
   return (
     <div className="w-full">
@@ -50,6 +54,8 @@ export function QuestionCard({
                   key={opt.id}
                   option={opt}
                   state={state}
+                  accentColor={accentColor}
+                  accentText={accentText}
                   onClick={() =>
                     onSelect({
                       questionId: question.id,
