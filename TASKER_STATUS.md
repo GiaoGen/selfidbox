@@ -6,6 +6,50 @@ Last updated: 2026-06-05
 
 ## Recent — 2026-06-05
 
+### Quiz Runtime UI 简化 — Top1 单图背景 + 去掉标题纯色 + 选项轻量化
+
+1. **背景改为 Top1 单图**：`ResultBackgroundManager` 从多图叠加（Top4/Top3/Top2 递减）简化为始终只显示当前排名第一的 result 图片。一张 `fixed` 模糊图（`blur(40px) scale(1.15) opacity(0.4)`）+ `rgba(255,255,255,0.75)` 遮罩。Top1 变化时通过 `AnimatePresence` key 切换做 600ms crossfade。无图片时返回 null。
+2. **去掉标题纯色背景**：QuizPlayer 标题区域从 `rounded-[28px]` 随机 Nippon 纯色卡片改回干净的文本布局（`text-[var(--muted)]` + `text-[var(--ink)]` + `text-[var(--body)]`），恢复原始简洁风格。
+3. **选项选中态轻量化**：`OptionButton` 选中态从 accent color 纯色填充改为 `bg-[var(--ink)]/6 text-[var(--ink)] shadow-md`（6% 淡灰底 + 阴影），badge 从 `rgba(255,255,255,0.2)` 改为 `bg-[var(--ink)]/12`。移除 `accentColor`/`accentText` props（OptionButton、QuestionCard、QuizPlayer 三层全部清理）。
+
+保留：选项无描边、Result 页面 blur 背景、Share Card 逻辑、答题流程。
+
+修改文件：
+- `components/quiz-runtime/ResultBackgroundManager.tsx` — 简化为单图 crossfade，移除多图/权重/递减逻辑
+- `components/quiz-runtime/QuizPlayer.tsx` — 标题区去纯色背景、停止传 accent 给 QuestionCard
+- `components/quiz-runtime/QuestionCard.tsx` — 移除 accentColor/accentText props
+- `components/quiz-runtime/OptionButton.tsx` — 移除 accent props，选中态改为淡灰底+阴影
+
+### 动态人格显影背景（Result Reveal Background）
+
+1. **`ResultBackgroundManager`**：新增组件，在答题过程中根据中间排名动态渲染模糊结果图片作为页面背景。`fixed inset-0 z-0 pointer-events-none`。
+2. **中间排名计算**：`QuizPlayer` 新增 `useMemo` 计算中间排名——每答一题后从 `answers.slice(0, currentIndex)` 计算当前 user vector → 排名。初始（0 题）使用默认 all-50s vector。
+3. **渐进收敛**：根据剩余题数逐步减少背景图数量：剩余 ≥3 → Top4，剩余 =2 → Top3，剩余 =1 → Top2。完成后进入 Result 页面，背景由 QuizResult 接管。
+4. **加权透明度**：Top1=0.45, Top2=0.30, Top3=0.17, Top4=0.08。不是平均分布。
+5. **性能限制**：最多同时渲染 4 张 `<img>`，通过 `AnimatePresence` 按 `result.id` key 管理挂载/卸载，fadeIn/fadeOut 各 800ms easeInOut。相同图片只改变 opacity，不重新加载。
+6. **可读性遮罩**：所有背景图上方统一 `rgba(255,255,255,0.75)` 遮罩，保证题目/选项/进度条永远可读。
+7. **无图片降级**：跳过没有 `image_url` 的 Result，使用下一张有图片的。如果 Top4 都没有图片，返回 null，保持当前页面背景。
+
+新增文件：
+- `components/quiz-runtime/ResultBackgroundManager.tsx` — 动态背景管理器
+
+修改文件：
+- `components/quiz-runtime/QuizPlayer.tsx` — 引入 `useMemo`，计算 `intermediateRanking`，渲染 `ResultBackgroundManager`，内容区加 `relative z-10` 确保在背景之上
+
+未改动：答题逻辑、结果计算、Result 页面、Share Card、数据库、AI。
+
+### Quiz Result 页面背景优化 — 图片模糊背景 + 主图完整显示 + Share 遮罩加深
+
+1. **Result 页面图片模糊背景**：当 `finalResult.image_url` 存在时，页面底层叠加 `fixed inset-0` 的图片高斯模糊层（`blur(48px) scale(1.15)`）+ 轻微暗色遮罩 `bg-black/25` 保证氛围感。无图片时保持原样。
+2. **Result 主图修复**：去掉 `rounded-3xl` 圆角容器、`border`、`shadow`；去掉 `aspect-[4/3] object-cover` 强制裁切 → 改为 `object-fit: contain max-height: 360px`，保持原始比例完整显示。
+3. **内容可读性**：文字区域（similarity badge → sync）包裹在 `bg-white/70 rounded-[24px] p-5` 半透明遮罩内，轻量不厚重，文字 `var(--ink)` 深色在模糊背景上清晰可读。无图片时无遮罩。
+4. **Share Modal 遮罩加深**：从 `bg-black/60` → `bg-black/80`，更明显区分 Result 页面和 Share Card，避免两层模糊背景视觉重叠。
+
+修改文件：
+- `components/quiz-runtime/QuizResult.tsx` — 新增模糊背景层 + 暗色 overlay；主图改为 `object-contain` 无圆角；内容包裹半透明遮罩；Share modal backdrop 加深
+
+未改动：答题逻辑、result 计算、Share Card 内部、数据库、Profile、Studio。
+
 ### Quiz Result Share Card 移动端优化 — 无圆角 + 模糊背景 + rotateY 翻转动画
 
 1. **手机端卡片尺寸**：卡片 `max-width: calc(100vw - 48px)`，左右保留 24px 间隙，不溢出、不被截断。卡片填满容器宽度，竖版海报比例。

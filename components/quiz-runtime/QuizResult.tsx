@@ -79,28 +79,52 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
   const resultImageUrl = top.result.image_url ?? undefined;
   const traits = top.result.traits ?? [];
   const shareText = top.result.share_text ?? "这是我的测试结果，你也来试试。";
+  const hasImage = !!resultImageUrl;
 
   return (
-    <>
+    <div className="relative" style={hasImage ? { minHeight: "100vh" } : undefined}>
+      {/* ── Blurred image background ── */}
+      {hasImage && (
+        <>
+          <img
+            src={resultImageUrl!}
+            alt=""
+            className="pointer-events-none fixed inset-0 h-full w-full"
+            style={{
+              objectFit: "cover",
+              filter: "blur(48px)",
+              transform: "scale(1.15)",
+            }}
+            crossOrigin="anonymous"
+          />
+          {/* subtle dark overlay for readability */}
+          <div className="pointer-events-none fixed inset-0 bg-black/25" />
+        </>
+      )}
+
+      <div className="relative z-10">
       <motion.div
         className="mx-auto w-full max-w-[560px]"
         variants={container}
         initial="hidden"
         animate="visible"
       >
-        {/* Result image */}
+        {/* Result image — full proportion, no crop, no radius */}
         {top.result.image_url && (
-          <motion.div variants={child} className="mb-8">
-            <div className="overflow-hidden rounded-3xl border border-[var(--ink)]/6 shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
-              <img
-                src={top.result.image_url}
-                alt=""
-                className="aspect-[4/3] w-full object-cover"
-              />
-            </div>
+          <motion.div variants={child} className="mb-8 flex justify-center">
+            <img
+              src={top.result.image_url}
+              alt=""
+              className="w-full"
+              style={{ objectFit: "contain", maxHeight: 360 }}
+            />
           </motion.div>
         )}
 
+        {/* ── Text content backdrop (subtle, only when has image bg) ── */}
+        <div
+          className={hasImage ? "rounded-[24px] bg-white/70 p-5 sm:p-6" : ""}
+        >
         {/* Similarity badge */}
         <motion.div variants={child} className="mb-5">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ink)]/10 bg-white px-4 py-1.5 text-sm font-medium text-[var(--ink)]">
@@ -224,6 +248,7 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
             <SyncBanner status={syncStatus} error={syncError} />
           </motion.div>
         )}
+        </div>
       </motion.div>
 
       {/* ---- share modal ---- */}
@@ -239,7 +264,7 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowShare(false)}
-              className="absolute inset-0 bg-black/60"
+              className="absolute inset-0 bg-black/80"
             />
 
             {/* card + save button — rotateY flip-in */}
@@ -285,7 +310,8 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
           </div>
         )}
       </AnimatePresence>
-    </>
+      </div>
+    </div>
   );
 }
 

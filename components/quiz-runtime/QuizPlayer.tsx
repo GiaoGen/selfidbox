@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import type { QuizRuntimeData, AnswerRecord, RankedRuntimeResult } from "@/lib/quiz-runtime";
 import { calculateUserVector, rankRuntimeResults, MAX_SANDBOX_ATTEMPTS } from "@/lib/quiz-runtime";
 import { createClient } from "@/lib/supabase/client";
 import { useNipponTheme } from "./useNipponTheme";
+import { ResultBackgroundManager } from "./ResultBackgroundManager";
 import { QuizProgress } from "./QuizProgress";
 import { QuestionCard } from "./QuestionCard";
 import { QuizResult } from "./QuizResult";
@@ -34,6 +35,20 @@ export function QuizPlayer({ quiz }: Props) {
   const total = questions.length;
   const factorKeys = quiz.factors.map((f) => f.key);
   const isLastQuestion = currentIndex === total - 1;
+
+  // Intermediate ranking — recomputed after each answer, drives the dynamic background
+  const intermediateRanking = useMemo(() => {
+    const answeredSoFar = answers
+      .slice(0, currentIndex)
+      .filter((a): a is AnswerRecord => !!a);
+    if (answeredSoFar.length === 0) {
+      const defaultVector: Record<string, number> = {};
+      for (const key of factorKeys) defaultVector[key] = 50;
+      return rankRuntimeResults(defaultVector, quiz.results);
+    }
+    const vector = calculateUserVector(factorKeys, answeredSoFar);
+    return rankRuntimeResults(vector, quiz.results);
+  }, [answers, currentIndex, factorKeys, quiz.results]);
 
   const finishQuiz = useCallback(
     async (finalAnswers: AnswerRecord[]) => {
@@ -160,20 +175,21 @@ export function QuizPlayer({ quiz }: Props) {
   const currentAnswer = answers[currentIndex] ?? null;
 
   return (
-    <div className="mx-auto w-full max-w-[560px]">
-      {/* Themed header */}
-      <div
-        className="mb-10 rounded-[28px] p-6 sm:p-8"
-        style={{ backgroundColor: theme.headerBg, color: theme.headerText }}
-      >
-        <p className="text-sm font-medium opacity-70">
+    <>
+      {/* ── Dynamic personality reveal background ── */}
+      <ResultBackgroundManager ranking={intermediateRanking} />
+
+      <div className="relative z-10 mx-auto w-full max-w-[560px]">
+      {/* Header */}
+      <div className="mb-10">
+        <p className="text-sm font-medium text-[var(--muted)]">
           {quiz.quiz_type === "personality" ? "人格测试" : quiz.quiz_type === "fun" ? "趣味测试" : "测试"}
         </p>
-        <h1 className="mt-1 text-xl font-semibold tracking-[-0.02em]">
+        <h1 className="mt-1 text-xl font-semibold tracking-[-0.02em] text-[var(--ink)]">
           {quiz.title}
         </h1>
         {quiz.hook && (
-          <p className="mt-1 text-[15px] leading-relaxed opacity-80">
+          <p className="mt-1 text-[15px] leading-relaxed text-[var(--body)]">
             {quiz.hook}
           </p>
         )}
@@ -191,8 +207,6 @@ export function QuizPlayer({ quiz }: Props) {
         locked={selectedOptionId !== null}
         direction={direction}
         onSelect={handleSelect}
-        accentColor={theme.accent}
-        accentText={theme.accentText}
       />
 
       {/* Back button */}
@@ -216,5 +230,6 @@ export function QuizPlayer({ quiz }: Props) {
         </button>
       </div>
     </div>
+    </>
   );
 }
