@@ -151,6 +151,7 @@ export function QuizPlayer({ quiz }: Props) {
         userVector={userVector}
         syncStatus={syncStatus}
         syncError={syncError}
+        accentColor={theme.accent}
       />
     );
   }

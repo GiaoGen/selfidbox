@@ -6,6 +6,37 @@ Last updated: 2026-06-05
 
 ## Recent — 2026-06-05
 
+### Quiz Result Share Card 移动端优化 — 无圆角 + 模糊背景 + rotateY 翻转动画
+
+1. **手机端卡片尺寸**：卡片 `max-width: calc(100vw - 48px)`，左右保留 24px 间隙，不溢出、不被截断。卡片填满容器宽度，竖版海报比例。
+2. **卡片无圆角**：`borderRadius: 0`，分享卡片本体是直角矩形。弹窗遮罩、关闭按钮保留圆角。
+3. **有图片时模糊背景**：当 `image_url` 存在时，卡片底层叠加一张 `filter: blur(40px) scale(1.15) opacity(0.45)` 的绝对定位大图，上面覆盖半透明 `cardColor` 遮罩保证文字可读。前景图仍 `object-fit: contain`，不裁切不变形。
+4. **无图片时**：纯色背景（cardColor），无占位图，使用无图片排版。
+5. **rotateY 翻转入场**：动画从 `rotateZ`（平面旋转）改为 `rotateY(-720deg)`（绕竖直轴翻转两圈），父容器 `perspective: 1200px` 提供 3D 深度，duration 1100ms，ease 顺滑。
+6. **退出无旋转**：关闭时只 `opacity: 0`（200ms），不 rotate。
+7. **保存图片精准**：`cardRef` 仍在卡片本体，`toPng` 不包含遮罩/按钮。
+
+修改文件：
+- `components/share/QuizResultShareCard.tsx` — `borderRadius: 0`；`width: 100%`；新增模糊背景层 + 半透明遮罩；内容包裹在 `relative z-10` 层
+- `components/quiz-runtime/QuizResult.tsx` — 动画 `rotate`→`rotateY`；`perspective: 1200px`；退出仅 `opacity`；`maxWidth: calc(100vw - 48px)`
+
+### Quiz Result Share Card 重构 — 全屏分享弹窗 + 旋转动画 + 主题色卡片
+
+1. **分享弹窗重新设计**：移除旧的 bottom-sheet/modal 面板（标题"分享结果"、关闭按钮、双按钮栏），改为纯暗背景 + 居中卡片 + 弱化关闭按钮（右上角半透明 X）+ 保存按钮在卡片下方。
+2. **旋转入场动画**：卡片从 `rotate(-720deg) scale(0.85)` 旋入到 `rotate(0deg) scale(1)`，duration 900ms，framer-motion ease curve。退出反向旋转 360deg。用户第一眼看到的是卡片本身。
+3. **图片完整显示**：`object-fit: contain`，`maxHeight: 260px`，无裁切、无圆角、无变形，保持原始比例。
+4. **无图片布局**：不再显示默认占位 SVG。无图片时结果名称更靠上、spacer 更大（24px vs 8px）、share_text 字号提升、description 区域自然扩展。
+5. **卡片背景色**：使用 `useNipponTheme().accent`（Nippon random accent color），通过 `textColorFor()` 自动计算所有文字颜色（深色背景白字/浅色背景黑字）。fallback 到 Nippon theme color。
+6. **保存图片精准截取**：`cardRef` 仍然挂在 `QuizResultShareCard` 上，`toPng` 只捕获卡片本身，不包括遮罩、关闭按钮、保存按钮。
+7. **卡片内容保留**：quiz title、result name、subtitle、description、image_url、traits、share_text、SelfIDBox 全部真实数据。
+
+修改文件：
+- `components/share/QuizResultShareCard.tsx` — 完全重写，新增 `cardColor` prop，动态文字颜色，双布局（有图/无图）
+- `components/quiz-runtime/QuizResult.tsx` — `accentColor` prop，分享弹窗改为全屏 overlay + 旋转动画
+- `components/quiz-runtime/QuizPlayer.tsx` — 传 `accentColor={theme.accent}` 给 QuizResult
+
+未改动：答题逻辑、result 计算、Supabase schema、Quiz Studio、Profile、OCR。
+
 ### Quiz Runtime UI 优化 — 选项无描边 + Nippon 主题标题 + 主题色选中态
 
 1. **去掉选项卡片描边**：移除所有 `border`/`ring`/`outline`，选项卡片改为纯白背景 + 轻微阴影（idle）/ 主题色填充（selected）。

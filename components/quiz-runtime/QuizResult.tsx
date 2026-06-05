@@ -17,6 +17,7 @@ interface Props {
   userVector: Record<string, number>;
   syncStatus?: SyncStatus;
   syncError?: string;
+  accentColor: string;
 }
 
 const container = {
@@ -31,7 +32,7 @@ const child = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0, 0, 0.2, 1] as const } },
 };
 
-export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatus, syncError }: Props) {
+export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatus, syncError, accentColor }: Props) {
   const top = ranking[0];
   const secondary = ranking.slice(1, 3).filter((r) => r.similarity > 0);
 
@@ -228,73 +229,59 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
       {/* ---- share modal ---- */}
       <AnimatePresence>
         {showShare && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ perspective: "1200px" }}
+          >
             {/* backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowShare(false)}
-              className="absolute inset-0 bg-[var(--ink)]/30 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/60"
             />
 
-            {/* panel */}
+            {/* card + save button — rotateY flip-in */}
             <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 50 }}
-              transition={{ duration: 0.25, ease: [0, 0, 0.2, 1] as const }}
-              className="relative z-10 flex max-h-[90vh] w-full flex-col rounded-t-[32px] bg-[var(--canvas)] shadow-[0_-12px_48px_rgba(10,10,10,0.12)] sm:max-h-[85vh] sm:w-[480px] sm:rounded-[28px] sm:shadow-[0_18px_60px_rgba(10,10,10,0.15)]"
+              initial={{ rotateY: -720, scale: 0.9, opacity: 0 }}
+              animate={{ rotateY: 0, scale: 1, opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.2 } }}
+              transition={{ duration: 1.1, ease: [0.25, 0.1, 0.25, 1] as const }}
+              className="relative z-10 flex w-full flex-col items-center"
+              style={{ maxWidth: "calc(100vw - 48px)" }}
             >
-              {/* header */}
-              <div className="flex items-center justify-between px-6 pt-6 pb-4 sm:px-7 sm:pt-7">
-                <h2 className="text-lg font-semibold tracking-[-0.01em] text-[var(--ink)]">
-                  分享结果
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setShowShare(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ink)]/6 text-[var(--muted)] transition-all hover:bg-[var(--ink)]/12 hover:text-[var(--ink)]"
-                >
-                  <X size={16} />
-                </button>
-              </div>
+              <QuizResultShareCard
+                ref={cardRef}
+                quizTitle={quizTitle || "SelfIDBox Quiz"}
+                resultName={resultName}
+                resultSubtitle={resultSubtitle}
+                resultDescription={resultDescription}
+                resultImageUrl={resultImageUrl}
+                traits={traits}
+                shareText={shareText}
+                cardColor={accentColor}
+              />
 
-              {/* card preview */}
-              <div className="flex-1 overflow-y-auto px-4 pb-4 sm:px-6">
-                <div className="flex justify-center">
-                  <QuizResultShareCard
-                    ref={cardRef}
-                    quizTitle={quizTitle || "SelfIDBox Quiz"}
-                    resultName={resultName}
-                    resultSubtitle={resultSubtitle}
-                    resultDescription={resultDescription}
-                    resultImageUrl={resultImageUrl}
-                    traits={traits}
-                    shareText={shareText}
-                  />
-                </div>
-              </div>
-
-              {/* actions */}
-              <div className="flex items-center gap-3 px-6 pb-6 pt-2 sm:px-7 sm:pb-7">
-                <button
-                  type="button"
-                  onClick={() => setShowShare(false)}
-                  className="flex-1 rounded-full border border-[var(--ink)]/12 bg-white py-3 text-[15px] font-semibold text-[var(--ink)] transition-all hover:border-[var(--ink)]/25"
-                >
-                  关闭
-                </button>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={saveImage}
-                  className="flex-1 rounded-full bg-[var(--ink)] py-3 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                >
-                  {saving ? "保存中..." : "保存图片"}
-                </button>
-              </div>
+              {/* save button */}
+              <button
+                type="button"
+                disabled={saving}
+                onClick={saveImage}
+                className="mt-5 rounded-full bg-white px-8 py-3 text-[15px] font-semibold text-[#1C1C1C] transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {saving ? "保存中..." : "保存图片"}
+              </button>
             </motion.div>
+
+            {/* weak close button — top-right corner */}
+            <button
+              type="button"
+              onClick={() => setShowShare(false)}
+              className="absolute top-4 right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/60 transition-all hover:bg-white/20 hover:text-white"
+            >
+              <X size={18} />
+            </button>
           </div>
         )}
       </AnimatePresence>
