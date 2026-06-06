@@ -6,6 +6,21 @@ Last updated: 2026-06-05
 
 ## Recent — 2026-06-06
 
+### Explore 轮播优化 + 分类/时间筛选紧凑化
+
+1. **删除 dot 指示器**：`TrendingCarousel` 移除所有分页圆点。
+2. **无限向前循环轮播**：最后一张→克隆→无缝跳回第一张，始终向前滚动，无回滚效果。实现方式：渲染 `[0..N-1, clone_of_0]`，滑到 clone 后 `scrollTo(0, instant)` 跳回。
+3. **单卡显示**：外层 `section overflow-hidden` 裁剪 peek，每张卡片用 `w-full snap-center` 包裹，一次只显示一张。`TrendingCard` 移除 `snap-start`/`shrink-0`/`w-[85vw]`，改为 `w-full max-w-[420px]`。
+4. **Categories chips 缩小**：`px-5 py-2.5 text-sm` → `px-3.5 py-1.5 text-[13px]`，gap `2` → `1.5`。
+5. **时间筛选缩小**：`px-4 py-2` → `px-3 py-1.5`，"时间" 标签 `text-xs` → `text-[11px]`，gap `2` → `1.5`。
+
+修改文件：
+- `components/explore/TrendingCarousel.tsx` — 重写：无限循环 + 单卡显示 + 去掉 dots
+- `components/explore/TrendingCard.tsx` — 移除 snap/shrink 类，w-full max-w-[420px]
+- `components/explore/ExploreClient.tsx` — 缩小 Categories + 时间筛选
+
+---
+
 ### TestCard 移除图片背景：普通卡片回归纯色 Nippon
 
 1. **TestCard 移除 `backgroundImage`**：删除了 `hasImage`、`backgroundImage: url(${card.image})`、`backgroundSize`、`backgroundPosition`。普通列表卡片仅使用 Nippon 纯色 `bgColor`。

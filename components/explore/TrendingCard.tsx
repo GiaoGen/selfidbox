@@ -15,7 +15,7 @@ export function TrendingCard({ site: card, rank }: { site: ExploreCard; rank: nu
   return (
     <Link
       href={card.href}
-      className="group relative flex w-[85vw] max-w-[420px] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-[32px] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.10),0_0_100px_rgba(130,80,220,0.06)] sm:w-[420px]"
+      className="group relative flex w-full max-w-[420px] flex-col justify-between overflow-hidden rounded-[32px] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]"
       style={{
         backgroundColor: hasImage ? "transparent" : bgColor,
         color: textColor,
@@ -29,8 +29,8 @@ export function TrendingCard({ site: card, rank }: { site: ExploreCard; rank: nu
             backgroundImage: `url(${card.image})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
-            filter: "blur(16px)",
-            transform: "scale(1.12)",
+            filter: "blur(14px)",
+            transform: "scale(1.2)",
           }}
         />
       )}

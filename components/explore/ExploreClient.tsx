@@ -272,7 +272,7 @@ export function ExploreClient({
       {/*  Tabs (buttons — no page reload)                                  */}
       {/* ================================================================ */}
       <div className="overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="flex gap-2 min-w-max">
+        <div className="flex gap-1.5 min-w-max">
           {tabs.map((tab) => {
             const active = tab.id === activeTab;
             return (
@@ -280,7 +280,7 @@ export function ExploreClient({
                 key={tab.id}
                 type="button"
                 onClick={() => selectTab(tab.id)}
-                className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors ${
+                className={`shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
                   active
                     ? "bg-[var(--ink)] text-white"
                     : "bg-white text-[var(--ink)] hover:bg-[var(--surface-strong)]"
@@ -296,8 +296,8 @@ export function ExploreClient({
       {/* ================================================================ */}
       {/*  Date range pills (buttons — no page reload)                      */}
       {/* ================================================================ */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold text-[var(--muted)] shrink-0">时间</span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-[11px] font-semibold text-[var(--muted)] shrink-0">时间</span>
         {rangePills.map((pill) => {
           const active = pill.id === activeRange;
           return (
@@ -305,7 +305,7 @@ export function ExploreClient({
               key={pill.id}
               type="button"
               onClick={() => selectRange(pill.id)}
-              className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                 active
                   ? "bg-[#b8a4ed]/30 text-[var(--ink)]"
                   : "bg-white text-[var(--muted)] hover:bg-[var(--surface-strong)]"
