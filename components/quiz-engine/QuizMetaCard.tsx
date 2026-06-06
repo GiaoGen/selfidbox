@@ -129,6 +129,32 @@ export function QuizMetaCard({ meta, onChange, bgColor, stepNumber, stepLabel }:
           <p className={`mt-3 text-lg leading-7 ${light ? "text-white/70" : "opacity-80"}`}>{meta.hook}</p>
         ) : null
       )}
+
+      {/* Description */}
+      {isEditing ? (
+        <InlineEditableTextarea
+          value={meta.description ?? ""}
+          onChange={(v) => update({ description: v })}
+          placeholder="Quiz 描述（可选，用于列表展示）"
+          className={`mt-3 text-base leading-6 ${light ? "text-white/60" : "opacity-60"}`}
+        />
+      ) : (
+        meta.description ? (
+          <p className={`mt-3 text-base leading-6 ${light ? "text-white/60" : "opacity-60"}`}>{meta.description}</p>
+        ) : null
+      )}
+
+      {/* Cover Image URL */}
+      {isEditing && (
+        <div className="mt-3">
+          <InlineEditableInput
+            value={meta.cover_image_url ?? ""}
+            onChange={(v) => update({ cover_image_url: v })}
+            placeholder="封面图片 URL（可选）"
+            className={`text-sm ${mutedClass}`}
+          />
+        </div>
+      )}
     </section>
   );
 }

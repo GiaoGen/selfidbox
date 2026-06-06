@@ -3,16 +3,18 @@ import {
   getAdminStats,
   getAdminCategories,
   getRecentTestSites,
+  getAdminQuizStats,
   type AdminTestSiteRow,
 } from "@/lib/admin-db";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 
 export default async function AdminDashboard() {
-  const [stats, categories, recent] = await Promise.all([
+  const [stats, categories, recent, quizStats] = await Promise.all([
     getAdminStats(),
     getAdminCategories(),
     getRecentTestSites(5),
+    getAdminQuizStats(),
   ]);
 
   const categoryCount = categories.length;
@@ -32,8 +34,16 @@ export default async function AdminDashboard() {
         <StatCard label="分类数" value={categoryCount} accent="peach" />
       </div>
 
+      {/* ---- Quiz Stats ---- */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Quizzes" value={quizStats.total} accent="lavender" />
+        <StatCard label="Published" value={quizStats.published} accent="mint" />
+        <StatCard label="Sandbox" value={quizStats.sandbox} accent="peach" />
+        <StatCard label="Submitted" value={quizStats.submitted} accent="ochre" />
+      </div>
+
       {/* ---- Quick links ---- */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <QuickLink
           href="/admin/test-sites"
           label="管理测试网站"
@@ -43,6 +53,11 @@ export default async function AdminDashboard() {
           href="/admin/categories"
           label="管理分类"
           desc="创建和编辑测试分类"
+        />
+        <QuickLink
+          href="/admin/quizzes"
+          label="管理 Quizzes"
+          desc="AI 人格测试后台管理"
         />
         <QuickLink
           href="/admin/test-sites/new"

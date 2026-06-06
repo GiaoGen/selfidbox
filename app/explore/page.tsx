@@ -5,7 +5,9 @@ import {
   mapTestSite,
   type ExploreCategory,
 } from "@/lib/test-sites-db";
-import type { TestSite } from "@/lib/test-sites";
+import { getExploreQuizCards } from "@/lib/explore/fetch";
+import { testSiteToExploreCard } from "@/lib/explore/mapper";
+import type { ExploreCard } from "@/lib/explore/types";
 import { ExploreClient } from "@/components/explore/ExploreClient";
 
 /* ------------------------------------------------------------------ */
@@ -19,27 +21,31 @@ function parseRange(raw: string | undefined): Range {
   return "all";
 }
 
-function filterByRange(sites: TestSite[], range: Range): TestSite[] {
-  if (range === "all") return sites;
+function filterByRange(cards: ExploreCard[], range: Range): ExploreCard[] {
+  if (range === "all") return cards;
   const days = range === "7d" ? 7 : 30;
   const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-  return sites.filter((s) => {
-    if (!s.created_at) return true;
-    return new Date(s.created_at).getTime() >= cutoff;
+  return cards.filter((c) => {
+    if (!c.created_at) return true;
+    return new Date(c.created_at).getTime() >= cutoff;
   });
 }
 
-function sortByPopularity(sites: TestSite[]): TestSite[] {
-  return [...sites].sort(
-    (a, b) => (b.popularity_score ?? 0) - (a.popularity_score ?? 0),
-  );
+function sortExploreCards(cards: ExploreCard[]): ExploreCard[] {
+  return [...cards].sort((a, b) => {
+    // featured first
+    if (a.featured !== b.featured) return b.featured ? 1 : -1;
+    // then popularity
+    if (a.popularity_score !== b.popularity_score)
+      return b.popularity_score - a.popularity_score;
+    // then created_at
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
 }
 
-function getTrending(sites: TestSite[]): TestSite[] {
-  const recent7d = filterByRange(sites, "7d");
-  return sortByPopularity(recent7d)
-    .sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0))
-    .slice(0, 5);
+function getTrending(cards: ExploreCard[]): ExploreCard[] {
+  const recent7d = filterByRange(cards, "7d");
+  return sortExploreCards(recent7d).slice(0, 5);
 }
 
 /* ------------------------------------------------------------------ */
@@ -53,14 +59,32 @@ export default async function ExplorePage({
 }) {
   const sp = await searchParams;
 
-  const [categoryRows, siteRows] = await Promise.all([
+  const [categoryRows, siteRows, quizCards] = await Promise.all([
     getCategories(),
     getPublishedTestSites(),
+    getExploreQuizCards(),
   ]);
 
   const categories: ExploreCategory[] = categoryRows.map(mapCategory);
-  const allSites: TestSite[] = siteRows.map(mapTestSite);
-  const trending = getTrending(allSites);
+  const siteCards: ExploreCard[] = siteRows
+    .map(mapTestSite)
+    .map(testSiteToExploreCard);
+
+  // Merge test_sites + quizzes into unified list
+  const allCards: ExploreCard[] = sortExploreCards([
+    ...siteCards,
+    ...quizCards,
+  ]);
+
+  console.log("[Explore] Data merge:", {
+    officialCards: siteCards.length,
+    quizCards: quizCards.length,
+    allCards: allCards.length,
+    quizCategoryIds: quizCards.map((c) => c.category_id),
+    siteCategoryIds: siteCards.map((c) => c.category_id),
+  });
+
+  const trending = getTrending(allCards);
 
   const tabs = [
     { id: "hot", label: "热门" },
@@ -77,7 +101,7 @@ export default async function ExplorePage({
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
         <ExploreClient
-          sites={allSites}
+          sites={allCards}
           trending={trending}
           tabs={tabs}
           rangePills={rangePills}

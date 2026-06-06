@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { getCategories, getTestSitesByCategory, mapCategory, mapTestSite } from "@/lib/test-sites-db";
+import { getExploreQuizCardsByCategory } from "@/lib/explore/fetch";
+import { testSiteToExploreCard } from "@/lib/explore/mapper";
+import type { ExploreCard } from "@/lib/explore/types";
 import { TestCard } from "./test-card";
 
 function EmptyState({ message }: { message: string }) {
@@ -10,16 +13,41 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
+function sortExploreCards(cards: ExploreCard[]): ExploreCard[] {
+  return [...cards].sort((a, b) => {
+    if (a.featured !== b.featured) return b.featured ? 1 : -1;
+    if (a.popularity_score !== b.popularity_score)
+      return b.popularity_score - a.popularity_score;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+}
+
 export async function CategoryPage({ category }: { category: string }) {
-  const [categoryRows, { category: currentCatRow, sites: siteRows }] =
+  const [categoryRows, { category: currentCatRow, sites: siteRows }, quizCards] =
     await Promise.all([
       getCategories(),
       getTestSitesByCategory(category),
+      getExploreQuizCardsByCategory(category),
     ]);
 
   const categories = categoryRows.map(mapCategory);
   const current = currentCatRow ? mapCategory(currentCatRow) : null;
-  const tests = siteRows.map(mapTestSite);
+
+  // Merge test_sites + quizzes
+  const siteCards: ExploreCard[] = siteRows
+    .map(mapTestSite)
+    .map(testSiteToExploreCard);
+  const allCards = sortExploreCards([...siteCards, ...quizCards]);
+
+  console.log("[Explore] CategoryPage:", {
+    category,
+    currentCatId: current?.id,
+    officialCards: siteCards.length,
+    quizCards: quizCards.length,
+    allCards: allCards.length,
+    quizCategoryIds: quizCards.map((c) => c.category_id),
+    siteCategoryIds: siteCards.map((c) => c.category_id),
+  });
 
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
@@ -84,12 +112,12 @@ export async function CategoryPage({ category }: { category: string }) {
           </div>
         </div>
 
-        {tests.length === 0 ? (
+        {allCards.length === 0 ? (
           <EmptyState message="该分类暂无测试数据" />
         ) : (
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {tests.map((site) => (
-              <TestCard key={site.id} site={site} />
+            {allCards.map((card) => (
+              <TestCard key={card.id} site={card} />
             ))}
           </section>
         )}

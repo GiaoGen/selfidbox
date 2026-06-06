@@ -253,3 +253,172 @@ export async function getRecentTestSites(limit = 5): Promise<AdminTestSiteRow[]>
     "getRecentTestSites",
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  Quizzes admin                                                      */
+/* ------------------------------------------------------------------ */
+
+export interface AdminQuizRow {
+  id: string;
+  slug: string;
+  title: string;
+  hook: string;
+  quiz_type: string;
+  status: string;
+  creator_user_id: string;
+  attempt_count: number;
+  abstractness: number;
+  seriousness: number;
+  depth: number;
+  poeticness: number;
+  description: string | null;
+  cover_image_url: string | null;
+  category_id: string | null;
+  featured: boolean;
+  created_at: string;
+  category: AdminCategoryRow | null;
+}
+
+export interface AdminQuizFilters {
+  search?: string;
+  status?: string;
+}
+
+/** Fetch all quizzes with optional search + status filter */
+export async function getAdminQuizzes(
+  filters?: AdminQuizFilters,
+): Promise<AdminQuizRow[]> {
+  return withTimeout(
+    async () => {
+      // Fetch quizzes and categories in parallel (avoids FK dependency)
+      const [quizResult, catResult] = await Promise.all([
+        (() => {
+          let q = supabase
+            .from("quizzes")
+            .select("*")
+            .order("created_at", { ascending: false });
+          if (filters?.search) q = q.ilike("title", `%${filters.search}%`);
+          if (filters?.status) q = q.eq("status", filters.status);
+          return q;
+        })(),
+        supabase.from("test_categories").select("*"),
+      ]);
+
+      if (quizResult.error) throw quizResult.error;
+
+      const categories = (catResult.data ?? []) as AdminCategoryRow[];
+      const catMap = new Map(categories.map((c) => [c.id, c]));
+
+      const quizzes = (quizResult.data ?? []) as AdminQuizRow[];
+      // Join category in memory
+      return quizzes.map((q) => ({
+        ...q,
+        category: q.category_id ? (catMap.get(q.category_id) ?? null) : null,
+      }));
+    },
+    [],
+    "getAdminQuizzes",
+  );
+}
+
+/** Fetch a single quiz by ID */
+export async function getAdminQuizById(
+  id: string,
+): Promise<AdminQuizRow | null> {
+  return withTimeout(
+    async () => {
+      const { data, error } = await supabase
+        .from("quizzes")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (error || !data) return null;
+
+      const quiz = data as AdminQuizRow;
+
+      // Fetch category separately if needed
+      if (quiz.category_id) {
+        const { data: cat } = await supabase
+          .from("test_categories")
+          .select("*")
+          .eq("id", quiz.category_id)
+          .single();
+        quiz.category = (cat as AdminCategoryRow) ?? null;
+      } else {
+        quiz.category = null;
+      }
+
+      return quiz;
+    },
+    null,
+    "getAdminQuizById",
+  );
+}
+
+export interface UpdateQuizMetadataInput {
+  title?: string;
+  description?: string | null;
+  cover_image_url?: string | null;
+  category_id?: string | null;
+  featured?: boolean;
+  status?: string;
+}
+
+/** Lightweight metadata update — does NOT touch questions/results/factors */
+export async function updateQuizMetadata(
+  id: string,
+  input: UpdateQuizMetadataInput,
+): Promise<AdminQuizRow> {
+  const { data, error } = await supabase
+    .from("quizzes")
+    .update(input)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as AdminQuizRow;
+}
+
+/** Delete a quiz and all its sub-rows */
+export async function deleteQuiz(id: string): Promise<void> {
+  // Delete sub-rows first (cascade not guaranteed on all environments)
+  await Promise.all([
+    supabase.from("quiz_options").delete().eq("quiz_id", id),
+    supabase.from("quiz_questions").delete().eq("quiz_id", id),
+    supabase.from("quiz_results").delete().eq("quiz_id", id),
+    supabase.from("quiz_factors").delete().eq("quiz_id", id),
+    supabase.from("quiz_attempt_answers").delete().eq("quiz_id", id),
+    supabase.from("quiz_attempts").delete().eq("quiz_id", id),
+  ]);
+
+  const { error } = await supabase.from("quizzes").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/** Count quizzes by status for dashboard stats */
+export async function getAdminQuizStats(): Promise<{
+  total: number;
+  published: number;
+  draft: number;
+  sandbox: number;
+  submitted: number;
+  archived: number;
+}> {
+  const { data, error } = await supabase
+    .from("quizzes")
+    .select("status");
+
+  if (error || !data) {
+    return { total: 0, published: 0, draft: 0, sandbox: 0, submitted: 0, archived: 0 };
+  }
+
+  return {
+    total: data.length,
+    published: data.filter((r) => r.status === "published").length,
+    draft: data.filter((r) => r.status === "draft").length,
+    sandbox: data.filter((r) => r.status === "sandbox").length,
+    submitted: data.filter((r) => r.status === "submitted").length,
+    archived: data.filter((r) => r.status === "archived").length,
+  };
+}

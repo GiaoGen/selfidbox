@@ -4,6 +4,10 @@ export interface QuizMeta {
   quiz_type: string;
   audience: string;
   tone: string;
+  description?: string;
+  cover_image_url?: string;
+  category_id?: string;
+  featured?: boolean;
 }
 
 /** Global style knobs that influence AI generation tone. Range 0–100. */

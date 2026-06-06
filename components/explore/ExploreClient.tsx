@@ -4,47 +4,57 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import type { TestSite } from "@/lib/test-sites";
+import type { ExploreCard } from "@/lib/explore/types";
 import { TopNavbar } from "@/components/layout/TopNavbar";
 import { TrendingCarousel } from "./TrendingCarousel";
 import { TrendingCard } from "./TrendingCard";
 import { TestCard } from "@/app/explore/_components/test-card";
 
 /* ------------------------------------------------------------------ */
-/*  Filters (pure functions, no server dependency)                     */
+/*  Filters (pure functions)                                           */
 /* ------------------------------------------------------------------ */
 
 type Range = "7d" | "30d" | "all";
 
-function filterByTab(sites: TestSite[], tab: string): TestSite[] {
-  if (tab === "hot" || !tab) return sites;
-  return sites.filter((s) => s.category === tab);
+function filterByTab(cards: ExploreCard[], tab: string): ExploreCard[] {
+  if (tab === "hot" || !tab) return cards;
+  const result = cards.filter((c) => String(c.category_id ?? "") === String(tab));
+  console.log("[Explore] filterByTab:", {
+    tab,
+    inputCount: cards.length,
+    outputCount: result.length,
+    sampleCategoryIds: cards.slice(0, 3).map((c) => c.category_id),
+  });
+  return result;
 }
 
-function filterByRange(sites: TestSite[], range: Range): TestSite[] {
-  if (range === "all") return sites;
+function filterByRange(cards: ExploreCard[], range: Range): ExploreCard[] {
+  if (range === "all") return cards;
   const days = range === "7d" ? 7 : 30;
   const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-  return sites.filter((s) => {
-    if (!s.created_at) return true;
-    return new Date(s.created_at).getTime() >= cutoff;
+  return cards.filter((c) => {
+    if (!c.created_at) return true;
+    return new Date(c.created_at).getTime() >= cutoff;
   });
 }
 
-function sortByPopularity(sites: TestSite[]): TestSite[] {
-  return [...sites].sort(
-    (a, b) => (b.popularity_score ?? 0) - (a.popularity_score ?? 0),
-  );
+function sortExploreCards(cards: ExploreCard[]): ExploreCard[] {
+  return [...cards].sort((a, b) => {
+    if (a.featured !== b.featured) return b.featured ? 1 : -1;
+    if (a.popularity_score !== b.popularity_score)
+      return b.popularity_score - a.popularity_score;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
 }
 
-function searchSites(sites: TestSite[], query: string): TestSite[] {
+function searchCards(cards: ExploreCard[], query: string): ExploreCard[] {
   const q = query.toLowerCase().trim();
   if (!q) return [];
-  return sites.filter((s) => {
-    if (s.name.toLowerCase().includes(q)) return true;
-    if (s.description.toLowerCase().includes(q)) return true;
-    if (s.tags.some((t) => t.toLowerCase().includes(q))) return true;
-    if (s.categoryLabel.toLowerCase().includes(q)) return true;
+  return cards.filter((c) => {
+    if (c.title.toLowerCase().includes(q)) return true;
+    if (c.description.toLowerCase().includes(q)) return true;
+    if (c.tags.some((t) => t.toLowerCase().includes(q))) return true;
+    if (c.categoryLabel.toLowerCase().includes(q)) return true;
     return false;
   });
 }
@@ -75,8 +85,8 @@ function ClockIcon() {
 /* ------------------------------------------------------------------ */
 
 type ExploreClientProps = {
-  sites: TestSite[];
-  trending: TestSite[];
+  sites: ExploreCard[];
+  trending: ExploreCard[];
   tabs: { id: string; label: string }[];
   rangePills: { id: Range; label: string }[];
   initialTab: string;
@@ -107,11 +117,11 @@ export function ExploreClient({
   const filtered = useMemo(() => {
     let result = filterByTab(sites, activeTab);
     result = filterByRange(result, activeRange);
-    return sortByPopularity(result);
+    return sortExploreCards(result);
   }, [sites, activeTab, activeRange]);
 
   const searchResults = useMemo(
-    () => (searching ? searchSites(sites, query) : []),
+    () => (searching ? searchCards(sites, query) : []),
     [sites, searching, query],
   );
 
@@ -210,22 +220,22 @@ export function ExploreClient({
               </div>
             ) : (
               <div className="py-2">
-                {searchResults.map((site) => (
+                {searchResults.map((card) => (
                   <Link
-                    key={site.id}
-                    href={`/test-sites/${site.id}`}
+                    key={card.id}
+                    href={card.href}
                     onClick={exitSearch}
                     className="flex items-start gap-4 px-5 py-3 transition-colors hover:bg-[var(--surface-soft)]"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold truncate">{site.name}</span>
-                        {site.featured && <span className="shrink-0 text-[#e8b94a]"><StarIcon /></span>}
+                        <span className="text-sm font-semibold truncate">{card.title}</span>
+                        {card.featured && <span className="shrink-0 text-[#e8b94a]"><StarIcon /></span>}
                       </div>
-                      <span className="text-xs text-[var(--muted)]">{site.categoryLabel}</span>
-                      {site.tags.length > 0 && (
+                      <span className="text-xs text-[var(--muted)]">{card.categoryLabel}</span>
+                      {card.tags.length > 0 && (
                         <div className="mt-1.5 flex flex-wrap gap-1">
-                          {site.tags.slice(0, 2).map((tag) => (
+                          {card.tags.slice(0, 2).map((tag) => (
                             <span key={tag} className="rounded-full bg-[var(--surface-strong)] px-2 py-0.5 text-[10px] font-medium text-[var(--muted)]">
                               #{tag}
                             </span>
@@ -233,10 +243,12 @@ export function ExploreClient({
                         </div>
                       )}
                     </div>
-                    <div className="flex shrink-0 items-center gap-1 text-xs text-[var(--muted)]">
-                      <ClockIcon />
-                      {site.estimatedMinutes} min
-                    </div>
+                    {card.estimatedMinutes != null && (
+                      <div className="flex shrink-0 items-center gap-1 text-xs text-[var(--muted)]">
+                        <ClockIcon />
+                        {card.estimatedMinutes} min
+                      </div>
+                    )}
                   </Link>
                 ))}
               </div>
@@ -250,8 +262,8 @@ export function ExploreClient({
       {/* ================================================================ */}
       {trending.length > 0 && (
         <TrendingCarousel>
-          {trending.map((site, i) => (
-            <TrendingCard key={site.id} site={site} rank={i + 1} />
+          {trending.map((card, i) => (
+            <TrendingCard key={card.id} site={card} rank={i + 1} />
           ))}
         </TrendingCarousel>
       )}
@@ -316,8 +328,8 @@ export function ExploreClient({
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((site) => (
-            <TestCard key={site.id} site={site} />
+          {filtered.map((card) => (
+            <TestCard key={card.id} site={card} />
           ))}
         </div>
       )}

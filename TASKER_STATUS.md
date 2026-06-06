@@ -4,7 +4,108 @@ Last updated: 2026-06-05
 
 ---
 
-## Recent — 2026-06-05
+## Recent — 2026-06-06
+
+### Fix Explore 分类筛选不显示 quizzes
+
+**Root cause**: `ExploreCard.category_id` 类型不一致导致 `filterByTab` 匹配失败。
+- `filterByTab` 用 category **slug**（如 "personality"）与 `card.category_id` 做比较
+- `testSiteToExploreCard` 设置 `category_id: null` → 永远不匹配
+- `quizToExploreCard` 设置 `category_id: quiz.category_id`（UUID）→ 永远不匹配 slug
+- 结果：主 Explore 页的分类 tab 过滤对 test_sites 和 quizzes 都不生效（只有 "热门" tab 能显示）
+
+**Fix**: 统一 `ExploreCard.category_id` 为 category slug，与 tab ID 对齐。
+1. `lib/explore/mapper.ts` — `testSiteToExploreCard`: `category_id` 从 `null` 改为 `site.category`（slug）；`quizToExploreCard`: 新增 `categorySlug` 参数，`category_id` 使用 slug 而非 UUID
+2. `lib/explore/fetch.ts` — `getExploreQuizCards` 和 `getExploreQuizCardsByCategory` 都从 catMap 提取 slug 传给 `quizToExploreCard`
+3. `components/explore/ExploreClient.tsx` — `filterByTab` 改用 `String()` 比较防止类型差异，添加 debug console.log
+4. `app/explore/page.tsx` — 添加服务端 merge 日志
+5. `app/explore/_components/category-page.tsx` — 添加服务端 merge 日志
+
+修改文件：
+- `lib/explore/mapper.ts`
+- `lib/explore/fetch.ts`
+- `components/explore/ExploreClient.tsx`
+- `app/explore/page.tsx`
+- `app/explore/_components/category-page.tsx`
+
+---
+
+### Fix Explore → UGC Quiz 跳转：新增 Quizzes 详情页
+
+1. **Explore Card href 修正**：`lib/explore/mapper.ts` — `quizToExploreCard` 的 href 从 `/quiz/[slug]` 改为 `/quizzes/[slug]`，不再直接跳答题页。
+2. **Quiz Detail 数据查询**：`lib/quizzes-db.ts` — 新增 `getQuizDetail(slug)` 查询已发布 quiz + category join；新增 `getRelatedQuizzes(categoryId, excludeSlug)` 取同类已发布 quiz 最多 3 条。
+3. **QuizDetail 组件**：`components/QuizDetail.tsx` — 复用 TestSiteDetail 布局结构（nav / hero / pills / description / related）。Hero 使用 accentFromId 派生背景色。Badge 显示「社区 Quiz」+ 分类 + 类型。主按钮「去做这个测试」链接到 `/quiz/[slug]` 答题页。Pills 显示 attempt_count 和发布时间。Related 区域展示同类其他 quiz。
+4. **路由页面**：`app/quizzes/[slug]/page.tsx` — server component，调用 `getQuizDetail` + `getRelatedQuizzes`，notFound 处理非 published quiz。
+5. **Loading 骨架**：`app/quizzes/[slug]/loading.tsx` — 与 test_sites 一致的 loading 占位。
+
+用户路径修正为：Explore → `/quizzes/[slug]` 详情页 →「去做这个测试」→ `/quiz/[slug]` 答题页。
+
+新增文件：
+- `components/QuizDetail.tsx`
+- `app/quizzes/[slug]/page.tsx`
+- `app/quizzes/[slug]/loading.tsx`
+
+修改文件：
+- `lib/explore/mapper.ts` — quiz href 改为 `/quizzes/[slug]`
+- `lib/explore/types.ts` — ExploreCard.href 注释同步更新
+- `lib/quizzes-db.ts` — 新增 `getQuizDetail`、`getRelatedQuizzes`、`QuizDetailRow`、`QuizDetailRelatedRow`
+
+---
+
+### Explore 接入已发布 Quizzes
+
+### Explore 接入已发布 Quizzes
+
+1. **Unified ExploreCard Model**：`lib/explore/types.ts` — 统一卡片类型，字段：`id`、`source_type`（official/community）、`href`、`title`、`description`、`image`（cover_image_url）、`category_id`、`categoryLabel`、`featured`、`popularity_score`、`created_at`、`tags`、`estimatedMinutes`、`accent`。
+2. **Mapper**：`lib/explore/mapper.ts` — `testSiteToExploreCard()` 映射 test_sites（source_type=official），`quizToExploreCard()` 映射 quizzes（source_type=community）。Quiz accent 由 id hash 确定性生成。
+3. **Unified Fetch**：`lib/explore/fetch.ts` — `getExploreQuizCards()` 并行查 published quizzes + categories，内存 join 标签；`getExploreQuizCardsByCategory(slug)` 按分类过滤。使用 `listQuery` 缓存 60s。
+4. **Explore 主页**：`app/explore/page.tsx` — test_sites + quizzes 合并为 `ExploreCard[]`，统一排序（featured → popularity_score → created_at），trending 区也混合显示。
+5. **分类页**：`app/explore/_components/category-page.tsx` — 同步引入 `getExploreQuizCardsByCategory`，test_sites 和 quizzes 混合在同一分类下，统一排序。
+6. **TestCard**：支持 `ExploreCard` prop。显示 source badge（"官方" 紫色 / "社区" 绿色）。有 `image` 时使用 cover image 背景 + 暗色叠加层；无 image 时使用 accent 纯色背景。Quiz 无 `estimatedMinutes`/`tags` 时优雅降级。
+7. **TrendingCard**：支持 `ExploreCard` prop。显示 source badge。Quiz 无 `popularity_score` 时不显示 🔥。
+8. **ExploreClient**：全部 `TestSite` 类型替换为 `ExploreCard`。搜索覆盖 title + description + tags + categoryLabel。`filterByTab` 按 `category_id` 过滤（quiz 和 test_site 使用同一 `test_categories`）。导航：test_sites → `/test-sites/[id]`，quizzes → `/quiz/[slug]`。
+
+新增文件：
+- `lib/explore/types.ts` — ExploreCard 类型 + accent 工具
+- `lib/explore/mapper.ts` — TestSite/Quiz → ExploreCard 映射
+- `lib/explore/fetch.ts` — 统一查询 + 缓存
+
+修改文件：
+- `app/explore/page.tsx` — 合并 quizzes，统一排序
+- `app/explore/_components/test-card.tsx` — ExploreCard prop，source badge，cover image 背景
+- `app/explore/_components/category-page.tsx` — 合并 quizzes 到分类
+- `components/explore/ExploreClient.tsx` — ExploreCard 替代 TestSite
+- `components/explore/TrendingCard.tsx` — ExploreCard prop，source badge
+
+未改动：Quiz Runtime、Quiz Studio、Profile、OCR、Auth、Admin。
+
+### Admin → Quizzes 管理模块
+
+1. **DB Migration**：`supabase/migrations/add_quiz_metadata_fields.sql` — quizzes 表新增 `description`、`cover_image_url`、`category_id`（FK → test_categories）、`featured` 四个字段。
+2. **Admin Quiz 列表页**：`app/admin/quizzes/page.tsx` — 支持 title 模糊搜索、状态筛选（All/Draft/Sandbox/Submitted/Published/Archived tabs）、默认 created_at desc 排序。表格列：Title、Status、Attempts、Category、Featured、Created、Edit/Delete 操作。
+3. **Admin Quiz 编辑页**：`app/admin/quizzes/[id]/edit/page.tsx` + `form.tsx` — 编辑 title、description、cover_image_url（含预览）、category_id（下拉选择）、featured、status。不碰 questions/results/factors（由 Quiz Studio 管理）。
+4. **数据层**：`lib/admin-db.ts` 新增 `AdminQuizRow` 类型、`getAdminQuizzes()`、`getAdminQuizById()`、`updateQuizMetadata()`、`deleteQuiz()`、`getAdminQuizStats()`。
+5. **Sidebar**：AdminSidebar "内容管理" 分组下新增 "Quizzes" 入口。
+6. **Dashboard**：新增 Quizzes 统计行（Quizzes/Published/Sandbox/Submitted）+ QuickLink "管理 Quizzes"。
+7. **StatusBadge**：新增 `sandbox`（紫，`#b8a4ed`）和 `submitted`（青，`#81C7D4`）状态色。
+8. **Quiz Studio**：`QuizMetaCard` 新增 description（textarea）和 cover_image_url（input）可编辑字段。`QuizMeta` type 新增 `description?`、`cover_image_url?`、`category_id?`、`featured?`。`saveQuizSchema` / `updateQuizSchema` 写入新字段。
+
+新增文件：
+- `supabase/migrations/add_quiz_metadata_fields.sql`
+- `app/admin/quizzes/page.tsx`
+- `app/admin/quizzes/[id]/edit/page.tsx`
+- `app/admin/quizzes/[id]/edit/form.tsx`
+
+修改文件：
+- `lib/admin-db.ts` — 新增 Quiz admin 查询函数 + 类型
+- `lib/quizzes-db.ts` — save/update 写入新 metadata 字段
+- `lib/mock-quiz-engine.ts` — QuizMeta 新增 4 个可选字段
+- `components/admin/StatusBadge.tsx` — 新增 sandbox/submitted
+- `components/admin/AdminSidebar.tsx` — 新增 Quizzes 导航
+- `app/admin/page.tsx` — Dashboard 新增 Quiz stats + quick link
+- `components/quiz-engine/QuizMetaCard.tsx` — 新增 description + cover_image_url 编辑
+
+未改动：Explore、Quiz Runtime、OCR、Auth、Profile。
 
 ### Quiz Runtime UI 简化 — Top1 单图背景 + 去掉标题纯色 + 选项轻量化
 

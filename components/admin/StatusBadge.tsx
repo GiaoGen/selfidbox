@@ -1,5 +1,7 @@
 const statusConfig: Record<string, { label: string; className: string }> = {
   draft: { label: "Draft", className: "bg-[#e8b94a] text-[#0a0a0a]" },
+  sandbox: { label: "Sandbox", className: "bg-[#b8a4ed] text-[#0a0a0a]" },
+  submitted: { label: "Submitted", className: "bg-[#81C7D4] text-[#0a0a0a]" },
   published: { label: "Published", className: "bg-[#a4d4c5] text-[#0a0a0a]" },
   archived: { label: "Archived", className: "bg-[var(--surface-strong)] text-[var(--muted)]" },
 };

@@ -16,6 +16,7 @@ import type {
   AnswerRecord,
   RankedRuntimeResult,
 } from "./quiz-runtime";
+import type { AdminCategoryRow } from "./admin-db";
 
 /* ------------------------------------------------------------------ */
 /*  Read: get full quiz by slug                                        */
@@ -102,6 +103,84 @@ export async function getQuizBySlug(slug: string): Promise<QuizRuntimeData | nul
     results: (resultRows ?? []) as QuizResultData[],
     questions,
   };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Read: quiz detail (for /quizzes/[slug] detail page)                 */
+/* ------------------------------------------------------------------ */
+
+export interface QuizDetailRow {
+  id: string;
+  slug: string;
+  title: string;
+  hook: string;
+  description: string | null;
+  cover_image_url: string | null;
+  category_id: string | null;
+  quiz_type: string;
+  status: string;
+  attempt_count: number;
+  featured: boolean;
+  created_at: string;
+  category: AdminCategoryRow | null;
+}
+
+export async function getQuizDetail(
+  slug: string,
+): Promise<QuizDetailRow | null> {
+  const { data, error } = await supabase
+    .from("quizzes")
+    .select("*")
+    .eq("slug", slug)
+    .eq("status", "published")
+    .single();
+
+  if (error || !data) return null;
+
+  const quiz = data as QuizDetailRow;
+
+  if (quiz.category_id) {
+    const { data: cat } = await supabase
+      .from("test_categories")
+      .select("*")
+      .eq("id", quiz.category_id)
+      .single();
+    quiz.category = (cat as AdminCategoryRow) ?? null;
+  } else {
+    quiz.category = null;
+  }
+
+  return quiz;
+}
+
+export interface QuizDetailRelatedRow {
+  id: string;
+  slug: string;
+  title: string;
+  hook: string;
+  description: string | null;
+  attempt_count: number;
+}
+
+export async function getRelatedQuizzes(
+  categoryId: string,
+  excludeSlug: string,
+): Promise<QuizDetailRelatedRow[]> {
+  const { data, error } = await supabase
+    .from("quizzes")
+    .select("id, slug, title, hook, description, attempt_count")
+    .eq("category_id", categoryId)
+    .eq("status", "published")
+    .neq("slug", excludeSlug)
+    .order("created_at", { ascending: false })
+    .limit(3);
+
+  if (error) {
+    console.error("getRelatedQuizzes error:", error);
+    return [];
+  }
+
+  return (data ?? []) as QuizDetailRelatedRow[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -210,6 +289,10 @@ export async function saveQuizSchema(
       seriousness: input.seriousness ?? 50,
       depth: input.depth ?? 50,
       poeticness: input.poeticness ?? 50,
+      description: input.meta.description ?? null,
+      cover_image_url: input.meta.cover_image_url ?? null,
+      category_id: input.meta.category_id ?? null,
+      featured: input.meta.featured ?? false,
     })
     .select("id")
     .single();
@@ -459,6 +542,10 @@ export async function updateQuizSchema(
       seriousness: input.seriousness ?? 50,
       depth: input.depth ?? 50,
       poeticness: input.poeticness ?? 50,
+      description: input.meta.description ?? null,
+      cover_image_url: input.meta.cover_image_url ?? null,
+      category_id: input.meta.category_id ?? null,
+      featured: input.meta.featured ?? false,
     })
     .eq("id", quizId);
 

@@ -20,6 +20,7 @@ export function AdminSidebar() {
       <NavSection label="内容管理">
         <NavItem href="/admin/test-sites">Test Sites</NavItem>
         <NavItem href="/admin/categories">Categories</NavItem>
+        <NavItem href="/admin/quizzes">Quizzes</NavItem>
       </NavSection>
 
       <NavSection label="快捷操作">
