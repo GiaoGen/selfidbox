@@ -84,10 +84,12 @@ export function TrendingCard({ site: card, rank }: { site: ExploreCard; rank: nu
         )}
       </div>
 
-      <div className="relative mt-6 flex items-center justify-between">
-        <div className={`flex items-center gap-3 text-xs ${isDark ? "text-white/70" : "text-[#0a0a0a]/60"}`}>
+      {(card.estimatedMinutes != null || card.popularity_score > 0) && (
+        <div className="relative mt-4 flex items-center gap-3 text-xs">
           {card.estimatedMinutes != null && (
-            <span>{card.estimatedMinutes} min</span>
+            <span className={isDark ? "text-white/60" : "text-[#0a0a0a]/50"}>
+              {card.estimatedMinutes} min
+            </span>
           )}
           {card.popularity_score > 0 && (
             <span className={`rounded-full px-2 py-0.5 backdrop-blur-sm ${isDark ? "bg-white/15 text-white/85" : "bg-black/10 text-[#0a0a0a]/70"}`}>
@@ -95,10 +97,7 @@ export function TrendingCard({ site: card, rank }: { site: ExploreCard; rank: nu
             </span>
           )}
         </div>
-        <span className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-[#0a0a0a] shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-all group-hover:scale-105 group-hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)]">
-          查看详情
-        </span>
-      </div>
+      )}
     </Link>
   );
 }
