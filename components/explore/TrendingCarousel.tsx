@@ -13,7 +13,11 @@ export function TrendingCarousel({ children }: { children: React.ReactNode }) {
       const el = scrollRef.current;
       if (!el) return;
       const slide = el.children[index] as HTMLElement | undefined;
-      slide?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+      if (!slide) return;
+      // Use scrollTo({ left }) instead of scrollIntoView to avoid vertical page scroll
+      const gap = 16; // gap-4 = 16px
+      const targetLeft = slide.offsetLeft - gap;
+      el.scrollTo({ left: targetLeft, behavior: "smooth" });
     },
     [],
   );
@@ -44,45 +48,6 @@ export function TrendingCarousel({ children }: { children: React.ReactNode }) {
 
   return (
     <section>
-      {/* Header */}
-      <div className="mb-5 flex items-end justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-            Trending This Week
-          </p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em]">
-            本周热门
-          </h2>
-        </div>
-        {/* Arrows (desktop) */}
-        <div className="hidden gap-1.5 sm:flex">
-          <button
-            type="button"
-            onClick={() => {
-              const next = Math.max(0, activeIndex - 1);
-              setActiveIndex(next);
-              scrollTo(next);
-            }}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-sm shadow-[0_2px_10px_rgba(10,10,10,0.05)] transition hover:bg-[var(--surface-strong)] hover:shadow-[0_4px_14px_rgba(10,10,10,0.08)]"
-            aria-label="上一个"
-          >
-            ←
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const next = Math.min(total - 1, activeIndex + 1);
-              setActiveIndex(next);
-              scrollTo(next);
-            }}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-sm shadow-[0_2px_10px_rgba(10,10,10,0.05)] transition hover:bg-[var(--surface-strong)] hover:shadow-[0_4px_14px_rgba(10,10,10,0.08)]"
-            aria-label="下一个"
-          >
-            →
-          </button>
-        </div>
-      </div>
-
       {/* Slides */}
       <div
         ref={scrollRef}

@@ -23,6 +23,10 @@ export interface ExploreCard {
   estimatedMinutes: number | null;
   /** Accent key for card background color */
   accent: AccentKey;
+  /** Stable Nippon color background (hex) */
+  bg_color: string;
+  /** Readable text color for bg_color (#1C1C1C or #FCFAF2) */
+  text_color: string;
 }
 
 export type AccentKey = "pink" | "teal" | "lavender" | "peach" | "ochre" | "mint";

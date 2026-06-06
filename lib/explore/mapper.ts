@@ -2,9 +2,11 @@ import type { TestSite } from "@/lib/test-sites";
 import type { AdminQuizRow } from "@/lib/admin-db";
 import type { ExploreCard } from "./types";
 import { accentFromId } from "./types";
+import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
 
 /** Map a TestSite to unified ExploreCard */
 export function testSiteToExploreCard(site: TestSite): ExploreCard {
+  const bg = nipponColorForSlug(site.id);
   return {
     id: site.id,
     source_type: "official",
@@ -20,6 +22,8 @@ export function testSiteToExploreCard(site: TestSite): ExploreCard {
     tags: site.tags ?? [],
     estimatedMinutes: site.estimatedMinutes ?? null,
     accent: site.accent,
+    bg_color: bg,
+    text_color: textColorForNipponBg(bg),
   };
 }
 
@@ -28,14 +32,18 @@ export function quizToExploreCard(
   quiz: AdminQuizRow,
   categoryLabel?: string,
   categorySlug?: string,
+  resultImageUrl?: string,
 ): ExploreCard {
+  const bg = nipponColorForSlug(quiz.slug);
+  // Use result image (from quiz_results) if available, otherwise empty
+  const image = resultImageUrl ?? "";
   return {
     id: quiz.id,
     source_type: "community",
     href: `/quizzes/${quiz.slug}`,
     title: quiz.title,
     description: quiz.description ?? quiz.hook ?? "",
-    image: quiz.cover_image_url ?? "",
+    image,
     category_id: categorySlug ?? quiz.category?.slug ?? null, // category slug — matches tab IDs for filtering
     categoryLabel: categoryLabel ?? quiz.category?.name ?? "",
     featured: quiz.featured ?? false,
@@ -44,5 +52,7 @@ export function quizToExploreCard(
     tags: [],
     estimatedMinutes: null,
     accent: accentFromId(quiz.id),
+    bg_color: bg,
+    text_color: textColorForNipponBg(bg),
   };
 }

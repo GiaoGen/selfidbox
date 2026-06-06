@@ -51,3 +51,42 @@ export const NIPPON_COLORS: string[] = [
   "#656765", "#535953", "#4F4F48", "#52433D", "#373C38",
   "#3A3226", "#434343", "#1C1C1C", "#080808", "#0C0C0C",
 ];
+
+/* ------------------------------------------------------------------ */
+/*  Stable color lookup — same slug → same Nippon color, always       */
+/* ------------------------------------------------------------------ */
+
+function hashString(s: string): number {
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+/** Deterministic Nippon color for a slug/id. Same input → same color. */
+export function nipponColorForSlug(slug: string): string {
+  return NIPPON_COLORS[hashString(slug) % NIPPON_COLORS.length];
+}
+
+/* ------------------------------------------------------------------ */
+/*  Readable text color for a given background                         */
+/* ------------------------------------------------------------------ */
+
+function hexToRgb(hex: string): [number, number, number] {
+  const v = parseInt(hex.slice(1), 16);
+  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+}
+
+function luminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex).map((c) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** #1C1C1C for light backgrounds, #FCFAF2 for dark backgrounds */
+export function textColorForNipponBg(bg: string): string {
+  return luminance(bg) > 0.45 ? "#1C1C1C" : "#FCFAF2";
+}

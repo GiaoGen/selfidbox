@@ -6,6 +6,61 @@ Last updated: 2026-06-05
 
 ## Recent — 2026-06-06
 
+### TestCard 移除图片背景：普通卡片回归纯色 Nippon
+
+1. **TestCard 移除 `backgroundImage`**：删除了 `hasImage`、`backgroundImage: url(${card.image})`、`backgroundSize`、`backgroundPosition`。普通列表卡片仅使用 Nippon 纯色 `bgColor`。
+2. **图片背景仅限 TrendingCard**：`blur(16px)` 逻辑只存在于 `components/explore/TrendingCard.tsx`，所有其他卡片（热门列表/分类/搜索/quizzes/test_sites）不渲染任何图片背景。
+3. **不改动范围**：数据查询、分类、搜索、Admin、Quiz Runtime、Quiz Studio 全部未变。
+
+修改文件：
+- `app/explore/_components/test-card.tsx` — 移除 hasImage + backgroundImage 逻辑
+
+---
+
+### TrendingCard 轮播背景修复：模糊图片不透出底层纯色
+
+1. **Card root 背景条件化**：当 `hasImage` 时 `backgroundColor: "transparent"`，无图片时退回 Nippon `bgColor`。解决模糊图片边缘透出底层 Nippon 纯色的问题。
+2. **Scale 增大**：`scale(1.08)` → `scale(1.12)`，确保模糊边缘不产生透明间隙。
+3. **无遮罩**：图片层不加任何 overlay/gradient。
+4. **不改动范围**：TestCard、分类筛选、搜索、Admin、Quiz Runtime、Quiz Studio 保持不变。
+
+修改文件：
+- `components/explore/TrendingCard.tsx` — 条件化 backgroundColor + scale 1.12
+
+---
+
+### Explore 色彩系统：稳定 Nippon Colors 接入
+
+1. **稳定 hash 映射**：`lib/nippon-colors.ts` — 新增 `nipponColorForSlug(slug)` 和 `textColorForNipponBg(bg)`。同一个 slug 永远获得同一个 Nippon 颜色（`hash(slug) % NIPPON_COLORS.length`），不使用 `Math.random()`。
+2. **ExploreCard 扩展**：`lib/explore/types.ts` — 新增 `bg_color`（hex）和 `text_color`（#1C1C1C / #FCFAF2）字段。
+3. **Mapper 统一计算**：`lib/explore/mapper.ts` — `testSiteToExploreCard` 和 `quizToExploreCard` 各自调用 `nipponColorForSlug` + `textColorForNipponBg` 生成稳定颜色。
+4. **TestCard 使用 Nippon 背景**：`app/explore/_components/test-card.tsx` — 移除 accent 硬编码类，改用 `card.bg_color` 作为 `backgroundColor`，文字/标签/芯片全部根据 `isDark` 自适应。
+5. **TrendingCard 纯色背景**：`components/explore/TrendingCard.tsx` — 移除 5 种 gradient palette，改用 `card.bg_color` 纯色背景；内发光、标签、文字全部根据深浅自适应。
+
+修改文件：
+- `lib/nippon-colors.ts` — 新增 `nipponColorForSlug`、`textColorForNipponBg`
+- `lib/explore/types.ts` — ExploreCard 新增 `bg_color` + `text_color`
+- `lib/explore/mapper.ts` — 两个 mapper 计算颜色
+- `app/explore/_components/test-card.tsx` — Nippon 背景 + 自适应标签
+- `components/explore/TrendingCard.tsx` — 纯色 Nippon 背景替代渐变
+
+---
+
+### Explore 页面 UI 优化：carousel 修复 + source tag + estimated_time
+
+1. **Carousel 自动切换不再滚动页面**：`TrendingCarousel.tsx` — `scrollIntoView()` 替换为 `scrollTo({ left })`，避免浏览器将 slide 滚动到视口时连带触发页面垂直滚动。
+2. **Source tag 文案**：quizzes → "SelfIDBox"，test_sites → "站外"（TrendingCard + TestCard 同步修改）。
+3. **Source tag 样式**：去掉背景色，纯文字，颜色根据卡片背景自适应（深色卡 `text-white/60`，浅色卡 `text-[#0a0a0a]/50`，图片卡统一 white）。
+4. **Estimated time 位置**：TestCard 中 estimated_time 移至左上角，仅 test_sites（站外）显示；quizzes 不显示。
+5. **卡片最终布局**：左上 = estimated_time（仅站外），右上 = 站外/SelfIDBox 标签，底部 = category + tags。
+
+修改文件：
+- `components/explore/TrendingCarousel.tsx`
+- `components/explore/TrendingCard.tsx`
+- `app/explore/_components/test-card.tsx`
+
+---
+
 ### Fix Explore 分类筛选不显示 quizzes
 
 **Root cause**: `ExploreCard.category_id` 类型不一致导致 `filterByTab` 匹配失败。
