@@ -4,8 +4,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ScreenshotReportUploader } from "@/components/profile/ScreenshotReportUploader";
 import { SwipeToDeleteSourceRow } from "@/components/profile/SwipeToDeleteSourceRow";
-import { SourceDetailModal } from "@/components/profile/SourceDetailModal";
+import { RotatingCardModal } from "@/components/share/RotatingCardModal";
+import { QuizResultShareCard } from "@/components/share/QuizResultShareCard";
 import type { ProfileSourceEntry } from "@/lib/user-profile-db";
+import type { ReportDetailData, QuizDetailData } from "@/lib/source-detail-db";
 
 export type { ProfileSourceEntry } from "@/lib/user-profile-db";
 
@@ -40,8 +42,14 @@ export function DataSourceModal({
     message: string;
   } | null>(null);
 
-  /* ---- Source detail state ---- */
-  const [detailSource, setDetailSource] = useState<ProfileSourceEntry | null>(null);
+  /* ---- Card modal state (replaces Source Detail Modal) ---- */
+  const [cardOpen, setCardOpen] = useState(false);
+  const [cardLoading, setCardLoading] = useState(false);
+  const [cardData, setCardData] = useState<ReportDetailData | QuizDetailData | null>(null);
+  const [cardType, setCardType] = useState<"quiz" | "report" | null>(null);
+
+  /* ---- Detail cache: avoids re-fetching the same source ---- */
+  const detailCache = useRef(new Map<string, ReportDetailData | QuizDetailData>());
 
   /* Auto-dismiss feedback after 3 seconds */
   useEffect(() => {
@@ -76,6 +84,17 @@ export function DataSourceModal({
       setFeedback(null);
     }
   }, [open, fetchSources]);
+
+  /* ---- Preload images when modal opens (non-blocking) ---- */
+  useEffect(() => {
+    if (!open || sources.length === 0) return;
+    for (const src of sources) {
+      if (src.image_url) {
+        const img = new Image();
+        img.src = src.image_url;
+      }
+    }
+  }, [open, sources]);
 
   /* ---- Delete handlers ---- */
 
@@ -137,6 +156,92 @@ export function DataSourceModal({
       setDeleting(false);
     }
   }, [deleteTarget, fetchSources, router]);
+
+  /* ---- Source item click → show card (instant if data available) ---- */
+
+  const handleSourceClick = useCallback(async (entry: ProfileSourceEntry) => {
+    const cacheKey = `${entry.source_type}:${entry.id}`;
+    setCardType(entry.source_type);
+
+    /* 1. Source entry already has card-ready fields → instant open */
+    if (entry.source_type === "quiz" && "traits" in entry) {
+      const normalized: QuizDetailData = {
+        id: entry.id,
+        source_type: "quiz",
+        created_at: entry.created_at,
+        quiz_title: entry.title,
+        quiz_slug: "",
+        final_result_name: entry.result,
+        final_result_key: "",
+        result_subtitle: entry.subtitle ?? null,
+        result_description: entry.description ?? null,
+        result_image_url: entry.image_url ?? null,
+        result_traits: entry.traits ?? [],
+        result_share_text: entry.share_text ?? null,
+        user_vector: null,
+      };
+      detailCache.current.set(cacheKey, normalized);
+      setCardData(normalized);
+      setCardLoading(false);
+      setCardOpen(true);
+      return;
+    }
+
+    if (entry.source_type === "report" && "image_url" in entry) {
+      const normalized: ReportDetailData = {
+        id: entry.id,
+        source_type: "report",
+        report_type: entry.title,
+        main_result: entry.result,
+        created_at: entry.created_at,
+        input_type: "",
+        image_url: entry.image_url ?? null,
+        normalized_summary: null,
+        core_vector: null,
+        social_vector: null,
+      };
+      detailCache.current.set(cacheKey, normalized);
+      setCardData(normalized);
+      setCardLoading(false);
+      setCardOpen(true);
+      return;
+    }
+
+    /* 2. Cache hit → instant open */
+    const cached = detailCache.current.get(cacheKey);
+    if (cached) {
+      setCardData(cached);
+      setCardLoading(false);
+      setCardOpen(true);
+      return;
+    }
+
+    /* 3. Cache miss → fetch from detail API (only path with loading) */
+    setCardData(null);
+    setCardLoading(true);
+    setCardOpen(true);
+
+    try {
+      const res = await fetch(
+        `/api/profile/source-detail?source_type=${entry.source_type}&id=${entry.id}`,
+      );
+      const data = await res.json();
+      if (data.ok) {
+        detailCache.current.set(cacheKey, data.detail);
+        setCardData(data.detail);
+      } else {
+        setCardOpen(false);
+      }
+    } catch {
+      setCardOpen(false);
+    } finally {
+      setCardLoading(false);
+    }
+  }, []);
+
+  const handleCardClose = useCallback(() => {
+    setCardOpen(false);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -297,7 +402,7 @@ export function DataSourceModal({
                   className=""
                 >
                   <div
-                    onClick={() => setDetailSource(src)}
+                    onClick={() => handleSourceClick(src)}
                     className="cursor-pointer"
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -326,14 +431,53 @@ export function DataSourceModal({
         </div>
       </div>
 
-      {/* Source Detail Modal */}
-      {detailSource && (
-        <SourceDetailModal
-          open={detailSource !== null}
-          onClose={() => setDetailSource(null)}
-          sourceType={detailSource.source_type}
-          sourceId={detailSource.id}
-        />
+      {/* ── Quiz Result Share Card ── */}
+      {cardType === "quiz" && (
+        <RotatingCardModal open={cardOpen} onClose={handleCardClose}>
+          {cardLoading && (
+            <div className="flex items-center justify-center py-16">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            </div>
+          )}
+          {!cardLoading && cardData && (
+            <QuizResultShareCard
+              quizTitle={(cardData as QuizDetailData).quiz_title}
+              resultName={(cardData as QuizDetailData).final_result_name}
+              resultSubtitle={(cardData as QuizDetailData).result_subtitle ?? ""}
+              resultDescription={(cardData as QuizDetailData).result_description ?? ""}
+              resultImageUrl={(cardData as QuizDetailData).result_image_url ?? undefined}
+              traits={(cardData as QuizDetailData).result_traits}
+              shareText={
+                (cardData as QuizDetailData).result_share_text ?? "这是我的测试结果，你也来试试。"
+              }
+              cardColor="#E8D5B7"
+            />
+          )}
+        </RotatingCardModal>
+      )}
+
+      {/* ── OCR Screenshot Card ── */}
+      {cardType === "report" && (
+        <RotatingCardModal open={cardOpen} onClose={handleCardClose}>
+          {cardLoading && (
+            <div className="flex items-center justify-center py-16">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            </div>
+          )}
+          {!cardLoading && cardData && (cardData as ReportDetailData).image_url ? (
+            <img
+              src={(cardData as ReportDetailData).image_url!}
+              alt="OCR 截图"
+              className="w-full select-none"
+              style={{ objectFit: "contain", maxHeight: "80vh" }}
+            />
+          ) : null}
+          {!cardLoading && cardData && !(cardData as ReportDetailData).image_url ? (
+            <div className="flex items-center justify-center rounded-2xl bg-white/10 px-8 py-16 text-white/50 text-sm">
+              未保存原始截图
+            </div>
+          ) : null}
+        </RotatingCardModal>
       )}
     </div>
   );

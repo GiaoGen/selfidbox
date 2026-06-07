@@ -28,6 +28,13 @@ export interface ProfileSourceEntry {
   title: string;
   result: string;
   meta: string;
+  /* Card-ready fields (populated at list-fetch time so clicks open instantly).
+     Undefined = not populated; null = populated but empty (e.g. no screenshot). */
+  image_url?: string | null;
+  subtitle?: string | null;
+  description?: string | null;
+  traits?: string[];
+  share_text?: string | null;
 }
 
 export async function getProfileSources(userId: string): Promise<ProfileSourceEntry[]> {
@@ -35,7 +42,7 @@ export async function getProfileSources(userId: string): Promise<ProfileSourceEn
 
   const { data: reports, error: reportError } = await supabase
     .from("reports")
-    .select("id, created_at, user_id, report_type, main_result, parse_status, input_type")
+    .select("id, created_at, user_id, report_type, main_result, parse_status, input_type, image_url")
     .eq("user_id", userId)
     .eq("parse_status", "normalized");
 
@@ -74,6 +81,38 @@ export async function getProfileSources(userId: string): Promise<ProfileSourceEn
     }
   }
 
+  /* ---- C2. Batch-fetch quiz_results (for instant card display) ---- */
+
+  const resultMap: Record<string, {
+    subtitle: string | null;
+    description: string | null;
+    image_url: string | null;
+    traits: string[];
+    share_text: string | null;
+  }> = {};
+
+  if (quizIds.length > 0) {
+    const { data: allResults, error: resultsError } = await supabase
+      .from("quiz_results")
+      .select("quiz_id, key, subtitle, description, image_url, traits, share_text")
+      .in("quiz_id", quizIds);
+
+    if (resultsError) {
+      console.warn(`[getProfileSources] quiz_results query failed: ${resultsError.message}`);
+    } else {
+      for (const r of allResults ?? []) {
+        const compositeKey = `${r.quiz_id}:${r.key}`;
+        resultMap[compositeKey] = {
+          subtitle: (r.subtitle as string) ?? null,
+          description: (r.description as string) ?? null,
+          image_url: (r.image_url as string) ?? null,
+          traits: (r.traits as string[]) ?? [],
+          share_text: (r.share_text as string) ?? null,
+        };
+      }
+    }
+  }
+
   /* ---- D. Transform to unified format ---- */
 
   const reportSources: ProfileSourceEntry[] = [];
@@ -86,6 +125,7 @@ export async function getProfileSources(userId: string): Promise<ProfileSourceEn
       title: (r.report_type as string) || "截图测评",
       result: (r.main_result as string) || "已解析",
       meta: (r.input_type as string) === "screenshot" ? "截图导入" : "报告导入",
+      image_url: (r.image_url as string) ?? null,
     });
   }
 
@@ -93,6 +133,8 @@ export async function getProfileSources(userId: string): Promise<ProfileSourceEn
 
   for (const a of attempts ?? []) {
     const quiz = quizMap[a.quiz_id];
+    const resultKey = a.final_result_key ? `${a.quiz_id}:${a.final_result_key}` : "";
+    const card = resultKey ? resultMap[resultKey] : undefined;
     quizSources.push({
       id: a.id,
       source_type: "quiz",
@@ -100,6 +142,12 @@ export async function getProfileSources(userId: string): Promise<ProfileSourceEn
       title: quiz?.title || "UGC Quiz",
       result: (a.final_result_name as string) || (a.final_result_key as string) || "已完成",
       meta: "Quiz Studio",
+      /* Card-ready fields (instant open, no detail API call needed) */
+      image_url: card?.image_url ?? null,
+      subtitle: card?.subtitle ?? null,
+      description: card?.description ?? null,
+      traits: card?.traits ?? [],
+      share_text: card?.share_text ?? null,
     });
   }
 

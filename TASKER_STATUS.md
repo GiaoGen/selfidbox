@@ -1,6 +1,38 @@
 # TASKER STATUS
 
-Last updated: 2026-06-05
+Last updated: 2026-06-07
+
+---
+
+## Recent — 2026-06-07
+
+### Profile 数据来源弹卡片：预加载 + 缓存优化（秒开）
+
+1. **`getProfileSources` 返回完整卡片数据**：`ProfileSourceEntry` 新增 `image_url`、`subtitle`、`description`、`traits`、`share_text` 可选字段。report 查询增加 `image_url` 列；quiz 查询增加 `quiz_results` 批量联表（一次 `.in("quiz_id", quizIds)` 取回所有 result 的 subtitle/description/image_url/traits/share_text），按 `quiz_id:key` 建 lookup map。
+2. **三层取数（source → cache → API）**：点击 source item 时优先判断 source entry 是否已有卡片字段（`"traits" in entry` / `"image_url" in entry`），有则直接 normalize 打开（无 loading）；其次查 `detailCache` Map；两次命中都不发请求。只有 cache miss 才走 `/api/profile/source-detail`。
+3. **前端缓存 Map**：`detailCache = useRef(new Map())`，key 为 `${source_type}:${id}`。同一条 source 第二次点击直接从 Map 取出，零请求。
+4. **图片预加载**：数据来源弹窗打开后遍历 `sources`，`new Image().src = url` 非阻塞预加载所有 `image_url`。
+5. **不改范围**：user_profile 聚合、删除逻辑、OCR 上传、Quiz Runtime、Quiz Studio、Supabase schema 均未修改。
+
+修改文件：
+- `lib/user-profile-db.ts` — ProfileSourceEntry 扩展 + reports 加 image_url + quiz_results 批量联表
+- `components/DataSourceModal.tsx` — detailCache Map + 三层取数 + 图片预加载
+
+---
+
+### Profile 数据来源点击改为弹出视觉卡片
+
+1. **复用分享卡片动画**：新建 `components/share/RotatingCardModal.tsx`，抽取 Quiz Runtime 中的 rotateY 翻转入场动效（perspective + rotateY(-720→0) + scale(0.9→1)），退出仅 fade out。用于 Quiz Share Card 和 OCR Screenshot Card。
+2. **Quiz 数据来源点击**：`source_type = "quiz"` 时直接弹出 `QuizResultShareCard`（复用 `components/share/QuizResultShareCard.tsx`），卡片使用该 quiz_attempt 对应 result 数据。
+3. **OCR 数据来源点击**：`source_type = "report"` 时弹出截图卡片，优先使用 `report.image_url`（object-contain，不裁切不变形），无 image_url 时显示"未保存原始截图"。
+4. **补充 share_text 字段**：`lib/source-detail-db.ts` 中 `QuizDetailData` 新增 `result_share_text`，查询 `quiz_results` 时增加 `share_text` 列。
+5. **删除旧入口**：`DataSourceModal` 不再触发 `SourceDetailModal`（组件文件保留未删），source item 点击改为 fetch detail → 弹出对应视觉卡片。
+6. **不改范围**：user_profile 聚合、数据来源列表查询、删除逻辑、OCR 上传、Quiz Runtime、Quiz Studio、Supabase schema 均未修改。
+
+修改文件：
+- `components/share/RotatingCardModal.tsx` — 新建：可复用旋转卡片弹窗
+- `components/DataSourceModal.tsx` — 替换 SourceDetailModal 为 RotatingCardModal + QuizResultShareCard / OCR Screenshot Card
+- `lib/source-detail-db.ts` — QuizDetailData 新增 result_share_text，查询增加 share_text
 
 ---
 

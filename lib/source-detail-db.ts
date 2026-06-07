@@ -34,6 +34,7 @@ export interface QuizDetailData {
   result_description: string | null;
   result_image_url: string | null;
   result_traits: string[];
+  result_share_text: string | null;
   user_vector: Record<string, number> | null;
 }
 
@@ -110,11 +111,12 @@ async function getQuizAttemptDetail(
   let resultDescription: string | null = null;
   let resultImageUrl: string | null = null;
   let resultTraits: string[] = [];
+  let resultShareText: string | null = null;
 
   if (data.final_result_key && data.quiz_id) {
     const { data: resultRow } = await supabase
       .from("quiz_results")
-      .select("subtitle, description, image_url, traits")
+      .select("subtitle, description, image_url, traits, share_text")
       .eq("quiz_id", data.quiz_id)
       .eq("key", data.final_result_key)
       .single();
@@ -124,6 +126,7 @@ async function getQuizAttemptDetail(
       resultDescription = (resultRow.description as string) ?? null;
       resultImageUrl = (resultRow.image_url as string) ?? null;
       resultTraits = (resultRow.traits as string[]) ?? [];
+      resultShareText = (resultRow.share_text as string) ?? null;
     }
   }
 
@@ -139,6 +142,7 @@ async function getQuizAttemptDetail(
     result_description: resultDescription,
     result_image_url: resultImageUrl,
     result_traits: resultTraits,
+    result_share_text: resultShareText,
     user_vector: (data.user_vector as Record<string, number>) ?? null,
   };
 }
