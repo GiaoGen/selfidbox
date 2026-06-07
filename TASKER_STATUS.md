@@ -1,6 +1,73 @@
 # TASKER STATUS
 
-Last updated: 2026-06-07
+Last updated: 2026-06-08
+
+---
+
+## Recent — 2026-06-08
+
+### Cover Flow 卡片缩小 + 中心缩放/深度层级
+
+1. **卡片缩小**：`CARD_WIDTH_VW=56` + `CARD_MAX_W=240`，预览卡片不再 1:1 原始大小。文件顶部 `CARD_WIDTH_VW` / `CARD_MAX_W` / `CARD_GAP` 三个常量可直接调大小。
+2. **中心最大、两侧缩小**：scroll 事件监听 → rAF throttle → 计算每张卡片中心距 viewport 中心的归一化距离 `n`（0~2）→ `scale(1 - n*0.15)`。中心 `n=0 → scale=1`，第一侧 `n≈1 → scale=0.85`，更远 `n=2 → scale=0.7`。
+3. **深度层级**：`opacity = 1 - n*0.175`（中心 1→侧 0.825→远 0.65），`translateY = n*10`（中心 0→侧 10px→远 20px），`zIndex = 100 - n*100`（中心最高）。
+4. **性能**：rAF throttle 的 scroll handler 通过 ref 直接操作 DOM `style.transform/opacity/zIndex`，不触发 React re-render。`willChange: transform, opacity`。resize 监听同步重算。
+5. **初始居中**：`paddingLeft/Right = calc(50vw - min(28vw, 120px))` 使首卡自然居中，结合 `scroll-snap-align: center`。
+6. **不改范围**：弹窗（RotatingCardModal 全尺寸）、QuizResultShareCard 样式、数据过滤、空状态隐藏。
+
+修改文件：
+- `components/profile/CoverFlowSources.tsx` — 重写：缩小 + scroll-driven 层级
+
+---
+
+### Cover Flow 重做：原生 scroll-snap + 全屏宽度
+
+1. **移除复杂逻辑**：删除 framer-motion drag physics、active index 计算、多层 transform 叠加、useMotionValue/animate、所有 Cover Flow scale/opacity 动画。代码从 ~250 行精简到 ~135 行。
+2. **原生 scroll-snap**：`scroll-snap-type: x mandatory` + `scroll-snap-align: center`，浏览器原生吸附，无自定义 drag 逻辑。`scroll-smooth` + `WebkitOverflowScrolling: touch` 保证平滑滚动。
+3. **全屏宽度**：`marginLeft/Right: calc(50% - 50vw)` 突破 Profile 主容器 `max-w-[960px] + px-4` 边界。卡片宽 `75vw`，左右露出相邻卡片提示可滑动。
+4. **去掉外层容器**：不再有圆角矩形背景/边框/padding 包裹。卡片直贴屏幕边缘。
+5. **分享卡片直出**：`QuizResultShareCard` 直接渲染在 75vw 容器中（无 scale 缩小、无 overflow-hidden、无圆角），保持原始比例和边缘。
+6. **滚动条隐藏**：`app/globals.css` 新增 `.scrollbar-none` 工具类（`scrollbar-width: none` + `::-webkit-scrollbar display:none`）。
+7. **不改范围**：数据过滤（quiz + image_url）、点击弹窗（RotatingCardModal）、空状态隐藏逻辑均保留。
+
+修改文件：
+- `components/profile/CoverFlowSources.tsx` — 完全重写（简化）
+- `app/globals.css` — 新增 `.scrollbar-none`
+
+---
+
+### Profile 页面 Cover Flow 数据来源卡片展示
+
+1. **CoverFlowSources 组件**：`components/profile/CoverFlowSources.tsx` — Apple Cover Flow 风格横向卡片轮播。中间卡片 scale(1)，两侧 scale(0.85)/scale(0.7)，opacity 递减。纯黑背景，无渐变无玻璃拟态。
+2. **拖拽滑动**：framer-motion `drag="x"` + `useMotionValue` 实现拖拽滚动，松手自动 snap 到最近卡片。spring 动画过渡。
+3. **卡片缩略**：Quiz source 使用 `QuizResultShareCard` + CSS `scale(0.4)` 缩小到 150×200 展示区；Report source 显示截图缩略图（object-contain）或"未保存原始截图"占位。底部渐变 fade 隐藏溢出文字。
+4. **点击行为**：点击居中卡片 → 打开对应 modal（Quiz Share Card / OCR Screenshot，与数据来源列表行为一致）。点击两侧卡片 → snap 到该卡片。
+5. **提取共享 hook**：`components/profile/useSourceCardOpen.ts` — 三层取数逻辑（source entry → detailCache Map → detail API）抽成可复用 hook。`DataSourceModal` 和 `CoverFlowSources` 共用，避免重复代码。
+6. **集成**：`ProfileInteractions` 中 ProfileSummary 下方插入 `CoverFlowSources`，雷达图上方显示。
+7. **空状态**：无数据来源时整个模块隐藏，不显示空状态文案。
+8. **性能**：每侧最多渲染 ±3 张卡片（共 ≤7 张），超出范围 opacity=0。
+
+修改文件：
+- `components/profile/CoverFlowSources.tsx` — 新建：Cover Flow 轮播 + 卡片弹窗
+- `components/profile/useSourceCardOpen.ts` — 新建：共享卡片打开 hook
+- `components/DataSourceModal.tsx` — 改用共享 hook
+- `components/profile/ProfileInteractions.tsx` — 插入 CoverFlowSources
+
+---
+
+## Recent — 2026-06-08
+
+### Cover Flow UI 修正：背景/圆角/过滤
+
+1. **模块背景**：`bg-black` → `bg-[var(--surface-card)]`，与雷达图卡片背景统一（`#f5f0e0`）。
+2. **模块圆角**：添加 `rounded-[32px] shadow-[0_18px_50px_rgba(10,10,10,0.07)]`，与项目其他卡片统一。
+3. **卡片缩略**：移除 `rounded-xl`（不再强制圆角），保留 `overflow-hidden`（scale 裁剪所需）。底部 fade 渐变从 `black` 改为 `#f5f0e0`（与背景融合）。
+4. **数据过滤**：`filteredSources` 只保留 `source_type === "quiz" && image_url` 存在的条目。OCR source 不显示。无图片 Quiz 不显示。
+5. **空状态**：`filteredSources.length === 0` 时隐藏整个模块。
+6. **清理**：移除 `renderReportThumb`、`renderReportModal`、report RotatingCardModal，未使用的 `ReportDetailData` import。
+
+修改文件：
+- `components/profile/CoverFlowSources.tsx` — 背景/圆角/过滤/清理
 
 ---
 

@@ -38,3 +38,11 @@ a {
   background: #ffb084;
   color: #0a0a0a;
 }
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

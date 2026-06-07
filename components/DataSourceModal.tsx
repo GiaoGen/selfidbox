@@ -6,6 +6,7 @@ import { ScreenshotReportUploader } from "@/components/profile/ScreenshotReportU
 import { SwipeToDeleteSourceRow } from "@/components/profile/SwipeToDeleteSourceRow";
 import { RotatingCardModal } from "@/components/share/RotatingCardModal";
 import { QuizResultShareCard } from "@/components/share/QuizResultShareCard";
+import { useSourceCardOpen } from "@/components/profile/useSourceCardOpen";
 import type { ProfileSourceEntry } from "@/lib/user-profile-db";
 import type { ReportDetailData, QuizDetailData } from "@/lib/source-detail-db";
 
@@ -42,14 +43,8 @@ export function DataSourceModal({
     message: string;
   } | null>(null);
 
-  /* ---- Card modal state (replaces Source Detail Modal) ---- */
-  const [cardOpen, setCardOpen] = useState(false);
-  const [cardLoading, setCardLoading] = useState(false);
-  const [cardData, setCardData] = useState<ReportDetailData | QuizDetailData | null>(null);
-  const [cardType, setCardType] = useState<"quiz" | "report" | null>(null);
-
-  /* ---- Detail cache: avoids re-fetching the same source ---- */
-  const detailCache = useRef(new Map<string, ReportDetailData | QuizDetailData>());
+  /* ---- Card modal (shared hook: cache + three-tier fetch) ---- */
+  const { cardOpen, cardLoading, cardData, cardType, openCard, closeCard } = useSourceCardOpen();
 
   /* Auto-dismiss feedback after 3 seconds */
   useEffect(() => {
@@ -157,91 +152,10 @@ export function DataSourceModal({
     }
   }, [deleteTarget, fetchSources, router]);
 
-  /* ---- Source item click → show card (instant if data available) ---- */
-
-  const handleSourceClick = useCallback(async (entry: ProfileSourceEntry) => {
-    const cacheKey = `${entry.source_type}:${entry.id}`;
-    setCardType(entry.source_type);
-
-    /* 1. Source entry already has card-ready fields → instant open */
-    if (entry.source_type === "quiz" && "traits" in entry) {
-      const normalized: QuizDetailData = {
-        id: entry.id,
-        source_type: "quiz",
-        created_at: entry.created_at,
-        quiz_title: entry.title,
-        quiz_slug: "",
-        final_result_name: entry.result,
-        final_result_key: "",
-        result_subtitle: entry.subtitle ?? null,
-        result_description: entry.description ?? null,
-        result_image_url: entry.image_url ?? null,
-        result_traits: entry.traits ?? [],
-        result_share_text: entry.share_text ?? null,
-        user_vector: null,
-      };
-      detailCache.current.set(cacheKey, normalized);
-      setCardData(normalized);
-      setCardLoading(false);
-      setCardOpen(true);
-      return;
-    }
-
-    if (entry.source_type === "report" && "image_url" in entry) {
-      const normalized: ReportDetailData = {
-        id: entry.id,
-        source_type: "report",
-        report_type: entry.title,
-        main_result: entry.result,
-        created_at: entry.created_at,
-        input_type: "",
-        image_url: entry.image_url ?? null,
-        normalized_summary: null,
-        core_vector: null,
-        social_vector: null,
-      };
-      detailCache.current.set(cacheKey, normalized);
-      setCardData(normalized);
-      setCardLoading(false);
-      setCardOpen(true);
-      return;
-    }
-
-    /* 2. Cache hit → instant open */
-    const cached = detailCache.current.get(cacheKey);
-    if (cached) {
-      setCardData(cached);
-      setCardLoading(false);
-      setCardOpen(true);
-      return;
-    }
-
-    /* 3. Cache miss → fetch from detail API (only path with loading) */
-    setCardData(null);
-    setCardLoading(true);
-    setCardOpen(true);
-
-    try {
-      const res = await fetch(
-        `/api/profile/source-detail?source_type=${entry.source_type}&id=${entry.id}`,
-      );
-      const data = await res.json();
-      if (data.ok) {
-        detailCache.current.set(cacheKey, data.detail);
-        setCardData(data.detail);
-      } else {
-        setCardOpen(false);
-      }
-    } catch {
-      setCardOpen(false);
-    } finally {
-      setCardLoading(false);
-    }
-  }, []);
-
-  const handleCardClose = useCallback(() => {
-    setCardOpen(false);
-  }, []);
+  /* ---- Source item click → open card (via shared hook) ---- */
+  const handleSourceClick = useCallback((entry: ProfileSourceEntry) => {
+    openCard(entry);
+  }, [openCard]);
 
   useEffect(() => {
     if (!open) return;
@@ -433,7 +347,7 @@ export function DataSourceModal({
 
       {/* ── Quiz Result Share Card ── */}
       {cardType === "quiz" && (
-        <RotatingCardModal open={cardOpen} onClose={handleCardClose}>
+        <RotatingCardModal open={cardOpen} onClose={closeCard}>
           {cardLoading && (
             <div className="flex items-center justify-center py-16">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -458,7 +372,7 @@ export function DataSourceModal({
 
       {/* ── OCR Screenshot Card ── */}
       {cardType === "report" && (
-        <RotatingCardModal open={cardOpen} onClose={handleCardClose}>
+        <RotatingCardModal open={cardOpen} onClose={closeCard}>
           {cardLoading && (
             <div className="flex items-center justify-center py-16">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
