@@ -16,13 +16,13 @@ export function ProfileInteractions({
 
   return (
     <>
+      <CoverFlowSources />
+
       <ProfileSummary
         title={title}
         description={description}
         onDataSourceClick={() => setSourceOpen(true)}
       />
-
-      <CoverFlowSources />
 
       <DataSourceModal
         open={sourceOpen}
