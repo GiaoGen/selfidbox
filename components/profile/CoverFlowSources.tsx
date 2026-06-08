@@ -35,7 +35,7 @@ const INNER_W = Math.round(CARD_MAX_W / PREVIEW_SCALE);
 function scaleAt(n: number)   { return Math.max(0.65, 1 - n * 0.11); }
 function opacityAt(n: number) { return Math.max(0.4,  1 - n * 0.18); }
 function liftAt(n: number)    { return Math.min(28, Math.round(n * 12)); }
-function zAt(n: number)       { return Math.max(1, Math.round(30 - n * 10)); }
+function zAt(n: number)       { return Math.max(1, Math.round(10 - n * 3)); }
 
 /* ================================================================== */
 
@@ -130,7 +130,7 @@ export function CoverFlowSources() {
     <>
       {/* ── Carousel + fades ── */}
       <div
-        className="relative"
+        className="relative z-0"
         style={{
           marginLeft: "calc(50% - 50vw)",
           marginRight: "calc(50% - 50vw)",
@@ -138,17 +138,15 @@ export function CoverFlowSources() {
       >
         {/* Top edge fade */}
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-40"
+          className="pointer-events-none absolute inset-x-0 top-0 z-20 h-16"
           style={{
-            height: 40,
             background: "linear-gradient(to bottom, var(--canvas) 0%, transparent 100%)",
           }}
         />
         {/* Bottom edge fade */}
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-40"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-16"
           style={{
-            height: 40,
             background: "linear-gradient(to top, var(--canvas) 0%, transparent 100%)",
           }}
         />

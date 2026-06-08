@@ -6,6 +6,22 @@ Last updated: 2026-06-08
 
 ## Recent — 2026-06-08
 
+### Cover Flow 上下边界渐隐遮罩
+
+1. **顶部/底部 fade overlay**：在 carousel wrapper 内添加两个 `absolute` overlay，高度 `h-8` (32px)，`pointer-events-none`。
+2. **渐隐颜色**：使用 `var(--canvas)` (#fffaf0) → `transparent` 渐变，与 Profile 页面背景一致。
+   - 顶部：`linear-gradient(to bottom, var(--canvas), transparent)`
+   - 底部：`linear-gradient(to top, var(--canvas), transparent)`
+3. **z-index 栈**：wrapper `relative z-0`（创建 stacking context），overlays `z-[1]`，卡片 z-index 由 `zAt()` 动态设置（1–10），仅在 Cover Flow 模块内部生效。
+4. **不改范围**：核心布局参数（CARD_WIDTH, CARD_MAX_W, PREVIEW_SCALE, INNER_W, GAP）、scroll 逻辑、卡片尺寸、transformOrigin、overflow 行为、zAt 函数。
+
+修改文件：
+- `components/profile/CoverFlowSources.tsx` — 添加 wrapper `z-0` + overlay `z-[1] h-8`
+
+---
+
+### Cover Flow 卡片缩小 + 中心缩放/深度层级
+
 ### Cover Flow 卡片缩小 + 中心缩放/深度层级
 
 1. **卡片缩小**：`CARD_WIDTH_VW=56` + `CARD_MAX_W=240`，预览卡片不再 1:1 原始大小。文件顶部 `CARD_WIDTH_VW` / `CARD_MAX_W` / `CARD_GAP` 三个常量可直接调大小。

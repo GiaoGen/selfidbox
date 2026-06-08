@@ -47,7 +47,7 @@ export function TopNavbar({ rightSlot }: { rightSlot?: ReactNode }) {
   const isCreate = pathname.startsWith("/create");
 
   return (
-    <nav className="flex items-center justify-between rounded-full bg-[var(--surface-soft)] p-2">
+    <nav className="relative z-20 flex items-center justify-between rounded-full bg-[var(--surface-soft)] p-2">
       <Link
         href="/explore"
         className="rounded-full px-4 py-2 text-sm font-semibold text-[var(--ink)]"
