@@ -21,12 +21,12 @@ import type { QuizDetailData } from "@/lib/source-detail-db";
 /*    GAP            — gap between cards (px)                           */
 /* ================================================================== */
 
-const CARD_WIDTH = "42vw";
+const CARD_WIDTH = "50vw";
 const CARD_MAX_W = 180;
 const CARD_MIN_W = 150;
 const SIDE_PAD_VW = 28;
-const PREVIEW_SCALE = 0.5;
-const PREVIEW_H = 260;
+const PREVIEW_SCALE = 0.52;
+const PREVIEW_H = 250;
 const GAP = 16;
 
 const INNER_W = Math.round(CARD_MAX_W / PREVIEW_SCALE);

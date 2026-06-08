@@ -6,6 +6,20 @@ Last updated: 2026-06-08
 
 ## Recent — 2026-06-08
 
+### 移除 Profile Summary 大卡片 → 一句话人格摘要
+
+1. **删除**：`ProfileSummary` 大型渐变大卡片（含 SelfID Profile 标题、描述、数据来源按钮）。
+2. **新增**：分割线 + 一句话人格摘要，直接作为页面内容，无卡片/背景/圆角容器。
+3. **内容来源**：`user_profile.selfid_profile`（原先的大标题），不含数字分数。
+4. **样式**：`text-center text-lg font-medium sm:text-xl`，`text-[var(--ink)]/80`，极简分割线 `border-[var(--ink)]/8`。
+5. **空状态**：`selfid_profile` 为空时隐藏整个模块。
+6. **不改范围**：Cover Flow、人格图谱、数据来源、页面其他部分。
+
+修改文件：
+- `components/profile/ProfileInteractions.tsx` — 替换 ProfileSummary + DataSourceModal 为 divider + 一句话文本
+
+---
+
 ### Cover Flow 上下边界渐隐遮罩
 
 1. **顶部/底部 fade overlay**：在 carousel wrapper 内添加两个 `absolute` overlay，高度 `h-8` (32px)，`pointer-events-none`。
