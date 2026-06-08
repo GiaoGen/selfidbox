@@ -6,6 +6,38 @@ Last updated: 2026-06-08
 
 ## Recent — 2026-06-08
 
+### 3D 词云球体：词语大小按 count 映射 + 加深光晕
+
+1. **Mock 数据结构**：从 `string[]` 改为 `{ label, count }[]`，count 范围 2–9。
+2. **字体大小映射**：线性映射 count → fontSize (13px–28px)，在 animate 循环中通过 `el.style.fontSize` 逐帧更新。
+3. **加深光晕**：三层 text-shadow — 内层 6px rgba(255,255,255,0.85) + 中层 14px rgba(255,255,255,0.65) + 外层 28px rgba(180,220,255,0.45)。
+4. **不改**：旋转、z-sort depth 效果、drag、弹窗交互、Profile 其他模块。
+
+修改文件：
+- `components/profile/WordSphereModal.tsx` — mock 数据、fontSize 计算、textShadow、animate 中 fontSize 更新
+
+---
+
+### 3D 词云球体弹窗（点击一句话摘要触发）
+
+1. **入口**：点击 Profile 页面 `selfid_profile` 一句话摘要 → 全屏暗色 modal。
+2. **Mock 数据**：23 个词（INFP、猫猫党、海王星…），使用 Fibonacci 球面均匀分布。
+3. **3D 渲染**：自写球体投影（rotateX/rotateY → 2D 投影），按 z 深度排序 scale/opacity/zIndex。无 three.js，纯 CSS transform + RAF。
+4. **交互**：默认慢速自转，pointer drag 跟随手势旋转，松手惯性衰减后恢复自转。`touchAction: none` 防止页面滚动。
+5. **关闭**：点击暗色背景（rgba(0,0,0,0.85)）关闭，无关闭按钮。
+6. **尺寸**：球体 `min(80vw, 360px)`，移动端居中，不撑满。
+7. **样式**：白色文字 + `text-shadow: 0 0 8px rgba(255,255,255,0.55)`，暗色背景。
+8. **性能**：RAF 动画在 modal 关闭时 cancel，DOM 直接操作不触发 React re-render。
+9. **不改**：Cover Flow、雷达图、数据来源、数据库、Profile 聚合。
+
+新增文件：
+- `components/profile/WordSphereModal.tsx` — 3D 词云球体 modal
+
+修改文件：
+- `components/profile/ProfileInteractions.tsx` — 添加 `useState` + onClick → WordSphereModal
+
+---
+
 ### 移除 Profile Summary 大卡片 → 一句话人格摘要
 
 1. **删除**：`ProfileSummary` 大型渐变大卡片（含 SelfID Profile 标题、描述、数据来源按钮）。
