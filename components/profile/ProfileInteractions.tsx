@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CoverFlowSources } from "@/components/profile/CoverFlowSources";
 import { WordSphereModal } from "@/components/profile/WordSphereModal";
+import { useWordCloud } from "@/components/profile/useWordCloud";
 
 export function ProfileInteractions({
   title,
@@ -11,6 +12,12 @@ export function ProfileInteractions({
   description: string;
 }) {
   const [sphereOpen, setSphereOpen] = useState(false);
+  const { words, loading, fetchWords } = useWordCloud();
+
+  function onSummaryClick() {
+    fetchWords();
+    setSphereOpen(true);
+  }
 
   return (
     <>
@@ -23,7 +30,7 @@ export function ProfileInteractions({
 
           {/* One-line personality summary */}
           <p
-            onClick={() => setSphereOpen(true)}
+            onClick={onSummaryClick}
             className="cursor-pointer text-center text-lg font-medium leading-relaxed tracking-wide text-[var(--ink)]/80 transition active:scale-[0.97] hover:text-[var(--ink)] sm:text-xl"
           >
             {title}
@@ -31,10 +38,13 @@ export function ProfileInteractions({
         </>
       )}
 
-      <WordSphereModal
-        open={sphereOpen}
-        onClose={() => setSphereOpen(false)}
-      />
+      {sphereOpen && !loading && (
+        <WordSphereModal
+          open={sphereOpen}
+          onClose={() => setSphereOpen(false)}
+          words={words}
+        />
+      )}
     </>
   );
 }

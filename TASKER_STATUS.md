@@ -6,6 +6,24 @@ Last updated: 2026-06-08
 
 ## Recent — 2026-06-08
 
+### 词云接入真实数据 + 前端缓存
+
+1. **API 新增**：`app/api/profile/word-cloud/route.ts` — GET，server supabase auth，查询 `quiz_attempts.final_result_name`，聚合计数后返回 `{ words: { label, count }[] }`。
+2. **前端缓存**：`components/profile/useWordCloud.ts` — `useRef` 内存缓存（TTL 5min），再次点击直接打开，不重新请求。
+3. **数据填充**：真实词 < 24 个时循环重复到 28 个，保持球体完整。重复项使用原始 count。
+4. **空状态**：无 quiz_attempts 时显示 "完成几个 Quiz 后，这里会长出你的人格星球。"。
+5. **不改**：旋转、光晕、drag、z-sort、Cover Flow、雷达图、数据库结构。
+
+新增文件：
+- `app/api/profile/word-cloud/route.ts` — 词云数据 API
+- `components/profile/useWordCloud.ts` — 前端 fetch + 缓存 hook
+
+修改文件：
+- `components/profile/WordSphereModal.tsx` — 移除 mock 数据，接受 `words` prop，pad 逻辑，空状态
+- `components/profile/ProfileInteractions.tsx` — 集成 useWordCloud，onClick → fetchWords + open modal
+
+---
+
 ### 3D 词云球体：词语大小按 count 映射 + 加深光晕
 
 1. **Mock 数据结构**：从 `string[]` 改为 `{ label, count }[]`，count 范围 2–9。

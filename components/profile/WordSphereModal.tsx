@@ -1,45 +1,42 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
+import type { WordCloudWord } from "@/components/profile/useWordCloud";
 
 /* ================================================================== */
-/*  Mock words — 20~30 items                                           */
+/*  Pad words to at least 24 entries (up to 30) by repeating real words  */
 /* ================================================================== */
 
-const MOCK_WORDS = [
-  { label: "INFP", count: 8 },
-  { label: "猫猫党", count: 6 },
-  { label: "海王星", count: 5 },
-  { label: "太阳", count: 7 },
-  { label: "To Hebe", count: 4 },
-  { label: "旧钢琴", count: 2 },
-  { label: "沙发海", count: 5 },
-  { label: "日记本", count: 3 },
-  { label: "流浪云", count: 6 },
-  { label: "月亮", count: 7 },
-  { label: "橘子汽水", count: 4 },
-  { label: "独行旅人", count: 8 },
-  { label: "梦游者", count: 3 },
-  { label: "冷感浪漫", count: 5 },
-  { label: "理性怪物", count: 9 },
-  { label: "温柔废墟", count: 4 },
-  { label: "深海信号", count: 2 },
-  { label: "宇宙邮差", count: 6 },
-  { label: "晚风", count: 3 },
-  { label: "黑胶唱片", count: 5 },
-  { label: "星光体", count: 4 },
-  { label: "沉默诗", count: 3 },
-  { label: "边界之外", count: 7 },
-];
+function padWords(words: WordCloudWord[]): WordCloudWord[] {
+  if (words.length === 0) return [];
+  if (words.length >= 24) return words;
+
+  const padded: WordCloudWord[] = [...words];
+  let i = 0;
+  while (padded.length < 28) {
+    padded.push({ ...words[i % words.length] });
+    i++;
+  }
+  return padded;
+}
+
+/* ================================================================== */
+/*  Font-size mapping (linear, count → px)                              */
+/* ================================================================== */
 
 const FONT_MIN = 13;
 const FONT_MAX = 28;
-const COUNT_MIN = Math.min(...MOCK_WORDS.map((w) => w.count));
-const COUNT_MAX = Math.max(...MOCK_WORDS.map((w) => w.count));
 
-function fontSize(count: number): number {
-  if (COUNT_MAX === COUNT_MIN) return FONT_MIN;
-  return FONT_MIN + ((count - COUNT_MIN) / (COUNT_MAX - COUNT_MIN)) * (FONT_MAX - FONT_MIN);
+function computeFontSize(words: WordCloudWord[], count: number): number {
+  if (words.length === 0) return FONT_MIN;
+  const counts = words.map((w) => w.count);
+  const cMin = Math.min(...counts);
+  const cMax = Math.max(...counts);
+  if (cMax === cMin) return (FONT_MIN + FONT_MAX) / 2;
+  return (
+    FONT_MIN +
+    ((count - cMin) / (cMax - cMin)) * (FONT_MAX - FONT_MIN)
+  );
 }
 
 /* ================================================================== */
@@ -55,9 +52,7 @@ interface WordPoint {
   z: number;
 }
 
-function buildWords(
-  words: { label: string; count: number }[],
-): WordPoint[] {
+function buildWords(words: WordCloudWord[]): WordPoint[] {
   const n = words.length;
   const phi = Math.PI * (3 - Math.sqrt(5));
   return words.map((w, i) => {
@@ -67,7 +62,7 @@ function buildWords(
     return {
       label: w.label,
       count: w.count,
-      fontSize: fontSize(w.count),
+      fontSize: computeFontSize(words, w.count),
       x: Math.cos(theta) * radiusAtY,
       y,
       z: Math.sin(theta) * radiusAtY,
@@ -98,9 +93,10 @@ function rotateY(x: number, y: number, z: number, angle: number) {
 interface Props {
   open: boolean;
   onClose: () => void;
+  words: WordCloudWord[];
 }
 
-export function WordSphereModal({ open, onClose }: Props) {
+export function WordSphereModal({ open, onClose, words }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef(0);
   const rxRef = useRef(0.3); // rotation X (radians)
@@ -111,8 +107,13 @@ export function WordSphereModal({ open, onClose }: Props) {
   const lastRef = useRef({ x: 0, y: 0 });
   const wordsRef = useRef<WordPoint[]>([]);
 
-  if (wordsRef.current.length === 0) {
-    wordsRef.current = buildWords(MOCK_WORDS);
+  // Rebuild sphere points when words change
+  const prevWordsKey = useRef("");
+  const wordsKey = words.map((w) => `${w.label}:${w.count}`).join(",");
+  if (wordsKey !== prevWordsKey.current || wordsRef.current.length === 0) {
+    prevWordsKey.current = wordsKey;
+    const padded = padWords(words);
+    wordsRef.current = buildWords(padded);
   }
 
   /* ---- Auto-rotate + inertia ---- */
@@ -199,6 +200,20 @@ export function WordSphereModal({ open, onClose }: Props) {
   }
 
   if (!open) return null;
+
+  if (words.length === 0) {
+    return (
+      <div
+        className="fixed inset-0 z-30 flex items-center justify-center"
+        style={{ background: "rgba(0,0,0,0.85)" }}
+        onClick={onOverlayClick}
+      >
+        <p className="max-w-xs text-center text-white/70 text-base leading-relaxed px-6">
+          完成几个 Quiz 后，这里会长出你的人格星球。
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div
