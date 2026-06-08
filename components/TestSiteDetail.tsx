@@ -70,11 +70,6 @@ export function TestSiteDetail({
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2">
-          <DetailPill label="预计完成时间" value={`${site.estimatedMinutes} 分钟`} />
-          <DetailPill label="测试难度" value={site.difficulty} />
-        </section>
-
         <section className="rounded-[32px] bg-[var(--surface-card)] p-5 sm:p-6">
           <p className="text-sm font-semibold text-[var(--muted)]">简介</p>
           <p className="mt-3 text-base leading-7 text-[var(--body)]">
@@ -90,6 +85,11 @@ export function TestSiteDetail({
               </span>
             ))}
           </div>
+        </section>
+
+        <section className="grid gap-3 sm:grid-cols-2">
+          <DetailPill label="预计完成时间" value={`${site.estimatedMinutes} 分钟`} />
+          <DetailPill label="测试难度" value={site.difficulty} />
         </section>
 
         <RelatedTestSites sites={relatedSites} />

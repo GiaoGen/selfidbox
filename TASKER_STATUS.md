@@ -6,6 +6,21 @@ Last updated: 2026-06-08
 
 ## Recent — 2026-06-08
 
+### 详情页布局调整：简介移至 Hero 正下方
+
+1. **QuizDetail** 和 **TestSiteDetail** 两个页面统一：
+   - Hero 卡片（标题 + 描述 + CTA 按钮）
+   - 简介模块（简介标题 + description + tags）
+   - 详情信息卡（已完成次数、发布时间、预计时间、难度等）
+   - 相关推荐
+2. **不改**：数据查询、跳转、按钮逻辑、Quiz Runtime、Explore、Admin。
+
+修改文件：
+- `components/QuizDetail.tsx` — 简介与详情信息卡交换位置
+- `components/TestSiteDetail.tsx` — 同上
+
+---
+
 ### 统一 /quizzes/[slug] 和 /test-sites/[slug] navbar 为 Explore 样式
 
 1. **提取 ExploreTopNavbar**：`components/layout/ExploreTopNavbar.tsx` — 基于 TopNavbar + 搜索按钮（Link → /explore），与 Explore 页面 navbar 样式完全一致。

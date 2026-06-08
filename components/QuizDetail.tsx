@@ -101,15 +101,6 @@ export function QuizDetail({
           </div>
         </section>
 
-        {/* Detail pills */}
-        <section className="grid gap-3 sm:grid-cols-2">
-          <DetailPill
-            label="已完成次数"
-            value={`${quiz.attempt_count} 次`}
-          />
-          <DetailPill label="发布时间" value={formatDate(quiz.created_at)} />
-        </section>
-
         {/* Description */}
         {(quiz.description || quiz.hook) && (
           <section className="rounded-[32px] bg-[var(--surface-card)] p-5 sm:p-6">
@@ -134,6 +125,15 @@ export function QuizDetail({
             </div>
           </section>
         )}
+
+        {/* Detail pills */}
+        <section className="grid gap-3 sm:grid-cols-2">
+          <DetailPill
+            label="已完成次数"
+            value={`${quiz.attempt_count} 次`}
+          />
+          <DetailPill label="发布时间" value={formatDate(quiz.created_at)} />
+        </section>
 
         {/* Related quizzes */}
         {relatedQuizzes.length > 0 && (
