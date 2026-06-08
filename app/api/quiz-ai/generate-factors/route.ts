@@ -1,34 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SELFID_FACTORS, SELFID_FACTOR_KEYS } from "@/lib/selfid-factors";
+import { SELFID_FACTOR_KEYS } from "@/lib/selfid-factors";
+import { trackAISuccess, trackAIError, extractTokens } from "@/lib/ai/track-ai-usage";
+import {
+  QUIZ_FACTORS_SYSTEM,
+  buildQuizFactorsPrompt,
+} from "@/lib/prompts/quiz-factors";
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_CHAT_URL = "https://api.deepseek.com/v1/chat/completions";
-
-const SYSTEM_PROMPT = `You are a personality quiz designer. Your task is to SELECT dimensional factors (axes) from a predefined catalog for a quiz.
-
-Rules:
-- Output ONLY valid JSON. No markdown, no code fences, no explanation.
-- You MUST pick factors ONLY from the provided catalog below. DO NOT invent new keys.
-- Each factor key you return MUST be exactly one of the keys in the catalog.
-- The name and description MUST match the catalog entry for that key.
-- Choose factors that best differentiate the given results — no two results should look identical across all factors.
-- Factors should be diverse and cover different aspects of personality.
-- All text in Chinese except "key" which must be English snake_case.
-
-PINNED FACTORS: Some factors may already be fixed (pinned) by the user. You will receive a list of pinned factors. You MUST:
-- NOT select any factor with the same key as a pinned factor.
-- Ensure every selected factor measures a genuinely different dimension from all pinned factors.
-
-Output format:
-{
-  "factors": [
-    {
-      "key": "sensitivity",
-      "name": "敏感度",
-      "description": "衡量用户对情绪、环境和细节变化的感知强度"
-    }
-  ]
-}`;
+const MODEL = "deepseek-chat";
 
 export async function POST(request: NextRequest) {
   if (!DEEPSEEK_API_KEY) {
@@ -39,6 +19,7 @@ export async function POST(request: NextRequest) {
   }
 
   let body: {
+    userId?: string;
     title?: string;
     hook?: string;
     quiz_type?: string;
@@ -55,7 +36,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { title, hook, quiz_type, audience, tone, results, factor_count, pinned_factors } = body;
+  const { userId, title, hook, quiz_type, audience, tone, results, factor_count, pinned_factors } = body;
 
   if (!title || typeof title !== "string") {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
@@ -86,34 +67,21 @@ export async function POST(request: NextRequest) {
     )
     .join("\n");
 
-  let pinnedSection = "";
-  if (pinned_factors && pinned_factors.length > 0) {
-    pinnedSection = `\n以下因子已经被用户固定，千万不要重复或生成语义重复的因子：\n${pinned_factors
-      .map((p) => `- ${p.name}（key: ${p.key}）`)
-      .join("\n")}\n`;
-  }
-
-  const catalog = SELFID_FACTORS.map(
-    (sf) => `- ${sf.key}（${sf.name}）：${sf.description}`,
-  ).join("\n");
-
-  const userMessage = `从以下因子库中选择适合这个测试的因子维度。
-
-测试标题：${title}
-测试副标题：${hookStr}
-测试类型：${quiz_type ?? "personality"}
-目标受众：${audienceStr}
-语气风格：${toneStr}
-因子数量：${count} 个
-
-已有的结果人格：
-${resultsSummary}
-${pinnedSection}
-
-可用因子库（只能从中选择，绝对不能自己创造 key）：
-${catalog}
-
-请从以上因子库中选择 ${count} 个能够有效区分这些结果人格的因子维度。${pinned_factors?.length ? "不能选择已被固定的因子。" : ""}每个因子必须能够产生足够的区分度——不能让所有结果在同一因子上看起来一样。返回的 key 必须与因子库中完全一致。`;
+  const userMessage = buildQuizFactorsPrompt({
+    title,
+    hook: hookStr,
+    quiz_type: quiz_type ?? "personality",
+    audienceStr,
+    toneStr,
+    results: (results ?? []).map((r) => ({
+      key: r.key,
+      name: r.name,
+      description: r.description ?? "",
+      traits: r.traits ?? [],
+    })),
+    count,
+    pinned_factors,
+  });
 
   try {
     const dsResponse = await fetch(DEEPSEEK_CHAT_URL, {
@@ -123,9 +91,9 @@ ${catalog}
         Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "deepseek-chat",
+        model: MODEL,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: QUIZ_FACTORS_SYSTEM },
           { role: "user", content: userMessage },
         ],
         temperature: 0.8,
@@ -136,6 +104,12 @@ ${catalog}
     if (!dsResponse.ok) {
       const errText = await dsResponse.text().catch(() => "");
       console.error("[quiz-ai:factors] DeepSeek API error", dsResponse.status, errText);
+      trackAIError({
+        userId,
+        feature: "quiz_generate_factors",
+        model: MODEL,
+        errorMessage: `DeepSeek API returned ${dsResponse.status}`,
+      });
       return NextResponse.json(
         { error: `DeepSeek API returned ${dsResponse.status}` },
         { status: 502 },
@@ -147,6 +121,12 @@ ${catalog}
 
     if (!rawContent) {
       console.error("[quiz-ai:factors] Empty response from DeepSeek", dsData);
+      trackAIError({
+        userId,
+        feature: "quiz_generate_factors",
+        model: MODEL,
+        errorMessage: "AI returned empty response",
+      });
       return NextResponse.json(
         { error: "AI returned empty response" },
         { status: 502 },
@@ -169,6 +149,13 @@ ${catalog}
       parsed = JSON.parse(jsonStr);
     } catch {
       console.error("[quiz-ai:factors] Failed to parse AI JSON", jsonStr.slice(0, 500));
+      trackAIError({
+        userId,
+        feature: "quiz_generate_factors",
+        model: MODEL,
+        ...extractTokens(dsData),
+        errorMessage: "AI returned invalid JSON",
+      });
       return NextResponse.json(
         { error: "AI returned invalid JSON" },
         { status: 502 },
@@ -176,6 +163,12 @@ ${catalog}
     }
 
     if (!parsed.factors || !Array.isArray(parsed.factors)) {
+      trackAIError({
+        userId,
+        feature: "quiz_generate_factors",
+        model: MODEL,
+        errorMessage: "AI response missing factors array",
+      });
       return NextResponse.json(
         { error: "AI response missing factors array" },
         { status: 502 },
@@ -213,9 +206,23 @@ ${catalog}
       }
     }
 
+    trackAISuccess({
+      userId,
+      feature: "quiz_generate_factors",
+      model: MODEL,
+      ...extractTokens(dsData),
+      metadata: { factor_count: parsed.factors.length },
+    });
+
     return NextResponse.json({ factors: parsed.factors });
   } catch (err) {
     console.error("[quiz-ai:factors] Unexpected error", err);
+    trackAIError({
+      userId,
+      feature: "quiz_generate_factors",
+      model: MODEL,
+      errorMessage: err instanceof Error ? err.message : "Internal server error",
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

@@ -23,6 +23,10 @@ export function AdminSidebar() {
         <NavItem href="/admin/quizzes">Quizzes</NavItem>
       </NavSection>
 
+      <NavSection label="系统">
+        <NavItem href="/admin/ai-usage">AI Usage</NavItem>
+      </NavSection>
+
       <NavSection label="快捷操作">
         <NavItem href="/admin/test-sites/new">+ 新增测试</NavItem>
         <NavItem href="/admin/categories/new">+ 新增分类</NavItem>

@@ -1,35 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { trackAISuccess, trackAIError, extractTokens } from "@/lib/ai/track-ai-usage";
+import {
+  QUIZ_RESULT_VECTORS_SYSTEM,
+  buildQuizResultVectorsPrompt,
+} from "@/lib/prompts/quiz-result-vectors";
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_CHAT_URL = "https://api.deepseek.com/v1/chat/completions";
-
-const SYSTEM_PROMPT = `You are a personality quiz designer. Your task is to assign 0-100 vector values for each result personality across each factor dimension.
-
-Rules:
-- Output ONLY valid JSON. No markdown, no code fences, no explanation.
-- Each result must have a value for EVERY factor.
-- All values must be integers from 0 to 100.
-- Core matching traits should score high (80–95).
-- Clearly non-matching traits should score low (10–30).
-- Neutral/irrelevant traits should sit in the middle (40–60).
-- Results must be clearly differentiated — do NOT give all results similar values.
-- Avoid extremes (0 or 100) unless absolutely certain.
-
-PINNED VECTORS: Some result vectors may already be fixed (pinned) by the user. You will receive their existing values as reference. Do NOT regenerate vectors for pinned results — only for the unpinned results listed in the prompt.
-
-Output format:
-{
-  "result_vectors": {
-    "result_key_1": {
-      "factor_key_1": 90,
-      "factor_key_2": 20
-    },
-    "result_key_2": {
-      "factor_key_1": 45,
-      "factor_key_2": 95
-    }
-  }
-}`;
+const MODEL = "deepseek-chat";
 
 export async function POST(request: NextRequest) {
   if (!DEEPSEEK_API_KEY) {
@@ -40,6 +18,7 @@ export async function POST(request: NextRequest) {
   }
 
   let body: {
+    userId?: string;
     title?: string;
     hook?: string;
     quiz_type?: string;
@@ -56,7 +35,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { title, hook, quiz_type, audience, tone, results, factors, pinned_vectors } = body;
+  const { userId, title, hook, quiz_type, audience, tone, results, factors, pinned_vectors } = body;
 
   if (!title || typeof title !== "string") {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
@@ -99,25 +78,16 @@ export async function POST(request: NextRequest) {
       .join("\n")}\n`;
   }
 
-  const userMessage = `为测试的人格结果分配向量值。
-
-测试标题：${title}
-测试副标题：${hook ?? ""}
-测试类型：${quiz_type ?? "personality"}
-目标受众：${audienceStr}
-语气风格：${toneStr}
-
-待生成向量的结果人格：
-${resultsText}
-
-因子维度：
-${factorsText}
-${pinnedText}
-请为以上每个结果在每个因子上分配 0-100 的值。记住：
-- 核心匹配的特征高到 80-95
-- 明显不符合的特征低到 10-30
-- 中性特征 40-60
-- 不同结果之间要有明显区分度`;
+  const userMessage = buildQuizResultVectorsPrompt({
+    title: title ?? "",
+    hook,
+    quiz_type,
+    audienceStr,
+    toneStr,
+    resultsText,
+    factorsText,
+    pinnedText,
+  });
 
   try {
     const dsResponse = await fetch(DEEPSEEK_CHAT_URL, {
@@ -127,9 +97,9 @@ ${pinnedText}
         Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "deepseek-chat",
+        model: MODEL,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: QUIZ_RESULT_VECTORS_SYSTEM },
           { role: "user", content: userMessage },
         ],
         temperature: 0.7,
@@ -140,6 +110,12 @@ ${pinnedText}
     if (!dsResponse.ok) {
       const errText = await dsResponse.text().catch(() => "");
       console.error("[quiz-ai:vectors] DeepSeek API error", dsResponse.status, errText);
+      trackAIError({
+        userId,
+        feature: "quiz_generate_result_vectors",
+        model: MODEL,
+        errorMessage: `DeepSeek API returned ${dsResponse.status}`,
+      });
       return NextResponse.json(
         { error: `DeepSeek API returned ${dsResponse.status}` },
         { status: 502 },
@@ -151,6 +127,12 @@ ${pinnedText}
 
     if (!rawContent) {
       console.error("[quiz-ai:vectors] Empty response from DeepSeek", dsData);
+      trackAIError({
+        userId,
+        feature: "quiz_generate_result_vectors",
+        model: MODEL,
+        errorMessage: "AI returned empty response",
+      });
       return NextResponse.json(
         { error: "AI returned empty response" },
         { status: 502 },
@@ -172,6 +154,13 @@ ${pinnedText}
       parsed = JSON.parse(jsonStr);
     } catch {
       console.error("[quiz-ai:vectors] Failed to parse AI JSON", jsonStr.slice(0, 500));
+      trackAIError({
+        userId,
+        feature: "quiz_generate_result_vectors",
+        model: MODEL,
+        ...extractTokens(dsData),
+        errorMessage: "AI returned invalid JSON",
+      });
       return NextResponse.json(
         { error: "AI returned invalid JSON" },
         { status: 502 },
@@ -209,9 +198,24 @@ ${pinnedText}
       }
     }
 
+    const resultCount = Object.keys(parsed.result_vectors).length;
+    trackAISuccess({
+      userId,
+      feature: "quiz_generate_result_vectors",
+      model: MODEL,
+      ...extractTokens(dsData),
+      metadata: { result_count: resultCount },
+    });
+
     return NextResponse.json({ result_vectors: parsed.result_vectors });
   } catch (err) {
     console.error("[quiz-ai:vectors] Unexpected error", err);
+    trackAIError({
+      userId,
+      feature: "quiz_generate_result_vectors",
+      model: MODEL,
+      errorMessage: err instanceof Error ? err.message : "Internal server error",
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

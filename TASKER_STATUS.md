@@ -6,6 +6,32 @@ Last updated: 2026-06-08
 
 ## Recent — 2026-06-08
 
+### AI Token 追踪 + Prompt 集中管理 + Admin 面板
+
+1. **数据库**：`supabase/migrations/add_ai_usage_logs.sql` — 新增 `ai_usage_logs` 表（user_id, feature, model, prompt/completion/total tokens, estimated_cost, success, error_message, metadata）。
+2. **统一调用包装器**：`lib/ai/track-ai-usage.ts` — `trackAISuccess()` / `trackAIError()` fire-and-forget 记录，`extractTokens()` 从 DeepSeek 响应提取 token 数。
+3. **成本计算**：`lib/ai/model-pricing.ts` — DeepSeek chat/reasoner 单价，按 input/output tokens 估算。
+4. **Prompt 集中管理**：`lib/prompts/` — 4 个 builder 文件（quiz-results, quiz-factors, quiz-questions, quiz-result-vectors），每个导出 system prompt + `build*Prompt()` 函数。
+5. **接入 4 个 Quiz AI 路由**：generate-results, generate-factors, generate-questions, generate-result-vectors — 全部使用 prompts 库 + tracking wrapper。
+6. **Admin 面板**：`/admin/ai-usage` — 表格展示最近 200 条调用（时间、功能、模型、tokens、成本、状态），AdminSidebar 新增 "AI Usage" 入口。
+7. **不改**：Prompt 内容、AI 生成格式、Quiz Runtime、OCR、Profile、业务逻辑。
+
+新增文件：
+- `supabase/migrations/add_ai_usage_logs.sql`
+- `lib/ai/model-pricing.ts`
+- `lib/ai/track-ai-usage.ts`
+- `lib/prompts/quiz-results.ts`
+- `lib/prompts/quiz-factors.ts`
+- `lib/prompts/quiz-questions.ts`
+- `lib/prompts/quiz-result-vectors.ts`
+- `app/admin/ai-usage/page.tsx`
+
+修改文件：
+- 4 个 `app/api/quiz-ai/generate-*/route.ts` — 使用 prompts + tracking
+- `components/admin/AdminSidebar.tsx` — 新增 AI Usage 入口
+
+---
+
 ### Quiz slug 随机化 — title 与 slug 解耦
 
 1. **生成位置**：`lib/quizzes-db.ts` — `saveQuizSchema()` 创建时调用 `uniqueSlug()`。

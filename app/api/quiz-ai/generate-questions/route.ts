@@ -1,81 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { trackAISuccess, trackAIError, extractTokens } from "@/lib/ai/track-ai-usage";
+import {
+  QUIZ_QUESTIONS_SYSTEM,
+  buildQuizQuestionsPrompt,
+} from "@/lib/prompts/quiz-questions";
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_CHAT_URL = "https://api.deepseek.com/v1/chat/completions";
-
-const SYSTEM_PROMPT = `You are a personality quiz designer building a vector-space quiz engine.
-
-HOW THIS WORKS:
-- The quiz does NOT score points toward specific results.
-- Instead, each option has "factor_effects" — small integer deltas (-3 to +3) that shift the user's position on personality dimensions.
-- After answering all questions, the user's accumulated factor values form a "user vector."
-- This vector is compared (Euclidean distance) to pre-defined "result vectors" to find the closest match.
-
-QUESTION RULES:
-- Scenario-based: everyday situations with vivid imagery.
-- Easy to choose: no overthinking required.
-- Share-friendly: questions and options feel fun and shareable.
-- NOT exam-like, NOT medical, NOT clinical, NOT deeply private.
-- Written in natural Chinese.
-- Each question should probe different combinations of factors.
-
-STYLE CONTROLS: You will receive 4 numeric style parameters (0-100). Adjust your output accordingly:
-
-abstractness (0=真实/realistic, 100=抽象/abstract):
-- High values: use metaphorical scenarios, imaginative situations, symbolic questions (e.g. "如果你是一颗漂浮在宇宙中的种子？").
-- Low values: use concrete, everyday, realistic scenarios (e.g. "今天下班后你会做什么？").
-- This affects: question text, option text.
-
-seriousness (0=搞怪/playful, 100=严肃/serious):
-- High values: use formal, thoughtful question topics; avoid humor (e.g. "你的决策风格是什么？").
-- Low values: use quirky, humorous, unexpected questions (e.g. "你是哪种冰箱人格？").
-- This affects: question text, option text.
-
-depth (0=轻松/light, 100=深度/deep):
-- High values: probe values, moral dilemmas, inner conflicts (e.g. "当价值观冲突时你会如何选择？").
-- Low values: stay on surface preferences, light daily choices (e.g. "你喜欢猫还是狗？").
-- This affects: question text, option framing.
-
-poeticness (0=直白/direct, 100=文艺/poetic):
-- High values: use lyrical, imagery-rich option text with literary quality.
-- Low values: use plain, direct option text.
-- This affects: option text wording.
-
-OPTION EFFECT RULES:
-- Each option must affect 1–3 factors.
-- Effects are small integers from -3 to +3.
-- Design options so different choices push the user vector in different directions.
-- Use the reference result_vectors to understand what "directions" make sense, but do NOT mention result names in questions/options.
-
-COVERAGE RULE:
-- Every factor must be covered by at least one option across the entire question set.
-
-PINNED QUESTIONS: Some questions may already be fixed (pinned) by the user. You will receive their text as reference. Do NOT generate questions that are highly similar in scenario or theme to pinned questions (e.g. if "你更喜欢哪种夜晚？" is pinned, do not generate "晚上你喜欢做什么？").
-
-OUTPUT RULES:
-- Output ONLY valid JSON. No markdown, no code fences, no explanation.
-- Labels must be sequential uppercase letters: A, B, C, D...
-
-Output format:
-{
-  "questions": [
-    {
-      "text": "你更喜欢哪种夜晚？",
-      "description": "",
-      "options": [
-        {
-          "label": "A",
-          "text": "一个人听雨写东西",
-          "factor_effects": {
-            "sensitivity": 2,
-            "imagination": 2,
-            "expressiveness": -1
-          }
-        }
-      ]
-    }
-  ]
-}`;
+const MODEL = "deepseek-chat";
 
 export async function POST(request: NextRequest) {
   if (!DEEPSEEK_API_KEY) {
@@ -86,6 +18,7 @@ export async function POST(request: NextRequest) {
   }
 
   let body: {
+    userId?: string;
     title?: string;
     hook?: string;
     quiz_type?: string;
@@ -110,6 +43,7 @@ export async function POST(request: NextRequest) {
   }
 
   const {
+    userId,
     title,
     hook,
     quiz_type,
@@ -215,43 +149,24 @@ export async function POST(request: NextRequest) {
       .join("\n")}\n`;
   }
 
-  const userMessage = `设计一套人格测试题目。
-
-测试标题：${title}
-测试副标题：${hookStr}
-测试类型：${typeStr}
-目标受众：${audienceStr}
-语气风格：${toneStr}
-题目数量：${qc} 题
-每题选项：${opq} 个（标签：${labels}）
-
-风格控制参数：
-- 抽象度 = ${a}/100 ${a >= 70 ? "（多用隐喻和想象场景，减少现实场景）" : a <= 30 ? "（使用真实日常场景和直白表达）" : "（平衡真实与抽象）"}
-- 严肃度 = ${s}/100 ${s >= 70 ? "（正式、分析性表达，不要搞怪）" : s <= 30 ? "（加入搞怪、娱乐化元素，轻松有趣）" : "（平衡严肃与轻松）"}
-- 深度 = ${d}/100 ${d >= 70 ? "（关注价值观、内在冲突、哲学性问题）" : d <= 30 ? "（关注表面偏好、轻松话题）" : "（平衡深度与轻松）"}
-- 文艺度 = ${p}/100 ${p >= 70 ? "（选项文本使用有画面感、文学感的表达）" : p <= 30 ? "（选项文本使用直白、简洁的表达）" : "（平衡文艺与直白）"}
-
-结果人格：
-${resultsText}
-
-因子维度：
-${factorsText}
-
-各结果在高/低因子上的参考（仅作设计参考，请勿在题目中提及结果名称）：
-${vectorsText}
-
-可用的 factor_effects key：${factorKeys.join(", ")}
-${pinnedSection}
-要求：
-- 每题各选项的 factor_effects 必须使用以上 factor keys
-- 每个 option 影响 1-3 个因子
-- 值在 -3 到 +3 之间
-- 不同选项应推动不同方向
-- 所有 ${factorKeys.length} 个因子在整个题目集中都要有涉及
-- 题目要场景化、有画面感、容易选、适合分享
-- 严格按照风格控制参数调整题目的抽象度、严肃度、深度和选项的文艺度${
-    pinned_questions?.length ? "\n- 不要生成与上述固定题目高度相似的新题目" : ""
-  }`;
+  const userMessage = buildQuizQuestionsPrompt({
+    title,
+    hook: hookStr,
+    quiz_type: typeStr,
+    audienceStr,
+    toneStr,
+    abstractness: a,
+    seriousness: s,
+    depth: d,
+    poeticness: p,
+    resultsText,
+    factorsText,
+    resultVectorsText: vectorsText,
+    factorKeys,
+    question_count: qc,
+    options_per_question: opq,
+    pinned_questions,
+  });
 
   try {
     const dsResponse = await fetch(DEEPSEEK_CHAT_URL, {
@@ -261,9 +176,9 @@ ${pinnedSection}
         Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "deepseek-chat",
+        model: MODEL,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: QUIZ_QUESTIONS_SYSTEM },
           { role: "user", content: userMessage },
         ],
         temperature: 0.85,
@@ -274,6 +189,12 @@ ${pinnedSection}
     if (!dsResponse.ok) {
       const errText = await dsResponse.text().catch(() => "");
       console.error("[quiz-ai:questions] DeepSeek API error", dsResponse.status, errText);
+      trackAIError({
+        userId,
+        feature: "quiz_generate_questions",
+        model: MODEL,
+        errorMessage: `DeepSeek API returned ${dsResponse.status}`,
+      });
       return NextResponse.json(
         { error: `DeepSeek API returned ${dsResponse.status}` },
         { status: 502 },
@@ -285,6 +206,12 @@ ${pinnedSection}
 
     if (!rawContent) {
       console.error("[quiz-ai:questions] Empty response", dsData);
+      trackAIError({
+        userId,
+        feature: "quiz_generate_questions",
+        model: MODEL,
+        errorMessage: "AI returned empty response",
+      });
       return NextResponse.json(
         { error: "AI returned empty response" },
         { status: 502 },
@@ -306,6 +233,13 @@ ${pinnedSection}
       parsed = JSON.parse(jsonStr);
     } catch {
       console.error("[quiz-ai:questions] Failed to parse JSON", jsonStr.slice(0, 500));
+      trackAIError({
+        userId,
+        feature: "quiz_generate_questions",
+        model: MODEL,
+        ...extractTokens(dsData),
+        errorMessage: "AI returned invalid JSON",
+      });
       return NextResponse.json(
         { error: "AI returned invalid JSON" },
         { status: 502 },
@@ -405,9 +339,23 @@ ${pinnedSection}
       }
     }
 
+    trackAISuccess({
+      userId,
+      feature: "quiz_generate_questions",
+      model: MODEL,
+      ...extractTokens(dsData),
+      metadata: { question_count: parsed.questions.length },
+    });
+
     return NextResponse.json({ questions: parsed.questions });
   } catch (err) {
     console.error("[quiz-ai:questions] Unexpected error", err);
+    trackAIError({
+      userId,
+      feature: "quiz_generate_questions",
+      model: MODEL,
+      errorMessage: err instanceof Error ? err.message : "Internal server error",
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },
