@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { supabase } from "./supabase";
 import { DEV_USER_ID } from "./dev-user";
 import type {
@@ -261,19 +262,36 @@ export interface SaveQuizResult {
   quizId: string;
 }
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9一-鿿]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-+/g, "-");
+const SLUG_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+function generateSlug(): string {
+  const bytes = randomBytes(6);
+  let slug = "q_";
+  for (let i = 0; i < 6; i++) {
+    slug += SLUG_CHARS[bytes[i] % SLUG_CHARS.length];
+  }
+  return slug;
+}
+
+/** Generate a unique slug, retrying on collision. */
+async function uniqueSlug(): Promise<string> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const slug = generateSlug();
+    const { data } = await supabase
+      .from("quizzes")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (!data) return slug;
+  }
+  throw new Error("无法生成唯一 slug，请重试。");
 }
 
 export async function saveQuizSchema(
   input: SaveQuizInput,
   creatorUserId: string,
 ): Promise<SaveQuizResult> {
-  const slug = slugify(input.meta.title);
+  const slug = await uniqueSlug();
 
   const { data: quiz, error: quizError } = await supabase
     .from("quizzes")
@@ -526,13 +544,20 @@ export async function updateQuizSchema(
   input: SaveQuizInput,
   quizId: string,
 ): Promise<SaveQuizResult> {
-  const slug = slugify(input.meta.title);
+  // Fetch existing slug — do NOT regenerate on edit
+  const { data: existing } = await supabase
+    .from("quizzes")
+    .select("slug")
+    .eq("id", quizId)
+    .single();
 
-  // 1. Update quizzes row
+  const slug = existing?.slug;
+  if (!slug) throw new Error("Quiz not found");
+
+  // 1. Update quizzes row (slug preserved)
   const { error: updateError } = await supabase
     .from("quizzes")
     .update({
-      slug,
       title: input.meta.title,
       hook: input.meta.hook,
       quiz_type: input.meta.quiz_type,

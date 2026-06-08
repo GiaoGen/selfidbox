@@ -6,6 +6,34 @@ Last updated: 2026-06-08
 
 ## Recent — 2026-06-08
 
+### Quiz slug 随机化 — title 与 slug 解耦
+
+1. **生成位置**：`lib/quizzes-db.ts` — `saveQuizSchema()` 创建时调用 `uniqueSlug()`。
+2. **随机库**：Node.js 内置 `crypto.randomBytes(6)`，生成 `q_` + 6 位小写字母数字 = 共 8 字符（如 `q_8f2xk7`）。
+3. **唯一性**：`uniqueSlug()` 最多重试 5 次，每次 `SELECT id FROM quizzes WHERE slug = $slug`，命中即重试，不命中则返回。
+4. **编辑保护**：`updateQuizSchema()` 从 DB 取回已有 slug，不再更新 `slug` 列。改 title 不影响 URL。
+5. **兼容旧数据**：仅对新创建 Quiz 使用新规则。编辑旧 Quiz 不改 slug。
+6. **不改**：Explore、Quiz Detail、Quiz Runtime（全部 `WHERE slug = ...` 不受影响）。
+
+修改文件：
+- `lib/quizzes-db.ts` — 新增 `generateSlug` + `uniqueSlug`，`saveQuizSchema` 使用随机 slug，`updateQuizSchema` 保留已有 slug
+
+---
+
+### 修复 Explore 轮播循环抽搐 bug
+
+1. **双端 clone**：`[clone of last, 0, 1, ..., N-1, clone of first]`，支持双向无缝循环。
+2. **transitionend 驱动 reset**：不再依赖 setTimeout 计时。当 smooth scroll 到达 clone 位置时，`onTransitionEnd` 触发 → `scrollTo(realIdx, false)` 瞬间跳转，用户无感知。
+3. **移除 CSS scroll-smooth**：改为 `scrollTo({ behavior })` 控制，保证 instant 跳转不会被 CSS 覆盖。
+4. **用户滑动**：`handleScroll` 检测用户交互 → 暂停 auto-play → 8s 后恢复。clone 位置的 reset 由 `handleTransitionEnd` 统一处理，不与用户交互冲突。
+5. **单张保护**：`total <= 1` 不启用 clone、不启动 auto-play、不渲染 dots。
+6. **不改**：分类/搜索、Admin、Quiz Runtime、Profile。
+
+修改文件：
+- `components/explore/TrendingCarousel.tsx` — 重写无缝循环逻辑
+
+---
+
 ### 详情页布局调整：简介移至 Hero 正下方
 
 1. **QuizDetail** 和 **TestSiteDetail** 两个页面统一：

@@ -9,26 +9,40 @@ export function TrendingCarousel({ children }: { children: React.ReactNode }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const cards = Array.isArray(children) ? children : [children];
   const total = cards.length;
-  const [activeIndex, setActiveIndex] = useState(0);
+
+  /* ---- Cloned slides for seamless infinite loop ---- */
+  // Structure: [clone of last, 0, 1, ..., N-1, clone of first]
+  // Real slides at indices 1..total, display index = slideIndex - 1
+  const slides = total > 1 ? [cards[total - 1], ...cards, cards[0]] : cards;
+
+  const [displayIndex, setDisplayIndex] = useState(0); // 0-based real card index
   const autoPlayTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const busyRef = useRef(false);
-  const isAutoScrollingRef = useRef(false);
 
-  // Render [0, 1, ..., N-1, clone_of_0] for seamless forward-only infinite loop
-  const slides = total > 1 ? [...cards, cards[0]] : cards;
+  /* ---- Programmatic scroll (no CSS scroll-smooth, we control behavior) ---- */
+  const scrollTo = useCallback(
+    (slideIndex: number, smooth: boolean) => {
+      const el = scrollRef.current;
+      if (!el) return;
+      el.scrollTo({
+        left: slideIndex * el.clientWidth,
+        behavior: smooth ? "smooth" : "instant",
+      });
+    },
+    [],
+  );
 
-  const scrollTo = useCallback((index: number, smooth: boolean) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    isAutoScrollingRef.current = true;
-    el.scrollTo({ left: index * el.clientWidth, behavior: smooth ? "smooth" : "instant" });
-  }, []);
-
-  /* ---- auto-play helpers ---- */
+  /* ---- Auto-play ---- */
   const clearAutoPlayTimers = useCallback(() => {
-    if (autoPlayTimerRef.current) { clearInterval(autoPlayTimerRef.current); autoPlayTimerRef.current = null; }
-    if (resumeTimerRef.current) { clearTimeout(resumeTimerRef.current); resumeTimerRef.current = null; }
+    if (autoPlayTimerRef.current) {
+      clearInterval(autoPlayTimerRef.current);
+      autoPlayTimerRef.current = null;
+    }
+    if (resumeTimerRef.current) {
+      clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = null;
+    }
   }, []);
 
   const startAutoPlay = useCallback(() => {
@@ -38,21 +52,11 @@ export function TrendingCarousel({ children }: { children: React.ReactNode }) {
       const el = scrollRef.current;
       if (!el || busyRef.current) return;
 
-      const currentIdx = Math.round(el.scrollLeft / el.clientWidth);
-      const next = currentIdx + 1;
+      const currentSlide = Math.round(el.scrollLeft / el.clientWidth);
+      const next = currentSlide + 1;
 
-      if (next >= total) {
-        busyRef.current = true;
-        scrollTo(next, true);
-        setTimeout(() => {
-          scrollTo(0, false);
-          setActiveIndex(0);
-          busyRef.current = false;
-        }, 500);
-      } else {
-        scrollTo(next, true);
-        setActiveIndex(next);
-      }
+      busyRef.current = true;
+      scrollTo(next, true);
     }, AUTO_PLAY_INTERVAL_MS);
   }, [total, clearAutoPlayTimers, scrollTo]);
 
@@ -63,66 +67,94 @@ export function TrendingCarousel({ children }: { children: React.ReactNode }) {
   const scheduleResume = useCallback(() => {
     if (total <= 1) return;
     if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
-    resumeTimerRef.current = setTimeout(() => {
-      startAutoPlay();
-    }, PAUSE_AFTER_INTERACTION_MS);
+    resumeTimerRef.current = setTimeout(startAutoPlay, PAUSE_AFTER_INTERACTION_MS);
   }, [total, startAutoPlay]);
 
-  /* ---- lifecycle ---- */
+  /* ---- Lifecycle ---- */
   useEffect(() => {
     if (total <= 1) return;
+    // Jump to real first slide (index 1) on mount
+    scrollTo(1, false);
     startAutoPlay();
-    return () => { clearAutoPlayTimers(); };
-  }, [total, startAutoPlay, clearAutoPlayTimers]);
+    return () => clearAutoPlayTimers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [total]);
 
-  /* ---- handleScroll — distinguish user scroll vs auto-play scroll ---- */
-  function handleScroll() {
-    if (busyRef.current) return;
-
+  /* ---- transitionend: detect when smooth scroll finishes, reset if on clone ---- */
+  function handleTransitionEnd() {
     const el = scrollRef.current;
     if (!el) return;
 
-    // Auto-play scroll → just update index, skip interaction logic
-    if (isAutoScrollingRef.current) {
-      isAutoScrollingRef.current = false;
-      const idx = Math.round(el.scrollLeft / el.clientWidth);
-      setActiveIndex(idx >= total ? 0 : idx);
-      return;
-    }
+    const slideIdx = Math.round(el.scrollLeft / el.clientWidth);
 
-    // User-initiated scroll
-    const idx = Math.round(el.scrollLeft / el.clientWidth);
-
-    if (idx >= total) {
-      busyRef.current = true;
-      scrollTo(0, false);
-      setActiveIndex(0);
-      requestAnimationFrame(() => { busyRef.current = false; });
+    if (slideIdx === 0) {
+      // On "clone of last" → instant jump to real last (index total)
+      scrollTo(total, false);
+      setDisplayIndex(total - 1);
+    } else if (slideIdx === slides.length - 1) {
+      // On "clone of first" → instant jump to real first (index 1)
+      scrollTo(1, false);
+      setDisplayIndex(0);
     } else {
-      setActiveIndex(idx);
+      // Real slide — update display index
+      setDisplayIndex(slideIdx - 1);
     }
 
+    busyRef.current = false;
+  }
+
+  /* ---- Scroll handler: detect user interaction ---- */
+  function handleScroll() {
+    if (busyRef.current) return;
+
+    // User-initiated scroll — pause auto-play, schedule resume
     pauseAutoPlay();
     scheduleResume();
   }
 
   return (
-    /* outer: overflow-visible — let card shadows breathe, no clipping */
     <section className="overflow-visible">
-      {/* viewport: overflow-hidden — clips slides only, not shadows */}
       <div className="overflow-hidden">
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="flex overflow-x-auto scrollbar-none snap-x snap-mandatory scroll-smooth"
+          onTransitionEnd={handleTransitionEnd}
+          className="flex overflow-x-auto scrollbar-none snap-x snap-mandatory"
         >
           {slides.map((child, i) => (
-            <div key={i} className="w-full shrink-0 snap-center flex justify-center px-2">
+            <div
+              key={i}
+              className="w-full shrink-0 snap-center flex justify-center px-2"
+            >
               {child}
             </div>
           ))}
         </div>
       </div>
+
+      {/* Dots */}
+      {total > 1 && (
+        <div className="mt-3 flex items-center justify-center gap-1.5">
+          {Array.from({ length: total }).map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              aria-label={`第 ${i + 1} 张`}
+              onClick={() => {
+                pauseAutoPlay();
+                busyRef.current = true;
+                scrollTo(i + 1, true);
+                scheduleResume();
+              }}
+              className={`h-1.5 rounded-full transition-all ${
+                i === displayIndex
+                  ? "w-5 bg-[var(--ink)]"
+                  : "w-1.5 bg-[var(--ink)]/20"
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
