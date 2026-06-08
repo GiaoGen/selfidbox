@@ -87,9 +87,9 @@ export async function POST(request: NextRequest) {
   if (!title || typeof title !== "string") {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
   }
-  if (!result_count || typeof result_count !== "number" || result_count < 1 || result_count > 8) {
+  if (!result_count || typeof result_count !== "number" || result_count < 1 || result_count > 16) {
     return NextResponse.json(
-      { error: "result_count must be between 1 and 8" },
+      { error: "result_count must be between 1 and 16" },
       { status: 400 },
     );
   }

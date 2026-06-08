@@ -68,9 +68,9 @@ export async function POST(request: NextRequest) {
   }
 
   const count = factor_count && typeof factor_count === "number" ? factor_count : 5;
-  if (count < 1 || count > 8) {
+  if (count < 1 || count > 16) {
     return NextResponse.json(
-      { error: "factor_count must be between 1 and 8" },
+      { error: "factor_count must be between 1 and 16" },
       { status: 400 },
     );
   }
