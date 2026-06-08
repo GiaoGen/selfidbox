@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExploreTopNavbar } from "@/components/layout/ExploreTopNavbar";
 import { RelatedTestSites } from "@/components/RelatedTestSites";
 import { ExternalTestButton } from "@/components/test-sites/ExternalTestButton";
 import type { TestSite } from "@/lib/test-sites";
@@ -33,28 +34,7 @@ export function TestSiteDetail({
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
-        <nav className="flex items-center justify-between rounded-full bg-[var(--surface-soft)] p-2">
-          <Link
-            href="/explore"
-            className="rounded-full px-4 py-2 text-sm font-semibold"
-          >
-            SelfIDBox
-          </Link>
-          <div className="flex items-center gap-1">
-            <Link
-              href="/profile"
-              className="rounded-full px-4 py-2 text-sm font-semibold"
-            >
-              个人图谱
-            </Link>
-            <Link
-              href={`/explore/${site.category}`}
-              className="rounded-full bg-[var(--ink)] px-4 py-2 text-sm font-semibold text-white"
-            >
-              {site.categoryLabel}
-            </Link>
-          </div>
-        </nav>
+        <ExploreTopNavbar />
 
         <section
           className={`overflow-hidden rounded-[36px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.08)] sm:p-8 ${accentClasses[site.accent]}`}

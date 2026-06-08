@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExploreTopNavbar } from "@/components/layout/ExploreTopNavbar";
 import type { QuizDetailRow, QuizDetailRelatedRow } from "@/lib/quizzes-db";
 import { accentFromId } from "@/lib/explore/types";
 import type { AccentKey } from "@/lib/explore/types";
@@ -44,31 +45,7 @@ export function QuizDetail({
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
-        {/* Nav */}
-        <nav className="flex items-center justify-between rounded-full bg-[var(--surface-soft)] p-2">
-          <Link
-            href="/explore"
-            className="rounded-full px-4 py-2 text-sm font-semibold"
-          >
-            SelfIDBox
-          </Link>
-          <div className="flex items-center gap-1">
-            <Link
-              href="/profile"
-              className="rounded-full px-4 py-2 text-sm font-semibold"
-            >
-              个人图谱
-            </Link>
-            {categorySlug && (
-              <Link
-                href={`/explore/${categorySlug}`}
-                className="rounded-full bg-[var(--ink)] px-4 py-2 text-sm font-semibold text-white"
-              >
-                {categoryLabel}
-              </Link>
-            )}
-          </div>
-        </nav>
+        <ExploreTopNavbar />
 
         {/* Hero */}
         <section

@@ -6,6 +6,22 @@ Last updated: 2026-06-08
 
 ## Recent — 2026-06-08
 
+### 统一 /quizzes/[slug] 和 /test-sites/[slug] navbar 为 Explore 样式
+
+1. **提取 ExploreTopNavbar**：`components/layout/ExploreTopNavbar.tsx` — 基于 TopNavbar + 搜索按钮（Link → /explore），与 Explore 页面 navbar 样式完全一致。
+2. **QuizDetail**：内联 `<nav>` → `<ExploreTopNavbar />`。
+3. **TestSiteDetail**：内联 `<nav>` → `<ExploreTopNavbar />`。
+4. **不改**：Explore 本身、Create、Profile、Quiz Runtime、Admin。
+
+新增文件：
+- `components/layout/ExploreTopNavbar.tsx`
+
+修改文件：
+- `components/QuizDetail.tsx` — 替换内联 nav
+- `components/TestSiteDetail.tsx` — 替换内联 nav
+
+---
+
 ### Summary 轻量卡片容器 + 单行 ellipsis + 动态字号
 
 1. **卡片容器**：`rounded-2xl bg-[var(--ink)]/[0.04] px-4 py-3`，极轻量背景，无渐变/无厚重阴影。
