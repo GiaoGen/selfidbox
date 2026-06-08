@@ -1,9 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { CoverFlowSources } from "@/components/profile/CoverFlowSources";
 import { WordSphereModal } from "@/components/profile/WordSphereModal";
 import { useWordCloud } from "@/components/profile/useWordCloud";
+
+/* ------------------------------------------------------------------ */
+/*  Dynamic font size by character length (mobile / desktop)            */
+/* ------------------------------------------------------------------ */
+
+function summaryFontClass(len: number): string {
+  if (len <= 6) return "text-2xl sm:text-3xl";
+  if (len <= 12) return "text-xl sm:text-2xl";
+  if (len <= 20) return "text-lg sm:text-xl";
+  if (len <= 30) return "text-base sm:text-lg";
+  return "text-sm sm:text-base";
+}
+
+/* ------------------------------------------------------------------ */
 
 export function ProfileInteractions({
   title,
@@ -19,6 +33,8 @@ export function ProfileInteractions({
     setSphereOpen(true);
   }
 
+  const fontClass = useMemo(() => summaryFontClass(title.length), [title]);
+
   return (
     <>
       <CoverFlowSources />
@@ -29,12 +45,16 @@ export function ProfileInteractions({
           <hr className="border-0 border-t border-[var(--ink)]/8" />
 
           {/* One-line personality summary */}
-          <p
+          <div
             onClick={onSummaryClick}
-            className="cursor-pointer text-center text-lg font-medium leading-relaxed tracking-wide text-[var(--ink)]/80 transition active:scale-[0.97] hover:text-[var(--ink)] sm:text-xl"
+            className="cursor-pointer rounded-3xl bg-[var(--surface-card)] px-4 py-3 text-center transition active:scale-[0.98] hover:brightness-[0.97]"
           >
-            {title}
-          </p>
+            <p
+              className={`truncate font-semibold tracking-wide text-[var(--ink)]/80 ${fontClass}`}
+            >
+              {title}
+            </p>
+          </div>
         </>
       )}
 

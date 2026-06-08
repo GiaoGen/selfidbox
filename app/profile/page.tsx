@@ -4,7 +4,7 @@ import { ProfileRadar, type RadarPoint } from "@/components/ProfileRadar";
 import { ProfileInteractions } from "@/components/profile/ProfileInteractions";
 import { ScreenshotReportUploader } from "@/components/profile/ScreenshotReportUploader";
 import { TopNavbar } from "@/components/layout/TopNavbar";
-import { UserMenu } from "@/components/auth/UserMenu";
+import { ProfileHeaderActions } from "@/components/profile/ProfileHeaderActions";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -91,7 +91,7 @@ export default async function ProfilePage() {
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
-        <TopNavbar rightSlot={<UserMenu />} />
+        <TopNavbar rightSlot={<ProfileHeaderActions />} />
 
         {hasProfile ? (
           <ProfileInteractions
@@ -114,14 +114,14 @@ export default async function ProfilePage() {
           <section className="flex flex-col gap-5">
             <ProfileRadar
               title="核心人格"
-              subtitle="你本质是什么样的人"
+              subtitle=""
               data={toRadarPoints(coreVector)}
               color="#ff4d8b"
             />
             {hasSocial && (
               <ProfileRadar
                 title="社会表达"
-                subtitle="你如何在世界中表现自己"
+                subtitle=""
                 data={toRadarPoints(socialVector)}
                 color="#1a3a3a"
               />

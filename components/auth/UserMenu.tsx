@@ -10,7 +10,11 @@ type AuthUser = {
   email?: string;
 };
 
-export function UserMenu() {
+export function UserMenu({
+  actions,
+}: {
+  actions?: { label: string; onClick: () => void }[];
+}) {
   const router = useRouter();
   const supabase = createClient();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -62,6 +66,20 @@ export function UserMenu() {
           <p className="truncate px-3 pt-1 text-[13px] font-medium text-[var(--muted)]">
             {user.email}
           </p>
+
+          {actions?.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                action.onClick();
+              }}
+              className="mt-1.5 w-full rounded-full px-3 py-2 text-left text-[13px] font-medium text-[var(--ink)]/70 transition hover:bg-[var(--ink)]/6"
+            >
+              {action.label}
+            </button>
+          ))}
 
           <button
             type="button"

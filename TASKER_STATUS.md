@@ -6,6 +6,36 @@ Last updated: 2026-06-08
 
 ## Recent — 2026-06-08
 
+### Summary 轻量卡片容器 + 单行 ellipsis + 动态字号
+
+1. **卡片容器**：`rounded-2xl bg-[var(--ink)]/[0.04] px-4 py-3`，极轻量背景，无渐变/无厚重阴影。
+2. **单行强制**：`truncate`（white-space: nowrap + overflow: hidden + text-overflow: ellipsis），不换行。
+3. **动态字号**：`summaryFontClass(len)` — ≤6字符 text-2xl, ≤12 text-xl, ≤20 text-lg, ≤30 text-base, >30 text-sm，桌面端各+1级。
+4. **点击保留**：容器 `cursor-pointer` + `onClick` → 词云弹窗，`active:scale-[0.98]` + `hover:bg` 微交互。
+5. **不改**：词云、Cover Flow、Radar、数据来源、数据库。
+
+修改文件：
+- `components/profile/ProfileInteractions.tsx` — 重构 summary：容器 + truncate + 动态字号
+
+---
+
+### Profile UI 优化：summary 强化 + Radar 去标题 + 头像菜单数据来源入口
+
+1. **Summary 视觉强化**：`text-lg sm:text-xl font-medium` → `text-2xl sm:text-3xl font-semibold`，保持极简文本形式、无卡片。
+2. **Radar 去标题**：`核心人格` "你本质是什么样的人" / `社会表达` "你如何在世界中表达自己" → subtitle 传空字符串，不渲染。
+3. **头像菜单数据来源入口**：`UserMenu` 新增 `actions` prop，Profile 页面通过 `ProfileHeaderActions` 客户端组件注入 "数据来源" → 打开 `DataSourceModal`，点击后关闭菜单并弹出数据来源弹窗。
+4. **不改**：Cover Flow、词云、数据来源列表内容、OCR、Quiz Runtime、数据库。
+
+新增文件：
+- `components/profile/ProfileHeaderActions.tsx` — 客户端组件，持有 UserMenu + DataSourceModal 状态
+
+修改文件：
+- `components/profile/ProfileInteractions.tsx` — summary font-size/font-weight
+- `components/auth/UserMenu.tsx` — 新增 `actions` prop，渲染额外菜单项
+- `app/profile/page.tsx` — 替换 UserMenu → ProfileHeaderActions，Radar subtitle 改为空
+
+---
+
 ### 词云接入真实数据 + 前端缓存
 
 1. **API 新增**：`app/api/profile/word-cloud/route.ts` — GET，server supabase auth，查询 `quiz_attempts.final_result_name`，聚合计数后返回 `{ words: { label, count }[] }`。
