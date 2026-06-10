@@ -9,7 +9,7 @@ Each option has "factor_effects" — integer deltas (-3 to +3) shifting the user
 
 QUESTION RULES:
 
-1. RESULTS-DRIVEN: Every question MUST help distinguish between provided results. Study the results' names, traits, and descriptions. Design questions that probe DIFFERENCES — if a question doesn't separate at least 2 results, it's useless.
+1. RESULTS-DRIVEN: Every question MUST help distinguish between the provided results. Study their names, traits, and descriptions. Design questions that probe DIFFERENCES — if a question doesn't separate at least 2 results, it's useless.
 
 2. THEME-BINDING: Questions must feel native to THIS quiz, not a generic personality test. Use the quiz title as the creative anchor. Questions unrelated to the quiz theme are invalid.
 
@@ -36,7 +36,9 @@ Instead: generate questions that ONLY make sense for this specific quiz.
 - depth: 0=surface/preferences → 100=values/inner-conflict
 - poeticness: 0=direct/plain → 100=lyrical/imagery-rich
 
-7. PINNED QUESTIONS: Never generate questions with similar scenario or theme to pinned questions.
+7. GENERATE exactly the requested question_count, each with the requested options_per_question.
+
+8. PINNED QUESTIONS: Never generate questions with similar scenario or theme to any pinned question listed in the input.
 
 OUTPUT:
 {"questions":[{"text":"...","description":"","options":[{"label":"A","text":"...","factor_effects":{"factor_key":2,"another_factor":-1}}]}]}
@@ -84,23 +86,23 @@ export function buildQuizQuestionsPrompt(
     pinned_questions,
   } = input;
 
-  let pinnedSection = "";
+  let pinnedBlock = "";
   if (pinned_questions && pinned_questions.length > 0) {
-    pinnedSection = `\n已固定的题目（禁止生成场景或主题相似的题目）：\n${pinned_questions
+    pinnedBlock = `\n已固定的题目（禁止场景或主题相似）：\n${pinned_questions
       .map((q) => `- "${q.text}"`)
-      .join("\n")}\n`;
+      .join("\n")}`;
   }
 
   const styleLine =
-    `风格参数：抽象度${a}/100 严肃度${s}/100 深度${d}/100 文艺度${p}/100` +
-    ` | ${a >= 70 ? "偏抽象/隐喻" : a <= 30 ? "偏真实/日常" : "平衡"} ` +
-    `${s >= 70 ? "偏严肃/正式" : s <= 30 ? "偏搞怪/轻松" : "平衡"} ` +
-    `${d >= 70 ? "偏深度/价值观" : d <= 30 ? "偏表面/偏好" : "平衡"} ` +
-    `${p >= 70 ? "偏文艺/画面感" : p <= 30 ? "偏直白/简洁" : "平衡"}`;
+    `风格：抽象度${a}/100(${a >= 70 ? "抽象" : a <= 30 ? "真实" : "平衡"}) ` +
+    `严肃度${s}/100(${s >= 70 ? "严肃" : s <= 30 ? "搞怪" : "平衡"}) ` +
+    `深度${d}/100(${d >= 70 ? "深度" : d <= 30 ? "轻松" : "平衡"}) ` +
+    `文艺度${p}/100(${p >= 70 ? "文艺" : p <= 30 ? "直白" : "平衡"})`;
 
   return `标题：「${title}」${hook ? ` 副标题：「${hook}」` : ""}
 类型：${quiz_type} | 受众：${audienceStr} | 语气：${toneStr}
 ${styleLine}
+生成：${question_count} 题 × ${options_per_question} 选项 | 覆盖 ${factorKeys.length} 个因子：${factorKeys.join(", ")}
 
 结果人格（题目必须能区分这些结果）：
 ${resultsText}
@@ -109,14 +111,5 @@ ${resultsText}
 ${factorsText}
 
 参考向量（高=该结果在此因子上的理想位置）：
-${resultVectorsText}
-${pinnedSection}
-
-指令：
-1. 生成恰好 ${question_count} 道题，每题 ${options_per_question} 个选项
-2. 题目必须与「${title}」主题强相关，禁止使用与主题无关的通用人格测试套路题
-3. 每道题必须能区分至少 2 个不同的结果人格 — 参考上述结果人格和其因子向量
-4. 每道题覆盖不同的因子组合，所有 ${factorKeys.length} 个因子在整个题目集中都要有涉及
-5. option 的 factor_effects 必须根据选项语义推断，不能随机赋值；值 -3 到 +3 整数，每选项影响 1-3 个因子
-6. 题目要有场景感、容易选、适合分享${pinned_questions?.length ? "\n7. 不要生成与已固定题目场景或主题相似的新题目" : ""}`;
+${resultVectorsText}${pinnedBlock}`;
 }

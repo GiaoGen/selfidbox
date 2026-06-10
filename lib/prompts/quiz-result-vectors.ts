@@ -21,6 +21,15 @@ SPREAD REQUIREMENTS:
 - Each result MUST have at least 2 factors in 70-95 AND at least 2 factors in 5-29. No flat profiles.
 - Every factor MUST show ≥15 points difference across results — a factor where all results score within a narrow band is useless.
 - At least 2 factors must show ≥40 points difference between the highest and lowest result.
+- Most values should fall in 35-85. Extreme values (≥90 or ≤10) on ≤30% of factors per result.
+
+INSTRUCTIONS:
+- For each result × factor, assign a 0-100 integer.
+- traits are the PRIMARY basis — matching trait → 70-85 (or 86-95 for strongest), contradicting → 15-29 (or 5-14 for strongest).
+- No strong signal → 40-60.
+- Each result must have clear peaks AND valleys.
+- Different results must differ meaningfully on each factor.
+- Pinned vectors (if listed in input) must NOT be modified — skip those result keys.
 
 OUTPUT:
 {"result_vectors":{"result_key":{"factor_key":78,"another_factor":22}}}`;
@@ -61,31 +70,23 @@ export function buildQuizResultVectorsPrompt(
     .map((f) => `- ${f.key}（${f.name}）：${f.description || "无"}`)
     .join("\n");
 
-  let pinnedSection = "";
+  let pinnedBlock = "";
   if (pinned_vectors && pinned_vectors.length > 0) {
-    pinnedSection = `\n已固定的向量（禁止覆盖）：\n${pinned_vectors
+    pinnedBlock = `\n已固定的向量（不要修改，跳过以下 result key）：\n${pinned_vectors
       .map((p) => {
         const highs = Object.entries(p.values).filter(([, v]) => v >= 80).map(([k]) => k).join("、") || "无";
         const lows = Object.entries(p.values).filter(([, v]) => v <= 30).map(([k]) => k).join("、") || "无";
-        return `- ${p.name}（${p.key}）：高=[${highs}] 低=[${lows}]（已固定）`;
+        return `- ${p.name}（${p.key}）：高=[${highs}] 低=[${lows}]`;
       })
-      .join("\n")}\n`;
+      .join("\n")}`;
   }
 
   return `标题：「${title}」${hook ? ` 副标题：「${hook}」` : ""}
 类型：${quiz_type} | 受众：${audienceStr} | 语气：${toneStr}
 
-结果（traits 是分配向量值的首要依据）：
+结果（traits 是分配向量的首要依据）：
 ${resultsBlock}
 
 因子：
-${factorsBlock}${pinnedSection}
-
-指令：
-1. 为每个 result 的每个 factor 分配 0-100 整数值
-2. 大多数值应落在 35-85 区间，极端值（≥90 或 ≤10）每 result 不超过 30% 的 factor
-3. 无明确信号 → 40-60；匹配 trait → 70-85；强烈匹配 → 86-95；矛盾 → 15-29；强烈矛盾 → 5-14
-4. 每 result 至少 2 个 factor ≥70、至少 2 个 ≤29，有明显峰谷
-5. 每个 factor 上最高值与最低值差距 ≥15；至少 2 个 factor 差距 ≥40
-6. 不同 result 不能在所有 factor 上都接近 — 至少 2-3 个 factor 上有 ≥25 分的差异${pinned_vectors?.length ? "\n7. 不要修改已固定的向量值" : ""}`;
+${factorsBlock}${pinnedBlock}`;
 }
