@@ -1,4 +1,6 @@
 import { supabase } from "./supabase";
+import { trackAISuccess, trackAIError } from "@/lib/ai/track-ai-usage";
+import { generateAISelfidProfile } from "@/lib/prompts/profile-summary";
 
 /* ================================================================== */
 /*  rebuildUserProfile(userId)                                         */
@@ -324,7 +326,7 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
   try {
     let query = supabase
       .from("reports")
-      .select("id, core_vector, social_vector, normalized_confidence, confidence, raw_ai_response, created_at")
+      .select("id, core_vector, social_vector, normalized_confidence, confidence, raw_ai_response, main_result, created_at")
       .eq("user_id", userId)
       .eq("parse_status", "normalized");
 
@@ -348,7 +350,7 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
   try {
     const { data, error } = await supabase
       .from("quiz_attempts")
-      .select("id, quiz_id, user_vector, profile_weight, created_at")
+      .select("id, quiz_id, final_result_name, user_vector, profile_weight, created_at")
       .eq("user_id", userId)
       .eq("included_in_profile", true)
       .eq("fused_into_profile", false)
@@ -495,9 +497,17 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
     }
   }
 
-  /* ---- 9. Generate labels ---- */
+  /* ---- 9. Collect result names for AI context ---- */
 
-  const { selfid_profile, summary } = generateProfileLabel(core_vector, social_vector);
+  const recentResults: string[] = [];
+  for (const r of newReportRows) {
+    const name = r.main_result as string | undefined;
+    if (name) recentResults.push(name);
+  }
+  for (const a of newAttempts) {
+    const name = a.final_result_name as string | undefined;
+    if (name && !recentResults.includes(name)) recentResults.push(name);
+  }
 
   /* ---- 10. Cumulative report_count ---- */
 
@@ -507,7 +517,61 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
     `(+${reportsUsed} reports, +${attemptsUsed} attempts)`,
   );
 
-  /* ---- 11. Upsert ---- */
+  /* ---- 11. Generate labels (rule-based fallback) ---- */
+
+  const { selfid_profile: fallbackProfile, summary } = generateProfileLabel(core_vector, social_vector);
+  let selfid_profile = fallbackProfile;
+
+  /* ---- 12. AI summary (best-effort, non-blocking) ---- */
+
+  try {
+    const topCore = Object.entries(core_vector)
+      .sort(([, a], [, b]) => Math.abs(b.value - 50) - Math.abs(a.value - 50))
+      .slice(0, 4)
+      .map(([key, dim]) => ({ label: CORE_CN[key] ?? key, value: Math.round(dim.value) }));
+
+    const topSocial = Object.entries(social_vector)
+      .sort(([, a], [, b]) => Math.abs(b.value - 50) - Math.abs(a.value - 50))
+      .slice(0, 4)
+      .map(([key, dim]) => ({ label: SOCIAL_CN[key] ?? key, value: Math.round(dim.value) }));
+
+    const aiResult = await generateAISelfidProfile(
+      topCore,
+      topSocial,
+      recentResults,
+      newReportCount,
+      userId,
+    );
+
+    if (aiResult.text) {
+      selfid_profile = aiResult.text;
+      trackAISuccess({
+        userId,
+        feature: "profile_summary",
+        model: "deepseek-chat",
+        ...aiResult.tokens,
+        metadata: {
+          input_trait_count: topCore.length + topSocial.length,
+          tag_count: recentResults.length,
+          source: "profile_rebuild",
+        },
+      });
+    } else {
+      trackAIError({
+        userId,
+        feature: "profile_summary",
+        model: "deepseek-chat",
+        errorMessage: "AI returned empty or failed",
+        metadata: { source: "profile_rebuild" },
+      });
+    }
+  } catch (err) {
+    console.warn("[ProfileRebuild] AI summary failed, using fallback:", err);
+  }
+
+  console.log(`[ProfileRebuild] selfid_profile: "${selfid_profile}"`);
+
+  /* ---- 13. Upsert ---- */
 
   const { error: upsertError } = await supabase.from("user_profile").upsert(
     {
@@ -566,7 +630,7 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
   try {
     const { data, error } = await supabase
       .from("reports")
-      .select("id, core_vector, social_vector, normalized_confidence, confidence, raw_ai_response, created_at")
+      .select("id, core_vector, social_vector, normalized_confidence, confidence, raw_ai_response, main_result, created_at")
       .eq("user_id", userId)
       .eq("parse_status", "normalized");
 
@@ -585,7 +649,7 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
   try {
     const { data, error } = await supabase
       .from("quiz_attempts")
-      .select("id, quiz_id, user_vector, profile_weight, created_at")
+      .select("id, quiz_id, final_result_name, user_vector, profile_weight, created_at")
       .eq("user_id", userId)
       .eq("included_in_profile", true)
       .order("created_at", { ascending: false });
@@ -728,11 +792,73 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
     `[ProfileRebuild-Full] fused ${reportsUsed} reports + ${attemptsUsed} quiz_attempts = ${newReportCount} total`,
   );
 
-  /* ---- 7. Generate labels ---- */
+  /* ---- 7. Collect result names for AI context ---- */
 
-  const { selfid_profile, summary } = generateProfileLabel(core_vector, social_vector);
+  const recentResults: string[] = [];
+  for (const r of allReportRows) {
+    const name = r.main_result as string | undefined;
+    if (name) recentResults.push(name);
+  }
+  for (const a of allAttempts) {
+    const name = a.final_result_name as string | undefined;
+    if (name && !recentResults.includes(name)) recentResults.push(name);
+  }
 
-  /* ---- 8. Upsert ---- */
+  /* ---- 8. Generate labels (rule-based fallback) ---- */
+
+  const { selfid_profile: fallbackProfile, summary } = generateProfileLabel(core_vector, social_vector);
+  let selfid_profile = fallbackProfile;
+
+  /* ---- 9. AI summary (best-effort, non-blocking) ---- */
+
+  try {
+    const topCore = Object.entries(core_vector)
+      .sort(([, a], [, b]) => Math.abs(b.value - 50) - Math.abs(a.value - 50))
+      .slice(0, 4)
+      .map(([key, dim]) => ({ label: CORE_CN[key] ?? key, value: Math.round(dim.value) }));
+
+    const topSocial = Object.entries(social_vector)
+      .sort(([, a], [, b]) => Math.abs(b.value - 50) - Math.abs(a.value - 50))
+      .slice(0, 4)
+      .map(([key, dim]) => ({ label: SOCIAL_CN[key] ?? key, value: Math.round(dim.value) }));
+
+    const aiResult = await generateAISelfidProfile(
+      topCore,
+      topSocial,
+      recentResults,
+      newReportCount,
+      userId,
+    );
+
+    if (aiResult.text) {
+      selfid_profile = aiResult.text;
+      trackAISuccess({
+        userId,
+        feature: "profile_summary",
+        model: "deepseek-chat",
+        ...aiResult.tokens,
+        metadata: {
+          input_trait_count: topCore.length + topSocial.length,
+          tag_count: recentResults.length,
+          source: "profile_rebuild_full",
+        },
+      });
+    } else {
+      trackAIError({
+        userId,
+        feature: "profile_summary",
+        model: "deepseek-chat",
+        errorMessage: "AI returned empty or failed",
+        metadata: { source: "profile_rebuild_full" },
+      });
+    }
+  } catch (err) {
+    console.warn("[ProfileRebuild-Full] AI summary failed, using fallback:", err);
+  }
+
+  console.log(`[ProfileRebuild-Full] selfid_profile: "${selfid_profile}"`);
+
+  /* ---- 10. Upsert ---- */
 
   const { error: upsertError } = await supabase.from("user_profile").upsert(
     {
