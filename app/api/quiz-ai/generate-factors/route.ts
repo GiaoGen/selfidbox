@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     quiz_type?: string;
     audience?: string[];
     tone?: string[];
-    results?: { key: string; name: string; description: string; traits: string[] }[];
+    results?: { key: string; name: string; subtitle?: string; description: string; traits: string[] }[];
     factor_count?: number;
     pinned_factors?: { key: string; name: string }[];
   };
@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
     results: (results ?? []).map((r) => ({
       key: r.key,
       name: r.name,
+      subtitle: r.subtitle ?? "",
       description: r.description ?? "",
       traits: r.traits ?? [],
     })),

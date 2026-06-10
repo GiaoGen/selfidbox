@@ -2,79 +2,46 @@
 /*  Prompt builder: generate quiz questions                             */
 /* ------------------------------------------------------------------ */
 
-export const QUIZ_QUESTIONS_SYSTEM = `You are a personality quiz designer building a vector-space quiz engine.
+export const QUIZ_QUESTIONS_SYSTEM = `You are a quiz question designer for a vector-space personality quiz. Output ONLY valid JSON — no markdown, no explanation.
 
-HOW THIS WORKS:
-- The quiz does NOT score points toward specific results.
-- Instead, each option has "factor_effects" — small integer deltas (-3 to +3) that shift the user's position on personality dimensions.
-- After answering all questions, the user's accumulated factor values form a "user vector."
-- This vector is compared (Euclidean distance) to pre-defined "result vectors" to find the closest match.
+HOW IT WORKS:
+Each option has "factor_effects" — integer deltas (-3 to +3) shifting the user's position on personality dimensions. After answering, accumulated values form a user vector, matched to pre-defined result vectors by Euclidean distance.
 
 QUESTION RULES:
-- Scenario-based: everyday situations with vivid imagery.
-- Easy to choose: no overthinking required.
-- Share-friendly: questions and options feel fun and shareable.
-- NOT exam-like, NOT medical, NOT clinical, NOT deeply private.
-- Written in natural Chinese.
-- Each question should probe different combinations of factors.
 
-STYLE CONTROLS: You will receive 4 numeric style parameters (0-100). Adjust your output accordingly:
+1. RESULTS-DRIVEN: Every question MUST help distinguish between provided results. Study the results' names, traits, and descriptions. Design questions that probe DIFFERENCES — if a question doesn't separate at least 2 results, it's useless.
 
-abstractness (0=真实/realistic, 100=抽象/abstract):
-- High values: use metaphorical scenarios, imaginative situations, symbolic questions (e.g. "如果你是一颗漂浮在宇宙中的种子？").
-- Low values: use concrete, everyday, realistic scenarios (e.g. "今天下班后你会做什么？").
-- This affects: question text, option text.
+2. THEME-BINDING: Questions must feel native to THIS quiz, not a generic personality test. Use the quiz title as the creative anchor. Questions unrelated to the quiz theme are invalid.
 
-seriousness (0=搞怪/playful, 100=严肃/serious):
-- High values: use formal, thoughtful question topics; avoid humor (e.g. "你的决策风格是什么？").
-- Low values: use quirky, humorous, unexpected questions (e.g. "你是哪种冰箱人格？").
-- This affects: question text, option text.
+3. ANTI-TEMPLATE — FORBIDDEN generic scenarios (unless directly required by the quiz theme):
+- 周末/休息日做什么、聚会/派对上的行为、旅行/出游带什么、看风景想到什么
+- 朋友难过怎么安慰、中彩票怎么花、理想生活什么样、面对困难怎么办
+- Any scenario that could appear in ANY personality quiz regardless of theme.
+Instead: generate questions that ONLY make sense for this specific quiz.
 
-depth (0=轻松/light, 100=深度/deep):
-- High values: probe values, moral dilemmas, inner conflicts (e.g. "当价值观冲突时你会如何选择？").
-- Low values: stay on surface preferences, light daily choices (e.g. "你喜欢猫还是狗？").
-- This affects: question text, option framing.
+4. OPTION SEMANTICS — factor_effects MUST follow from option meaning, not random:
+- "自己解决" → +independence, -attachment
+- "寻求建议" → -independence, +attachment
+- Each effect must have clear semantic justification.
+- Each option affects 1-3 factors. Values: integers -3 to +3.
 
-poeticness (0=直白/direct, 100=文艺/poetic):
-- High values: use lyrical, imagery-rich option text with literary quality.
-- Low values: use plain, direct option text.
-- This affects: option text wording.
+5. QUESTION DIVERSITY:
+- No two questions probing the same situation or factor combination.
+- Each question covers DIFFERENT factors.
+- ALL factors must be covered across the question set.
 
-OPTION EFFECT RULES:
-- Each option must affect 1–3 factors.
-- Effects are small integers from -3 to +3.
-- Design options so different choices push the user vector in different directions.
-- Use the reference result_vectors to understand what "directions" make sense, but do NOT mention result names in questions/options.
+6. STYLE (0-100, shape question text and option wording):
+- abstractness: 0=concrete/everyday → 100=metaphorical/imaginative
+- seriousness: 0=playful/humorous → 100=serious/formal
+- depth: 0=surface/preferences → 100=values/inner-conflict
+- poeticness: 0=direct/plain → 100=lyrical/imagery-rich
 
-COVERAGE RULE:
-- Every factor must be covered by at least one option across the entire question set.
+7. PINNED QUESTIONS: Never generate questions with similar scenario or theme to pinned questions.
 
-PINNED QUESTIONS: Some questions may already be fixed (pinned) by the user. You will receive their text as reference. Do NOT generate questions that are highly similar in scenario or theme to pinned questions (e.g. if "你更喜欢哪种夜晚？" is pinned, do not generate "晚上你喜欢做什么？").
-
-OUTPUT RULES:
-- Output ONLY valid JSON. No markdown, no code fences, no explanation.
-- Labels must be sequential uppercase letters: A, B, C, D...
-
-Output format:
-{
-  "questions": [
-    {
-      "text": "你更喜欢哪种夜晚？",
-      "description": "",
-      "options": [
-        {
-          "label": "A",
-          "text": "一个人听雨写东西",
-          "factor_effects": {
-            "sensitivity": 2,
-            "imagination": 2,
-            "expressiveness": -1
-          }
-        }
-      ]
-    }
-  ]
-}`;
+OUTPUT:
+{"questions":[{"text":"...","description":"","options":[{"label":"A","text":"...","factor_effects":{"factor_key":2,"another_factor":-1}}]}]}
+- Labels: sequential uppercase A, B, C, D...
+- All text in Chinese except factor keys (English snake_case).`;
 
 export interface BuildQuizQuestionsPromptInput {
   title: string;
@@ -119,40 +86,37 @@ export function buildQuizQuestionsPrompt(
 
   let pinnedSection = "";
   if (pinned_questions && pinned_questions.length > 0) {
-    pinnedSection = `\n以下题目已经被用户固定，不要生成高度相似的新题目：\n${pinned_questions
-      .map((q) => `- ${q.text}`)
+    pinnedSection = `\n已固定的题目（禁止生成场景或主题相似的题目）：\n${pinned_questions
+      .map((q) => `- "${q.text}"`)
       .join("\n")}\n`;
   }
 
-  const styleSection = `\n风格控制参数：\n- 抽象度 = ${a}/100 ${a >= 70 ? "（多使用隐喻场景和想象力）" : a <= 30 ? "（使用真实日常场景）" : "（平衡真实与抽象）"}\n- 严肃度 = ${s}/100 ${s >= 70 ? "（正式、深刻，不搞怪）" : s <= 30 ? "（加入搞怪、娱乐化元素）" : "（平衡严肃与轻松）"}\n- 深度 = ${d}/100 ${d >= 70 ? "（关注价值观、内在冲突）" : d <= 30 ? "（关注表面偏好）" : "（平衡深度与轻松）"}\n- 文艺度 = ${p}/100 ${p >= 70 ? "（使用有画面感、文学感的表达）" : p <= 30 ? "（使用直白、简洁的表达）" : "（平衡文艺与直白）"}\n`;
+  const styleLine =
+    `风格参数：抽象度${a}/100 严肃度${s}/100 深度${d}/100 文艺度${p}/100` +
+    ` | ${a >= 70 ? "偏抽象/隐喻" : a <= 30 ? "偏真实/日常" : "平衡"} ` +
+    `${s >= 70 ? "偏严肃/正式" : s <= 30 ? "偏搞怪/轻松" : "平衡"} ` +
+    `${d >= 70 ? "偏深度/价值观" : d <= 30 ? "偏表面/偏好" : "平衡"} ` +
+    `${p >= 70 ? "偏文艺/画面感" : p <= 30 ? "偏直白/简洁" : "平衡"}`;
 
-  return `设计新一轮题目。这些题目用于一个基于因子向量计算的个性测试。
+  return `标题：「${title}」${hook ? ` 副标题：「${hook}」` : ""}
+类型：${quiz_type} | 受众：${audienceStr} | 语气：${toneStr}
+${styleLine}
 
-测试标题：${title}
-测试副标题：${hook}
-测试类型：${quiz_type}
-目标受众：${audienceStr}
-语气风格：${toneStr}
-${styleSection}
-
-当前结果人格（每个都配有在各因子上的参考值，不要直接用在题目里，只需要用它们了解不同的"方向"）：
-
-结果人格：
+结果人格（题目必须能区分这些结果）：
 ${resultsText}
 
-因子列表：
+因子维度：
 ${factorsText}
 
-上述结果人格对应的参考因子向量：
+参考向量（高=该结果在此因子上的理想位置）：
 ${resultVectorsText}
 ${pinnedSection}
 
-请生成 ${question_count} 道选择题，每题 ${options_per_question} 个选项。要求：
-- 每个 option 影响 1-3 个因子
-- factor_effects 值为 -3 到 +3 之间的整数
-- 所有 ${factorKeys.length} 个因子在整个题目集中都要有涉及
-- 题目要场景化、有画面感、容易选、适合分享
-- 严格按照风格控制参数调整题目的抽象度、严肃度、深度和选项的文艺度${
-    pinned_questions?.length ? "\n- 不要生成与上述固定题目高度相似的新题目" : ""
-  }`;
+指令：
+1. 生成恰好 ${question_count} 道题，每题 ${options_per_question} 个选项
+2. 题目必须与「${title}」主题强相关，禁止使用与主题无关的通用人格测试套路题
+3. 每道题必须能区分至少 2 个不同的结果人格 — 参考上述结果人格和其因子向量
+4. 每道题覆盖不同的因子组合，所有 ${factorKeys.length} 个因子在整个题目集中都要有涉及
+5. option 的 factor_effects 必须根据选项语义推断，不能随机赋值；值 -3 到 +3 整数，每选项影响 1-3 个因子
+6. 题目要有场景感、容易选、适合分享${pinned_questions?.length ? "\n7. 不要生成与已固定题目场景或主题相似的新题目" : ""}`;
 }

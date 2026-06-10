@@ -4,6 +4,7 @@ import {
   QUIZ_RESULT_VECTORS_SYSTEM,
   buildQuizResultVectorsPrompt,
 } from "@/lib/prompts/quiz-result-vectors";
+import { normalizeResultVectors } from "@/lib/quiz-vector-normalize";
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_CHAT_URL = "https://api.deepseek.com/v1/chat/completions";
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     quiz_type?: string;
     audience?: string[];
     tone?: string[];
-    results?: { key: string; name: string; description: string; traits: string[] }[];
+    results?: { key: string; name: string; subtitle?: string; description: string; traits: string[] }[];
     factors?: { key: string; name: string; description?: string }[];
     pinned_vectors?: { key: string; name: string; values: Record<string, number> }[];
   };
@@ -56,37 +57,25 @@ export async function POST(request: NextRequest) {
   const audienceStr = audience?.length ? audience.join("、") : "一般大众";
   const toneStr = tone?.length ? tone.join("、") : "中性";
 
-  const resultsText = results
-    .map(
-      (r) =>
-        `- ${r.name}（key: ${r.key}）：${r.description} 特质：[${(r.traits ?? []).join("、")}]`,
-    )
-    .join("\n");
-
-  const factorsText = factors
-    .map((f) => `- ${f.key}（${f.name}）：${f.description ?? ""}`)
-    .join("\n");
-
-  let pinnedText = "";
-  if (pinned_vectors && pinned_vectors.length > 0) {
-    pinnedText = `\n以下结果向量已经被用户固定，不需要生成：\n${pinned_vectors
-      .map((p) => {
-        const highs = Object.entries(p.values).filter(([, v]) => v >= 80).map(([k]) => k).join("、") || "无";
-        const lows = Object.entries(p.values).filter(([, v]) => v <= 30).map(([k]) => k).join("、") || "无";
-        return `- ${p.name}（${p.key}）：高=[${highs}] 低=[${lows}]（已固定）`;
-      })
-      .join("\n")}\n`;
-  }
-
   const userMessage = buildQuizResultVectorsPrompt({
     title: title ?? "",
     hook,
     quiz_type,
     audienceStr,
     toneStr,
-    resultsText,
-    factorsText,
-    pinnedText,
+    results: (results ?? []).map((r) => ({
+      key: r.key,
+      name: r.name,
+      subtitle: r.subtitle ?? "",
+      description: r.description ?? "",
+      traits: r.traits ?? [],
+    })),
+    factors: (factors ?? []).map((f) => ({
+      key: f.key,
+      name: f.name,
+      description: f.description ?? "",
+    })),
+    pinned_vectors,
   });
 
   try {
@@ -198,16 +187,36 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const resultCount = Object.keys(parsed.result_vectors).length;
+    // ---- Post-processing: similarity check, auto-spread, clamp ----
+    const typedVectors = parsed.result_vectors as Record<string, Record<string, number>>;
+    const normalizeInput = {
+      vectors: typedVectors,
+      results: (results ?? []).map((r) => ({ key: r.key, traits: r.traits ?? [] })),
+      factors: (factors ?? []).map((f) => ({ key: f.key, name: f.name })),
+    };
+    const normalized = normalizeResultVectors(
+      normalizeInput.vectors,
+      normalizeInput.results,
+      normalizeInput.factors,
+    );
+
+    if (normalized.changes.length > 0) {
+      console.log("[quiz-ai:vectors] post-process changes:");
+      for (const c of normalized.changes) {
+        console.log("  " + c);
+      }
+    }
+
+    const resultCount = Object.keys(normalized.vectors).length;
     trackAISuccess({
       userId,
       feature: "quiz_generate_result_vectors",
       model: MODEL,
       ...extractTokens(dsData),
-      metadata: { result_count: resultCount },
+      metadata: { result_count: resultCount, normalizer_changes: normalized.changes.length },
     });
 
-    return NextResponse.json({ result_vectors: parsed.result_vectors });
+    return NextResponse.json({ result_vectors: normalized.vectors });
   } catch (err) {
     console.error("[quiz-ai:vectors] Unexpected error", err);
     trackAIError({
