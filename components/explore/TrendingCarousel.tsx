@@ -113,18 +113,18 @@ export function TrendingCarousel({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <section className="overflow-visible">
-      <div className="overflow-hidden">
+    <section className="overflow-visible bg-transparent">
+      <div className="overflow-hidden bg-transparent">
         <div
           ref={scrollRef}
           onScroll={handleScroll}
           onTransitionEnd={handleTransitionEnd}
-          className="flex overflow-x-auto scrollbar-none snap-x snap-mandatory"
+          className="flex overflow-x-auto scrollbar-none snap-x snap-mandatory bg-transparent"
         >
           {slides.map((child, i) => (
             <div
               key={i}
-              className="w-full shrink-0 snap-center flex justify-center px-2"
+              className="w-full shrink-0 snap-center flex justify-center px-2 bg-transparent"
             >
               {child}
             </div>

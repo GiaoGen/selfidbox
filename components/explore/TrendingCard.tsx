@@ -15,7 +15,7 @@ export function TrendingCard({ site: card, rank }: { site: ExploreCard; rank: nu
   return (
     <Link
       href={card.href}
-      className="group relative flex w-full max-w-[420px] flex-col justify-between overflow-hidden rounded-[32px] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]"
+      className="group relative flex w-full max-w-[420px] flex-col justify-between overflow-hidden rounded-[32px] p-6"
       style={{
         backgroundColor: hasImage ? "transparent" : bgColor,
         color: textColor,
