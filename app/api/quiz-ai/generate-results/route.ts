@@ -4,10 +4,43 @@ import {
   QUIZ_RESULTS_SYSTEM,
   buildQuizResultsPrompt,
 } from "@/lib/prompts/quiz-results";
+import type { ExistingResult } from "@/lib/prompts/quiz-results";
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_CHAT_URL = "https://api.deepseek.com/v1/chat/completions";
 const MODEL = "deepseek-chat";
+
+/* ------------------------------------------------------------------ */
+/*  Merge: preserve non-empty fields from original pinned results      */
+/* ------------------------------------------------------------------ */
+
+function mergePinnedResult(
+  original: ExistingResult,
+  ai: Record<string, unknown>,
+): Record<string, unknown> {
+  const merged = { ...ai };
+  // Name: never override if original has one
+  if (original.name && typeof original.name === "string" && original.name.trim()) {
+    merged.name = original.name;
+  }
+  // Subtitle: keep original if non-empty
+  if (original.subtitle && typeof original.subtitle === "string" && original.subtitle.trim()) {
+    merged.subtitle = original.subtitle;
+  }
+  // Description: keep original if non-empty
+  if (original.description && typeof original.description === "string" && original.description.trim()) {
+    merged.description = original.description;
+  }
+  // Traits: keep original if non-empty array
+  if (original.traits && Array.isArray(original.traits) && original.traits.length > 0) {
+    merged.traits = original.traits;
+  }
+  // share_text: keep original if non-empty
+  if (original.share_text && typeof original.share_text === "string" && original.share_text.trim()) {
+    merged.share_text = original.share_text;
+  }
+  return merged;
+}
 
 export async function POST(request: NextRequest) {
   if (!DEEPSEEK_API_KEY) {
@@ -29,7 +62,7 @@ export async function POST(request: NextRequest) {
     seriousness?: number;
     depth?: number;
     poeticness?: number;
-    pinned_results?: { key: string; name: string; traits: string[] }[];
+    existing_results?: ExistingResult[];
   };
 
   try {
@@ -38,7 +71,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { userId, title, hook, quiz_type, audience, tone, result_count, abstractness, seriousness, depth, poeticness, pinned_results } = body;
+  const { userId, title, hook, quiz_type, audience, tone, result_count, abstractness, seriousness, depth, poeticness, existing_results } = body;
 
   if (!title || typeof title !== "string") {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
@@ -71,7 +104,7 @@ export async function POST(request: NextRequest) {
     seriousness: s,
     depth: d,
     poeticness: p,
-    pinned_results,
+    existing_results,
   });
 
   try {
@@ -167,9 +200,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ---- Merge pinned results: preserve original non-empty fields ----
+    let results = parsed.results as Record<string, unknown>[];
+    const existingMap = new Map<string, ExistingResult>();
+    if (existing_results) {
+      for (const er of existing_results) {
+        existingMap.set(er.key, er);
+      }
+    }
+
+    if (existingMap.size > 0) {
+      results = results.map((ai) => {
+        const key = ai.key as string;
+        const original = existingMap.get(key);
+        if (original && original.is_pinned) {
+          return mergePinnedResult(original, ai);
+        }
+        return ai;
+      });
+
+      // Ensure all pinned results are present in AI output
+      for (const [key, original] of existingMap) {
+        if (original.is_pinned && !results.some((r) => r.key === key)) {
+          console.warn(`[quiz-ai] pinned result "${key}" missing from AI output, adding back`);
+          results.push({
+            key: original.key,
+            name: original.name ?? key,
+            subtitle: original.subtitle ?? "",
+            description: original.description ?? "",
+            traits: original.traits ?? [],
+            share_text: original.share_text ?? "",
+          });
+        }
+      }
+    }
+
     // Validate each result has required fields
-    for (let i = 0; i < parsed.results.length; i++) {
-      const r = parsed.results[i];
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
       if (!r || typeof r !== "object") {
         return NextResponse.json(
           { error: `Result ${i} is not an object` },
@@ -203,10 +271,10 @@ export async function POST(request: NextRequest) {
       feature: "quiz_generate_results",
       model: MODEL,
       ...extractTokens(dsData),
-      metadata: { result_count: parsed.results.length },
+      metadata: { result_count: results.length },
     });
 
-    return NextResponse.json({ results: parsed.results });
+    return NextResponse.json({ results });
   } catch (err) {
     console.error("[quiz-ai] Unexpected error", err);
     trackAIError({

@@ -38,12 +38,23 @@ Instead: generate questions that ONLY make sense for this specific quiz.
 
 7. GENERATE exactly the requested question_count, each with the requested options_per_question.
 
-8. PINNED QUESTIONS: Never generate questions with similar scenario or theme to any pinned question listed in the input.
+8. EXISTING QUESTIONS (partial-fill mode):
+You may receive existing questions with some fields already filled. Each has an "is_pinned" flag.
+- PINNED (is_pinned=true): KEEP all non-empty fields as-is. ONLY fill in fields that are empty/null/missing. For options: if an option has text, keep it and only generate its factor_effects. If the question text is non-empty, NEVER change it.
+- UNPINNED (is_pinned=false): you may regenerate freely.
+- The final output MUST include ALL questions — both pinned (with empty fields filled) and newly generated ones — totaling exactly question_count.
 
 OUTPUT:
 {"questions":[{"text":"...","description":"","options":[{"label":"A","text":"...","factor_effects":{"factor_key":2,"another_factor":-1}}]}]}
 - Labels: sequential uppercase A, B, C, D...
 - All text in Chinese except factor keys (English snake_case).`;
+
+export interface ExistingQuestion {
+  text?: string;
+  description?: string;
+  options?: { label: string; text?: string; factor_effects?: Record<string, number> }[];
+  is_pinned: boolean;
+}
 
 export interface BuildQuizQuestionsPromptInput {
   title: string;
@@ -61,7 +72,7 @@ export interface BuildQuizQuestionsPromptInput {
   factorKeys: string[];
   question_count: number;
   options_per_question: number;
-  pinned_questions?: { text: string }[];
+  existing_questions?: ExistingQuestion[];
 }
 
 export function buildQuizQuestionsPrompt(
@@ -83,14 +94,24 @@ export function buildQuizQuestionsPrompt(
     factorKeys,
     question_count,
     options_per_question,
-    pinned_questions,
+    existing_questions,
   } = input;
 
-  let pinnedBlock = "";
-  if (pinned_questions && pinned_questions.length > 0) {
-    pinnedBlock = `\n已固定的题目（禁止场景或主题相似）：\n${pinned_questions
-      .map((q) => `- "${q.text}"`)
-      .join("\n")}`;
+  let existingBlock = "";
+  if (existing_questions && existing_questions.length > 0) {
+    const lines = existing_questions.map((q) => {
+      const pin = q.is_pinned ? "🔒PINNED" : "🔓unpinned";
+      const hasText = q.text && q.text.trim();
+      const optionCount = q.options?.length ?? 0;
+      const filledOptions = q.options?.filter((o) => o.text && o.text.trim()).length ?? 0;
+      const parts: string[] = [];
+      if (!hasText) parts.push("text");
+      if (optionCount === 0) parts.push("options");
+      if (filledOptions < optionCount && optionCount > 0) parts.push("option factor_effects");
+      const emptyNote = parts.length > 0 ? ` [需补全: ${parts.join(", ")}]` : "";
+      return `- ${pin} "${q.text || "(无text)"}"${emptyNote}`;
+    });
+    existingBlock = `\n已有题目（保留 pinned 的非空字段，只补全缺失字段；不要生成与 pinned 场景或主题相似的题目）：\n${lines.join("\n")}`;
   }
 
   const styleLine =
@@ -111,5 +132,5 @@ ${resultsText}
 ${factorsText}
 
 参考向量（高=该结果在此因子上的理想位置）：
-${resultVectorsText}${pinnedBlock}`;
+${resultVectorsText}${existingBlock}`;
 }

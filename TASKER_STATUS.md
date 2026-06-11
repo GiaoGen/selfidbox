@@ -1,4 +1,17 @@
-# TASKER STATUS
+﻿
+---
+
+## Recent — 2026-06-10
+
+### Prompt Inventory 盘点
+
+1. **新建 PROMPT_INVENTORY.md**：完整盘点所有 AI Prompt（不含代码修改）
+2. **盘点结果**：
+   - 4 个活跃 DeepSeek prompt：quiz-results、quiz-factors、quiz-questions、quiz-result-vectors
+   - 1 个非 AI 模板：profile-summary（lib/prompts/profile-summary.ts，纯计算）
+   - 1 个外部 OCR prompt：FastAPI main.py（不在本仓库内）
+3. **每个 prompt 记录了**：文件位置、调用路由、输入字段、输出 JSON Schema、解析校验逻辑、风险点
+4. **共享风险识别**：未使用 esponse_format: { type: "json_object" }、无重试机制、code fence 剥离粗糙、prompt 字段与代码校验不完全对齐# TASKER STATUS
 
 Last updated: 2026-06-08
 
@@ -1654,3 +1667,4 @@ Last updated: 2026-06-08
 9. Connect Quiz Studio to real AI quiz generation pipeline
 10. Add DB schema migration file to repo
 11. Add error boundaries and loading states
+

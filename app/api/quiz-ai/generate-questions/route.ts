@@ -4,10 +4,81 @@ import {
   QUIZ_QUESTIONS_SYSTEM,
   buildQuizQuestionsPrompt,
 } from "@/lib/prompts/quiz-questions";
+import type { ExistingQuestion } from "@/lib/prompts/quiz-questions";
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_CHAT_URL = "https://api.deepseek.com/v1/chat/completions";
 const MODEL = "deepseek-chat";
+
+/* ------------------------------------------------------------------ */
+/*  Merge: preserve non-empty fields from pinned questions             */
+/* ------------------------------------------------------------------ */
+
+function mergePinnedQuestion(
+  original: ExistingQuestion,
+  ai: Record<string, unknown>,
+): Record<string, unknown> {
+  const merged = { ...ai };
+
+  // Text: never override if original has non-empty text
+  if (original.text && typeof original.text === "string" && original.text.trim()) {
+    merged.text = original.text;
+  }
+  // Description: keep original if non-empty
+  if (
+    original.description &&
+    typeof original.description === "string" &&
+    original.description.trim()
+  ) {
+    merged.description = original.description;
+  }
+
+  // Options: merge option by option
+  const aiOptions = (merged.options as Record<string, unknown>[]) ?? [];
+  const origOptions = original.options ?? [];
+
+  if (origOptions.length > 0) {
+    const mergedOptions: Record<string, unknown>[] = [];
+    for (let i = 0; i < Math.max(aiOptions.length, origOptions.length); i++) {
+      const aiOpt = aiOptions[i] as Record<string, unknown> | undefined;
+      const origOpt = origOptions[i];
+
+      if (!origOpt) {
+        // No original option — use AI
+        if (aiOpt) mergedOptions.push(aiOpt);
+        continue;
+      }
+
+      const mergedOpt: Record<string, unknown> = aiOpt ? { ...aiOpt } : { label: origOpt.label ?? "A" };
+      // Keep original label if present
+      if (origOpt.label) mergedOpt.label = origOpt.label;
+      // Keep original text if non-empty
+      if (origOpt.text && typeof origOpt.text === "string" && origOpt.text.trim()) {
+        mergedOpt.text = origOpt.text;
+        // Keep AI factor_effects if original has none
+        if (
+          origOpt.factor_effects &&
+          typeof origOpt.factor_effects === "object" &&
+          Object.keys(origOpt.factor_effects).length > 0
+        ) {
+          mergedOpt.factor_effects = origOpt.factor_effects;
+        }
+        // else: keep AI's factor_effects (already in mergedOpt from spread)
+      } else {
+        // Original option text is empty — use AI's text and effects
+        if (aiOpt) {
+          mergedOpt.text = aiOpt.text;
+          mergedOpt.factor_effects = aiOpt.factor_effects;
+        }
+      }
+
+      mergedOptions.push(mergedOpt);
+    }
+    merged.options = mergedOptions;
+  }
+
+  return merged;
+}
 
 export async function POST(request: NextRequest) {
   if (!DEEPSEEK_API_KEY) {
@@ -33,7 +104,7 @@ export async function POST(request: NextRequest) {
     result_vectors?: Record<string, Record<string, number>>;
     question_count?: number;
     options_per_question?: number;
-    pinned_questions?: { text: string }[];
+    existing_questions?: ExistingQuestion[];
   };
 
   try {
@@ -58,7 +129,7 @@ export async function POST(request: NextRequest) {
     result_vectors,
     question_count = 8,
     options_per_question = 4,
-    pinned_questions,
+    existing_questions,
   } = body;
 
   if (!title || typeof title !== "string") {
@@ -136,18 +207,7 @@ export async function POST(request: NextRequest) {
     vectorsText = lines.join("\n") || "无";
   }
 
-  const labels = Array.from({ length: opq }, (_, i) =>
-    String.fromCharCode(65 + i),
-  ).join("/");
-
   const factorKeys = factors.map((f) => f.key);
-
-  let pinnedSection = "";
-  if (pinned_questions && pinned_questions.length > 0) {
-    pinnedSection = `\n以下题目已经被用户固定，千万不要生成场景或主题高度相似的题目：\n${pinned_questions
-      .map((p) => `- "${p.text}"`)
-      .join("\n")}\n`;
-  }
 
   const userMessage = buildQuizQuestionsPrompt({
     title,
@@ -165,7 +225,7 @@ export async function POST(request: NextRequest) {
     factorKeys,
     question_count: qc,
     options_per_question: opq,
-    pinned_questions,
+    existing_questions,
   });
 
   try {
@@ -253,10 +313,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ---- Merge pinned questions: preserve original non-empty fields ----
+    let questions = parsed.questions as Record<string, unknown>[];
+
+    // Build map of original text → ExistingQuestion for pinned items
+    const pinnedByText = new Map<string, ExistingQuestion>();
+    if (existing_questions) {
+      for (const eq of existing_questions) {
+        if (eq.is_pinned && eq.text && eq.text.trim()) {
+          pinnedByText.set(eq.text.trim(), eq);
+        }
+      }
+    }
+
+    if (pinnedByText.size > 0) {
+      questions = questions.map((aiQ) => {
+        const aiText = (aiQ.text as string)?.trim();
+        const original = aiText ? pinnedByText.get(aiText) : undefined;
+        if (original) {
+          return mergePinnedQuestion(original, aiQ);
+        }
+        return aiQ;
+      });
+
+      // Ensure all pinned questions are present
+      for (const [text, original] of pinnedByText) {
+        if (!questions.some((q) => (q.text as string)?.trim() === text)) {
+          console.warn(`[quiz-ai:questions] pinned question "${text.slice(0, 30)}..." missing from AI output, adding back`);
+          questions.push({
+            text: original.text ?? "",
+            description: original.description ?? "",
+            options: (original.options ?? []).map((o) => ({
+              label: o.label ?? "A",
+              text: o.text ?? "",
+              factor_effects: o.factor_effects ?? {},
+            })),
+          });
+        }
+      }
+    }
+
     const factorKeySet = new Set(factorKeys);
 
-    for (let qi = 0; qi < parsed.questions.length; qi++) {
-      const q = parsed.questions[qi];
+    for (let qi = 0; qi < questions.length; qi++) {
+      const q = questions[qi];
       if (!q || typeof q !== "object") {
         return NextResponse.json(
           { error: `Question ${qi} is not an object` },
@@ -344,10 +444,10 @@ export async function POST(request: NextRequest) {
       feature: "quiz_generate_questions",
       model: MODEL,
       ...extractTokens(dsData),
-      metadata: { question_count: parsed.questions.length },
+      metadata: { question_count: questions.length },
     });
 
-    return NextResponse.json({ questions: parsed.questions });
+    return NextResponse.json({ questions });
   } catch (err) {
     console.error("[quiz-ai:questions] Unexpected error", err);
     trackAIError({

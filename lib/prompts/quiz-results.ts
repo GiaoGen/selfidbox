@@ -24,6 +24,12 @@ RULES:
 - share_text: memorable 1-liner. Pattern: "我是[name]，你是什么？"
 - Share-worthy and memorable. Not cringe. Not forced poetic. Not empty.
 
+EXISTING RESULTS (partial-fill mode):
+You may receive existing results with some fields already filled. Each result has an "is_pinned" flag.
+- PINNED (is_pinned=true): the user has confirmed this result. KEEP all non-empty fields exactly as-is. ONLY fill in fields that are empty/null/missing. The name field on pinned results must NEVER be changed.
+- UNPINNED (is_pinned=false): you may generate these freely, but the pinned ones serve as thematic reference for the full set.
+- The final output MUST include ALL results — both pinned (with their empty fields filled) and newly generated ones — totaling exactly result_count.
+
 STYLE (0-100, applied to name/description/share_text):
 abstractness: 0=concrete/everyday 100=metaphorical/imaginative
 seriousness: 0=playful/humorous 100=serious/formal
@@ -31,10 +37,18 @@ depth: 0=surface/preferences 100=values/inner-world
 poeticness: 0=direct/plain 100=lyrical/imagery-rich
 Theme anchoring always overrides style.
 
-PINNED RESULTS: When provided in the input, do NOT generate any result with the same key or a semantically/thematically overlapping result. The total set (pinned + new) must feel diverse.
-
 OUTPUT:
 {"results":[{"key":"english_key","name":"主题具体答案","subtitle":"简短副标题","description":"人格化解释描述…","traits":["特质1","特质2","特质3"],"share_text":"分享文案"}]}`;
+
+export interface ExistingResult {
+  key: string;
+  name?: string;
+  subtitle?: string;
+  description?: string;
+  traits?: string[];
+  share_text?: string;
+  is_pinned: boolean;
+}
 
 export interface BuildQuizResultsPromptInput {
   title: string;
@@ -47,7 +61,7 @@ export interface BuildQuizResultsPromptInput {
   seriousness: number;
   depth: number;
   poeticness: number;
-  pinned_results?: { key: string; name: string; traits: string[] }[];
+  existing_results?: ExistingResult[];
 }
 
 export function buildQuizResultsPrompt(
@@ -64,18 +78,30 @@ export function buildQuizResultsPrompt(
     seriousness: s,
     depth: d,
     poeticness: p,
-    pinned_results,
+    existing_results,
   } = input;
 
-  let pinnedBlock = "";
-  if (pinned_results && pinned_results.length > 0) {
-    pinnedBlock = `\n已固定的结果（禁止重复 key 或语义相似）：\n${pinned_results
-      .map((r) => `- ${r.name}（key: ${r.key}，特质：${r.traits.join("、")}）`)
-      .join("\n")}`;
+  let existingBlock = "";
+  if (existing_results && existing_results.length > 0) {
+    const lines = existing_results.map((r) => {
+      const pin = r.is_pinned ? "🔒PINNED" : "🔓unpinned";
+      const empty: string[] = [];
+      if (!r.name) empty.push("name");
+      if (!r.subtitle) empty.push("subtitle");
+      if (!r.description) empty.push("description");
+      if (!r.traits?.length) empty.push("traits");
+      if (!r.share_text) empty.push("share_text");
+      const emptyNote = empty.length > 0 ? ` [需补全: ${empty.join(", ")}]` : "";
+      return `- ${pin} ${r.name || "(无name)"}（key: ${r.key}）${emptyNote}`;
+    });
+    existingBlock = `\n已有结果（保留 pinned 的非空字段，只补全缺失字段）：\n${lines.join("\n")}`;
+    if (existing_results.some((r) => r.is_pinned && !r.name)) {
+      existingBlock += "\n注意：有 pinned result 缺少 name，请根据上下文补全。";
+    }
   }
 
   return `标题：「${title}」${hook ? ` 副标题：「${hook}」` : ""}
 类型：${quiz_type} | 受众：${audienceStr} | 语气：${toneStr}
 风格：抽象度${a}/100 严肃度${s}/100 深度${d}/100 文艺度${p}/100
-生成数量：${result_count}${pinnedBlock}`;
+生成数量：${result_count}（必须恰好返回此数量的 results）${existingBlock}`;
 }

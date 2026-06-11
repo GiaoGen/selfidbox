@@ -580,9 +580,6 @@ function CreatePageContent() {
     setAiError("");
     setResultIndex(0);
 
-    const pinnedResults = quiz.results.filter((r) => r.isPinned);
-    const remaining = Math.max(1, resultCount - pinnedResults.length);
-
     try {
       const res = await fetch("/api/quiz-ai/generate-results", {
         method: "POST",
@@ -599,15 +596,19 @@ function CreatePageContent() {
             .split("/")
             .map((s) => s.trim())
             .filter(Boolean),
-          result_count: remaining,
+          result_count: resultCount,
           abstractness: quiz.abstractness,
           seriousness: quiz.seriousness,
           depth: quiz.depth,
           poeticness: quiz.poeticness,
-          pinned_results: pinnedResults.map((r) => ({
+          existing_results: quiz.results.map((r) => ({
             key: r.id,
-            name: r.name,
-            traits: r.traits,
+            name: r.name || undefined,
+            subtitle: r.subtitle || undefined,
+            description: r.description || undefined,
+            traits: r.traits.length > 0 ? r.traits : undefined,
+            share_text: r.shareText || undefined,
+            is_pinned: r.isPinned,
           })),
         }),
       });
@@ -620,15 +621,16 @@ function CreatePageContent() {
       }
 
       const aiResults = data.results as AIResult[];
-      const newResults = mapAIResults(aiResults);
+      const allResults = mapAIResults(aiResults);
 
       setQuiz((prev) => {
-        const merged = [...pinnedResults, ...newResults];
-        const pinnedIds = new Set(pinnedResults.map((r) => r.id));
+        const pinnedIds = new Set(
+          prev.results.filter((r) => r.isPinned).map((r) => r.id),
+        );
         return {
           ...prev,
-          results: merged,
-          resultVectors: merged.map((r) => {
+          results: allResults,
+          resultVectors: allResults.map((r) => {
             const existing = prev.resultVectors.find((rv) => rv.resultId === r.id);
             const keepExisting = pinnedIds.has(r.id) && existing != null;
             return {
@@ -806,9 +808,6 @@ function CreatePageContent() {
     setAiQuestionsLoading(true);
     setAiQuestionsError("");
 
-    const pinnedQuestions = quiz.questions.filter((q) => q.isPinned);
-    const remaining = Math.max(1, questionCount - pinnedQuestions.length);
-
     try {
       const res = await fetch("/api/quiz-ai/generate-questions", {
         method: "POST",
@@ -844,10 +843,17 @@ function CreatePageContent() {
           result_vectors: Object.fromEntries(
             quiz.resultVectors.map((rv) => [rv.resultId, rv.values]),
           ),
-          question_count: remaining,
+          question_count: questionCount,
           options_per_question: optionsPerQuestion,
-          pinned_questions: pinnedQuestions.map((q) => ({
-            text: q.text,
+          existing_questions: quiz.questions.map((q) => ({
+            text: q.text || undefined,
+            description: undefined,
+            options: q.options.map((o) => ({
+              label: o.label,
+              text: o.text || undefined,
+              factor_effects: Object.keys(o.effects).length > 0 ? o.effects : undefined,
+            })),
+            is_pinned: q.isPinned,
           })),
         }),
       });
@@ -869,7 +875,7 @@ function CreatePageContent() {
         }[];
       }[];
 
-      const newQuestions: Question[] = aiQuestions.map((q, qi) => ({
+      const allQuestions: Question[] = aiQuestions.map((q, qi) => ({
         id: `q_${Date.now()}_${qi}`,
         text: q.text,
         isPinned: false,
@@ -882,7 +888,7 @@ function CreatePageContent() {
 
       setQuiz((prev) => ({
         ...prev,
-        questions: [...pinnedQuestions, ...newQuestions],
+        questions: allQuestions,
       }));
       setQuestionIndex(0);
     } catch {
