@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Library, CircleHelp, Check, AlertTriangle, AlertCircle, Minus } from "lucide-react";
-import { TopNavbar } from "@/components/layout/TopNavbar";
 import { QuizMetaCard } from "@/components/quiz-engine/QuizMetaCard";
 import { QuizStyleControls } from "@/components/quiz-engine/QuizStyleControls";
 import { ResultCard } from "@/components/quiz-engine/ResultCard";
@@ -948,8 +947,6 @@ function CreatePageContent() {
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <TopNavbar />
-
         {/* ── Hero ── */}
         <section
           className="overflow-hidden rounded-[36px] p-6 sm:p-8 shadow-[0_8px_30px_rgba(10,10,10,0.04)]"

@@ -52,35 +52,6 @@ export async function CategoryPage({ category }: { category: string }) {
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <section className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
-        <nav className="flex items-center justify-between rounded-full bg-[var(--surface-soft)] p-2">
-          <Link
-            href="/explore"
-            className="rounded-full px-4 py-2 text-sm font-semibold"
-          >
-            SelfIDBox
-          </Link>
-          <div className="flex items-center gap-1">
-            <Link
-              href="/profile"
-              className="rounded-full px-4 py-2 text-sm font-semibold"
-            >
-              个人图谱
-            </Link>
-            <Link
-              href="/create"
-              className="rounded-full px-4 py-2 text-sm font-semibold"
-            >
-              Quiz Studio
-            </Link>
-            <Link
-              href="/explore"
-              className="rounded-full bg-[var(--ink)] px-4 py-2 text-sm font-semibold text-white"
-            >
-              探索全部
-            </Link>
-          </div>
-        </nav>
-
         <div className="rounded-[32px] bg-[var(--surface-card)] p-6 sm:p-8 lg:p-10">
           <p className="text-sm font-semibold text-[var(--muted)]">
             Explore / {current?.label ?? category}

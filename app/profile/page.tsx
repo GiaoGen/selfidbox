@@ -3,7 +3,6 @@ import { getUserProfile } from "@/lib/user-profile-db";
 import { ProfileRadar, type RadarPoint } from "@/components/ProfileRadar";
 import { ProfileInteractions } from "@/components/profile/ProfileInteractions";
 import { ScreenshotReportUploader } from "@/components/profile/ScreenshotReportUploader";
-import { TopNavbar } from "@/components/layout/TopNavbar";
 import { ProfileHeaderActions } from "@/components/profile/ProfileHeaderActions";
 import { createClient } from "@/lib/supabase/server";
 
@@ -91,7 +90,10 @@ export default async function ProfilePage() {
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
-        <TopNavbar rightSlot={<ProfileHeaderActions />} />
+        {/* Auth actions — relocated from old top navbar */}
+        <div className="flex justify-end">
+          <ProfileHeaderActions />
+        </div>
 
         {hasProfile ? (
           <ProfileInteractions

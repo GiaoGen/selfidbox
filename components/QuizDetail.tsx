@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ExploreTopNavbar } from "@/components/layout/ExploreTopNavbar";
 import type { QuizDetailRow, QuizDetailRelatedRow } from "@/lib/quizzes-db";
 import { accentFromId } from "@/lib/explore/types";
 import type { AccentKey } from "@/lib/explore/types";
@@ -45,8 +44,6 @@ export function QuizDetail({
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
-        <ExploreTopNavbar />
-
         {/* Hero */}
         <section
           className={`overflow-hidden rounded-[36px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.08)] sm:p-8 ${accentClasses[accent]}`}

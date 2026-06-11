@@ -1,11 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search } from "lucide-react";
 import type { ExploreCard } from "@/lib/explore/types";
-import { TopNavbar } from "@/components/layout/TopNavbar";
 import { TrendingCarousel } from "./TrendingCarousel";
 import { TrendingCard } from "./TrendingCard";
 import { TestCard } from "@/app/explore/_components/test-card";
@@ -91,6 +89,7 @@ type ExploreClientProps = {
   rangePills: { id: Range; label: string }[];
   initialTab: string;
   initialRange: Range;
+  initialSearch?: string;
 };
 
 /* ------------------------------------------------------------------ */
@@ -104,14 +103,23 @@ export function ExploreClient({
   rangePills,
   initialTab,
   initialRange,
+  initialSearch,
 }: ExploreClientProps) {
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [activeRange, setActiveRange] = useState<Range>(initialRange);
-  const [searching, setSearching] = useState(false);
-  const [query, setQuery] = useState("");
+  const [searching, setSearching] = useState(!!initialSearch);
+  const [query, setQuery] = useState(initialSearch || "");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // When navigated to via navbar search, auto-open dropdown
+  useEffect(() => {
+    if (initialSearch) {
+      setSearching(true);
+      setQuery(initialSearch);
+    }
+  }, [initialSearch]);
 
   /* ---- filtered data (instant, no network) ---- */
   const filtered = useMemo(() => {
@@ -149,12 +157,6 @@ export function ExploreClient({
     syncURL(activeTab, range);
   }
 
-  function enterSearch() {
-    setSearching(true);
-    setQuery("");
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }
-
   function exitSearch() {
     setSearching(false);
     setQuery("");
@@ -163,53 +165,9 @@ export function ExploreClient({
   return (
     <>
       {/* ================================================================ */}
-      {/*  Nav bar + search dropdown                                        */}
+      {/*  Search dropdown                                                  */}
       {/* ================================================================ */}
       <div className="relative">
-        {searching ? (
-          <nav className="relative z-10 flex items-center rounded-full bg-[var(--surface-soft)] p-2">
-            <button
-              type="button"
-              onClick={exitSearch}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--muted)] transition hover:bg-white hover:text-[var(--ink)]"
-              aria-label="返回"
-            >
-              ←
-            </button>
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Escape") exitSearch(); }}
-              placeholder="搜索测试名称、标签、分类..."
-              className="min-w-0 flex-1 bg-transparent px-2 text-sm outline-none placeholder:text-[var(--muted)]"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="shrink-0 rounded-full px-2 text-xs text-[var(--muted)] hover:text-[var(--ink)]"
-              >
-                清除
-              </button>
-            )}
-          </nav>
-        ) : (
-          <TopNavbar
-            rightSlot={
-              <button
-                type="button"
-                onClick={enterSearch}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--ink)] shadow-[0_2px_10px_rgba(10,10,10,0.05)] transition hover:bg-[var(--surface-strong)]"
-                aria-label="搜索"
-              >
-                <Search size={16} />
-                <span className="hidden sm:inline">搜索</span>
-              </button>
-            }
-          />
-        )}
-
         {/* ---- Search dropdown ---- */}
         {showDropdown && (
           <div className="absolute left-0 right-0 top-full z-30 mt-2 max-h-[60vh] overflow-y-auto rounded-[24px] border border-[var(--hairline)] bg-white shadow-[0_18px_50px_rgba(10,10,10,0.12)]">

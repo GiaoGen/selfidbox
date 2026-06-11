@@ -55,7 +55,7 @@ function getTrending(cards: ExploreCard[]): ExploreCard[] {
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; range?: string }>;
+  searchParams: Promise<{ tab?: string; range?: string; search?: string }>;
 }) {
   const sp = await searchParams;
 
@@ -107,6 +107,7 @@ export default async function ExplorePage({
           rangePills={rangePills}
           initialTab={sp.tab || "hot"}
           initialRange={parseRange(sp.range)}
+          initialSearch={sp.search || ""}
         />
       </section>
     </main>
