@@ -40,26 +40,25 @@ export function ProfileInteractions({
 
   return (
     <>
-      <CoverFlowSources initialSources={initialSources} />
-
+      {/* One-line personality summary — first visual priority */}
       {title && (
-        <>
-          {/* Divider */}
-          <hr className="border-0 border-t border-[var(--ink)]/8" />
-
-          {/* One-line personality summary */}
-          <div
-            onClick={onSummaryClick}
-            className="cursor-pointer rounded-3xl bg-[var(--surface-card)] px-4 py-3 text-center transition active:scale-[0.98] hover:brightness-[0.97]"
+        <div
+          onClick={onSummaryClick}
+          className="cursor-pointer rounded-3xl bg-[var(--surface-card)] px-4 py-3 text-center transition active:scale-[0.98] hover:brightness-[0.97]"
+        >
+          <p
+            className={`truncate font-semibold tracking-wide text-[var(--ink)]/80 ${fontClass}`}
           >
-            <p
-              className={`truncate font-semibold tracking-wide text-[var(--ink)]/80 ${fontClass}`}
-            >
-              {title}
-            </p>
-          </div>
-        </>
+            {title}
+          </p>
+        </div>
       )}
+
+      {/* Divider */}
+      <hr className="border-0 border-t border-[var(--ink)]/8" />
+
+      {/* Cover Flow — second visual priority */}
+      <CoverFlowSources initialSources={initialSources} />
 
       {sphereOpen && !loading && (
         <WordSphereModal

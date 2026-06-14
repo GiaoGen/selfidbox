@@ -8,14 +8,14 @@
 export const PROFILE_SUMMARY_SYSTEM = `You are a personality profile writer. Output ONLY one sentence — no markdown, no quotes, no explanation.
 
 RULES:
-- Write ONE sentence only, ≤40 Chinese characters.
-- Based on the provided top traits and recent activity context.
+- Write ONE sentence only, ≤35 Chinese characters.
+- The PRIMARY input is the user's 16-dimension personality vector (core + social). This represents their LONG-TERM personality profile built from multiple data sources over time. Your summary MUST reflect these vectors first and foremost.
+- Recent quiz results are provided only as light context — they are individual data points, NOT the main personality signal. DO NOT write a summary based on the most recent quiz result. The summary should describe enduring personality tendencies, not transient test outcomes.
 - Tone: warm, slightly poetic, memorable — like a personal tagline.
 - NOT medical, NOT diagnostic, NOT clinical. Never say "你患有" or "你有障碍" or "你表现出".
 - NOT forced poetic, NOT cringe, NOT empty flattery.
-- Pattern: "你像[metaphor]，[trait summary]..." or "[trait summary]，[memorable insight]."
+- Pattern: describe the person's core personality tendencies revealed by the vectors. Example: "你是一个理性而敏感的人，总是在独立思考和情感共鸣之间寻找平衡。"
 - Example: "你像一颗安静运转的行星，理性、敏感，也保留自己的轨道。"
-- Example: "外表松弛的橘猫人格，内在却有热烈的探索欲和秩序感。"
 - All text in Chinese.`;
 
 export interface BuildProfileSummaryPromptInput {
@@ -55,18 +55,20 @@ export function buildProfileSummaryPrompt(
       ? recentResults.map((r) => `- ${r}`).join("\n")
       : "（暂无）";
 
-  return `生成一句人格摘要。
+  return `生成一句人格摘要，描述这个人的长期人格倾向。
 
-核心特质：
+⚠️ 最重要：以下16维人格向量是核心输入。摘要必须基于这些向量反映长期人格，不要基于最近一次Quiz结果。
+
+核心人格向量（8维）：
 ${coreBlock}
 
-社交表达特质：
+社会表达向量（8维）：
 ${socialBlock}
 
-近期结果人格：
-${resultsBlock}
+以上共16个维度，来自${reportCount}条数据的长期聚合。
 
-数据量：${reportCount} 条`;
+参考上下文（次要，仅作为风格参考，不要直接描述这些结果）：
+${resultsBlock}`;
 }
 
 /* ------------------------------------------------------------------ */
