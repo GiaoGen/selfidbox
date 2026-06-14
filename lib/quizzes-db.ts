@@ -1,6 +1,8 @@
 import { randomBytes } from "crypto";
+import { cache } from "react";
 import { supabase } from "./supabase";
 import { DEV_USER_ID } from "./dev-user";
+import { keyedSingleQuery } from "./cache";
 import type {
   QuizMeta,
   Result,
@@ -23,7 +25,7 @@ import type { AdminCategoryRow } from "./admin-db";
 /*  Read: get full quiz by slug                                        */
 /* ------------------------------------------------------------------ */
 
-export async function getQuizBySlug(slug: string): Promise<QuizRuntimeData | null> {
+export const getQuizBySlug = cache(async (slug: string): Promise<QuizRuntimeData | null> => {
   const { data: quiz, error: quizError } = await supabase
     .from("quizzes")
     .select("id, slug, title, hook, quiz_type, status, attempt_count")
@@ -104,7 +106,7 @@ export async function getQuizBySlug(slug: string): Promise<QuizRuntimeData | nul
     results: (resultRows ?? []) as QuizResultData[],
     questions,
   };
-}
+});
 
 /* ------------------------------------------------------------------ */
 /*  Read: quiz detail (for /quizzes/[slug] detail page)                 */
@@ -126,9 +128,9 @@ export interface QuizDetailRow {
   category: AdminCategoryRow | null;
 }
 
-export async function getQuizDetail(
-  slug: string,
-): Promise<QuizDetailRow | null> {
+export const getQuizDetail = keyedSingleQuery(
+  "getQuizDetail",
+  async (slug: string): Promise<QuizDetailRow | null> => {
   const { data, error } = await supabase
     .from("quizzes")
     .select("*")
@@ -152,7 +154,9 @@ export async function getQuizDetail(
   }
 
   return quiz;
-}
+},
+  60, // 1 min TTL
+);
 
 export interface QuizDetailRelatedRow {
   id: string;

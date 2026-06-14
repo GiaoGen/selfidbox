@@ -40,12 +40,18 @@ function zAt(n: number)       { return Math.max(1, Math.round(10 - n * 3)); }
 
 /* ================================================================== */
 
-export function CoverFlowSources() {
+export function CoverFlowSources({
+  initialSources,
+}: {
+  initialSources?: ProfileSourceEntry[];
+}) {
   /* ---- Sources ---- */
-  const [sources, setSources] = useState<ProfileSourceEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const ssrProvided = initialSources !== undefined;
+  const [sources, setSources] = useState<ProfileSourceEntry[]>(initialSources ?? []);
+  const [loading, setLoading] = useState(!ssrProvided);
 
   useEffect(() => {
+    if (ssrProvided) return; // already have data from SSR
     let cancelled = false;
     async function fetchSources() {
       try {
@@ -57,7 +63,7 @@ export function CoverFlowSources() {
     }
     fetchSources();
     return () => { cancelled = true; };
-  }, []);
+  }, [ssrProvided]);
 
   /* ---- Filter: quiz + image_url only ---- */
   const cards = sources.filter(

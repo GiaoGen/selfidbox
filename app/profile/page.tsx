@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getUserProfile } from "@/lib/user-profile-db";
+import { getUserProfile, getProfileSources, type ProfileSourceEntry } from "@/lib/user-profile-db";
 import { ProfileRadar, type RadarPoint } from "@/components/ProfileRadar";
 import { ProfileInteractions } from "@/components/profile/ProfileInteractions";
 import { ScreenshotReportUploader } from "@/components/profile/ScreenshotReportUploader";
@@ -76,7 +76,10 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
-  const profile = await getUserProfile(user.id);
+  const [profile, sources] = await Promise.all([
+    getUserProfile(user.id),
+    getProfileSources(user.id),
+  ]);
   const hasProfile =
     profile != null &&
     (profile.selfid_profile != null || profile.summary != null);
@@ -93,6 +96,7 @@ export default async function ProfilePage() {
           <ProfileInteractions
             title={profile!.selfid_profile ?? ""}
             description={profile!.summary ?? ""}
+            initialSources={sources}
           />
         ) : (
           <>

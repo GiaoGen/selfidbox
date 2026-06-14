@@ -1,7 +1,6 @@
 import { supabase } from "./supabase";
 import type { TestSite, TestAccent } from "./test-sites";
-import { listQuery, keyedSingleQuery } from "./cache";
-import { withTimeout } from "./supabase-timeout";
+import { listQuery, keyedSingleQuery, keyedObjectQuery } from "./cache";
 
 /* ------------------------------------------------------------------ */
 /*  Supabase row shapes                                                */
@@ -178,37 +177,36 @@ export const getTestSiteBySlug = keyedSingleQuery(
   60, // 1 min
 );
 
-export async function getTestSitesByCategory(categorySlug: string) {
-  return withTimeout(
-    async () => {
-      const { data: category, error: categoryError } = await supabase
-        .from("test_categories")
-        .select("id, slug, name, description")
-        .eq("slug", categorySlug)
-        .eq("status", "published")
-        .single();
+export const getTestSitesByCategory = keyedObjectQuery(
+  "getTestSitesByCategory",
+  async (categorySlug: string) => {
+    const { data: category, error: categoryError } = await supabase
+      .from("test_categories")
+      .select("id, slug, name, description")
+      .eq("slug", categorySlug)
+      .eq("status", "published")
+      .single();
 
-      if (categoryError) throw categoryError;
-      if (!category) return { category: null, sites: [] as TestSiteRow[] };
+    if (categoryError) throw categoryError;
+    if (!category) return { category: null, sites: [] as TestSiteRow[] };
 
-      const { data: sites, error: sitesError } = await supabase
-        .from("test_sites")
-        .select(`
-          *,
-          category:test_categories(*)
-        `)
-        .eq("category_id", (category as CategoryRow).id)
-        .eq("status", "published")
-        .order("featured", { ascending: false })
-        .order("sort_order", { ascending: true });
+    const { data: sites, error: sitesError } = await supabase
+      .from("test_sites")
+      .select(`
+        *,
+        category:test_categories(*)
+      `)
+      .eq("category_id", (category as CategoryRow).id)
+      .eq("status", "published")
+      .order("featured", { ascending: false })
+      .order("sort_order", { ascending: true });
 
-      if (sitesError) throw sitesError;
-      return { category: category as CategoryRow, sites: (sites as TestSiteRow[]) ?? [] };
-    },
-    { category: null, sites: [] as TestSiteRow[] },
-    "getTestSitesByCategory",
-  );
-}
+    if (sitesError) throw sitesError;
+    return { category: category as CategoryRow, sites: (sites as TestSiteRow[]) ?? [] };
+  },
+  { category: null, sites: [] as TestSiteRow[] },
+  60, // 1 min TTL
+);
 
 /* ------------------------------------------------------------------ */
 /*  Click tracking                                                     */

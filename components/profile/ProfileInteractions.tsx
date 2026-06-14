@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { CoverFlowSources } from "@/components/profile/CoverFlowSources";
 import { WordSphereModal } from "@/components/profile/WordSphereModal";
 import { useWordCloud } from "@/components/profile/useWordCloud";
+import type { ProfileSourceEntry } from "@/lib/user-profile-db";
 
 /* ------------------------------------------------------------------ */
 /*  Dynamic font size by character length (mobile / desktop)            */
@@ -21,9 +22,11 @@ function summaryFontClass(len: number): string {
 
 export function ProfileInteractions({
   title,
+  initialSources,
 }: {
   title: string;
   description: string;
+  initialSources?: ProfileSourceEntry[];
 }) {
   const [sphereOpen, setSphereOpen] = useState(false);
   const { words, loading, fetchWords } = useWordCloud();
@@ -37,7 +40,7 @@ export function ProfileInteractions({
 
   return (
     <>
-      <CoverFlowSources />
+      <CoverFlowSources initialSources={initialSources} />
 
       {title && (
         <>
