@@ -43,6 +43,10 @@ function mergePinnedResult(
   if (original.image_url && typeof original.image_url === "string" && original.image_url.trim()) {
     merged.image_url = original.image_url;
   }
+  // color: never override if original has one
+  if (original.color && typeof original.color === "string" && original.color.trim()) {
+    merged.color = original.color;
+  }
   return merged;
 }
 
@@ -235,6 +239,7 @@ export async function POST(request: NextRequest) {
             traits: original.traits ?? [],
             share_text: original.share_text ?? "",
             image_url: original.image_url ?? "",
+            color: original.color ?? "",
           });
         }
       }

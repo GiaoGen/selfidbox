@@ -22,6 +22,7 @@ RULES:
 - description: connect the theme member to personality. Pattern: "你像[theme result]，[what this says about you as a person]..."
 - traits: 3-5 Chinese adjectives for the personality behind this result.
 - share_text: memorable 1-liner. Pattern: "我是[name]，你是什么？"
+- color: a HEX color code that visually represents this result. The color MUST be semantically tied to the result name, mood, traits, and description. Examples: 海王星 → #2F5D8C (deep blue), 橘猫 → #D98A32 (warm orange), 旧钢琴 → #5A4638 (brown wood), 太阳 → #F2B84B (golden yellow), 森林 → #3A5C3A (forest green), 暴风雪 → #C8D8E8 (icy blue-white). MUST be a valid 6-digit HEX with # prefix. NO color names, NO rgb(), NO transparency.
 - Share-worthy and memorable. Not cringe. Not forced poetic. Not empty.
 
 EXISTING RESULTS (partial-fill mode):
@@ -38,7 +39,7 @@ poeticness: 0=direct/plain 100=lyrical/imagery-rich
 Theme anchoring always overrides style.
 
 OUTPUT:
-{"results":[{"key":"english_key","name":"主题具体答案","subtitle":"简短副标题","description":"人格化解释描述…","traits":["特质1","特质2","特质3"],"share_text":"分享文案"}]}`;
+{"results":[{"key":"english_key","name":"主题具体答案","subtitle":"简短副标题","description":"人格化解释描述…","traits":["特质1","特质2","特质3"],"share_text":"分享文案","color":"#AABBCC"}]}`;
 
 export interface ExistingResult {
   key: string;
@@ -48,6 +49,7 @@ export interface ExistingResult {
   traits?: string[];
   share_text?: string;
   image_url?: string | null;
+  color?: string | null;
   is_pinned: boolean;
 }
 

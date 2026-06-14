@@ -461,7 +461,7 @@ function CreatePageContent() {
         ...prev,
         results: [
           ...prev.results,
-          { id, name: "新结果", description: "", traits: [], isPinned: false },
+          { id, name: "新结果", description: "", traits: [], isPinned: false, color: "#FFF5E6" },
         ],
         resultVectors: [
           ...prev.resultVectors,
@@ -635,6 +635,7 @@ function CreatePageContent() {
             traits: r.traits.length > 0 ? r.traits : undefined,
             share_text: r.shareText || undefined,
             image_url: r.image_url || undefined,
+            color: r.color || undefined,
             is_pinned: r.isPinned,
           })),
         }),
@@ -649,12 +650,13 @@ function CreatePageContent() {
 
       const aiResults = data.results as AIResult[];
       const allResults = mapAIResults(aiResults).map((newResult) => {
-        // Preserve image_url from existing result with the same key
+        // Preserve image_url and color from existing result with the same key
         const existing = quiz.results.find((r) => r.id === newResult.id);
-        if (existing?.image_url) {
-          return { ...newResult, image_url: existing.image_url };
-        }
-        return newResult;
+        if (!existing) return newResult;
+        const merged = { ...newResult };
+        if (existing.image_url) merged.image_url = existing.image_url;
+        if (existing.color) merged.color = existing.color;
+        return merged;
       });
 
       setQuiz((prev) => {
@@ -1113,7 +1115,7 @@ function CreatePageContent() {
                     onChange={(r) => updateResult(i, r)}
                     onDelete={results.length > 1 ? () => { deleteResult(i); setResultIndex((idx) => Math.max(0, Math.min(idx, results.length - 2))); } : undefined}
                     onTogglePin={() => togglePin(i)}
-                    cardColor={resultColors[i % resultColors.length]}
+                    cardColor={result.color}
                   />
                 );
               })()}

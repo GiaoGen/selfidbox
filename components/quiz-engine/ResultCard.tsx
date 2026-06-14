@@ -1,20 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Pin, PinOff, Image, Loader } from "lucide-react";
+import { Pin, PinOff, Image, Loader, Palette } from "lucide-react";
 import type { Result } from "@/lib/mock-quiz-engine";
 import { uploadResultImage } from "@/lib/image-upload";
 import { InlineEditableInput } from "@/components/quiz-studio/InlineEditableInput";
 import { InlineEditableTextarea } from "@/components/quiz-studio/InlineEditableTextarea";
 import { EditableChipList } from "@/components/quiz-studio/EditableChipList";
 
-const COLORS = [
-  "bg-[#ffb084] text-[#0a0a0a]",
-  "bg-[#ff4d8b] text-white",
-  "bg-[#b8a4ed] text-[#0a0a0a]",
-  "bg-[#e8b94a] text-[#0a0a0a]",
-  "bg-[#1a3a3a] text-white",
-];
+const DEFAULT_CREAM = "#FFF5E6";
 
 type Props = {
   result: Result;
@@ -33,32 +27,39 @@ function isLight(hex: string): boolean {
 }
 
 export function ResultCard({ result, index, onChange, onDelete, onTogglePin, cardColor }: Props) {
-  const hasColor = !!cardColor;
-  const darkText = hasColor && isLight(cardColor!);
-  const colorClass = hasColor
-    ? ""
-    : COLORS[index % COLORS.length];
-  const cardStyle = hasColor
-    ? { backgroundColor: cardColor, color: darkText ? "var(--ink)" : "#ffffff" } as React.CSSProperties
-    : undefined;
+  const bgColor = cardColor || result.color || DEFAULT_CREAM;
+  const darkText = isLight(bgColor);
+  const cardStyle = { backgroundColor: bgColor, color: darkText ? "var(--ink)" : "#ffffff" } as React.CSSProperties;
 
   const isEditing = !!onChange;
   const update = onChange ?? (() => {});
   const pinned = result.isPinned;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const colorInputRef = useRef<HTMLInputElement>(null);
   const [uploadState, setUploadState] = useState<"idle" | "loading" | "error">("idle");
 
   const btnBase = "flex h-7 w-7 items-center justify-center rounded-full transition-all";
-  const btnVisible = hasColor
-    ? darkText ? "bg-black/10 text-[var(--ink)]/70 hover:bg-black/20 hover:text-[var(--ink)]" : "bg-white/20 text-current/80 hover:bg-white/35 hover:text-current"
+  const btnVisible = darkText
+    ? "bg-black/10 text-[var(--ink)]/70 hover:bg-black/20 hover:text-[var(--ink)]"
     : "bg-white/20 text-current/80 hover:bg-white/35 hover:text-current";
-  const pinActive = hasColor
-    ? darkText ? "bg-black/15 text-[var(--ink)]" : "bg-white/30 text-current"
+  const pinActive = darkText
+    ? "bg-black/15 text-[var(--ink)]"
     : "bg-white/30 text-current";
 
   function handleUploadClick() {
     fileInputRef.current?.click();
+  }
+
+  function handleColorClick() {
+    colorInputRef.current?.click();
+  }
+
+  function handleColorChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const newColor = e.target.value;
+    if (newColor && /^#[0-9A-Fa-f]{6}$/.test(newColor)) {
+      update({ ...result, color: newColor });
+    }
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -77,12 +78,12 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin, car
     }
   }
 
-  const opacityClass = hasColor ? (darkText ? "opacity-50" : "opacity-60") : "opacity-50";
-  const descClass = hasColor ? (darkText ? "opacity-70" : "opacity-80") : "opacity-80";
+  const opacityClass = darkText ? "opacity-50" : "opacity-60";
+  const descClass = darkText ? "opacity-70" : "opacity-80";
 
   return (
     <article
-      className={`rounded-[28px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.07)] ${colorClass} relative group/card transition-shadow ${
+      className={`rounded-[28px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.07)] relative group/card transition-shadow ${
         pinned ? "ring-2 ring-white/40 shadow-[0_0_24px_rgba(255,255,255,0.18)]" : ""
       }`}
       style={cardStyle}
@@ -90,6 +91,23 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin, car
       <div className="absolute right-3 top-3 flex items-center gap-0.5">
         {isEditing && (
           <>
+            {/* Color picker */}
+            <input
+              ref={colorInputRef}
+              type="color"
+              value={result.color || DEFAULT_CREAM}
+              onChange={handleColorChange}
+              className="absolute opacity-0 w-0 h-0 pointer-events-none"
+            />
+            <button
+              type="button"
+              onClick={handleColorClick}
+              className={`${btnBase} ${btnVisible}`}
+              title="选择颜色"
+            >
+              <Palette size={13} />
+            </button>
+
             <input
               ref={fileInputRef}
               type="file"

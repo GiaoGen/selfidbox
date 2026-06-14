@@ -38,6 +38,7 @@ export interface Result {
   shareText?: string;
   isPinned: boolean;
   image_url?: string;
+  color?: string;         // HEX color from AI or user picker
 }
 
 export interface AIResult {
@@ -47,6 +48,7 @@ export interface AIResult {
   description: string;
   traits: string[];
   share_text?: string;
+  color?: string;         // HEX — AI-generated, semantically tied to result
 }
 
 export function mapAIResults(aiResults: AIResult[]): Result[] {
@@ -58,6 +60,7 @@ export function mapAIResults(aiResults: AIResult[]): Result[] {
     traits: ai.traits,
     shareText: ai.share_text,
     isPinned: false,
+    color: ai.color,
   }));
 }
 
