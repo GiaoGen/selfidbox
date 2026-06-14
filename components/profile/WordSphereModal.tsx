@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import type { WordCloudWord } from "@/components/profile/useWordCloud";
 
 /* ================================================================== */
 /*  Pad words to fill the sphere — repeat real words as needed          */
 /* ================================================================== */
 
-const PAD_TARGET = 40;
+const PAD_TARGET = 28;
 const FONT_MIN = 11;
 const FONT_MAX = 28;
 const REPEAT_FONT_MIN = 13;
@@ -98,9 +98,10 @@ function buildWords(words: WordCloudWord[], padded: PaddedWord[]): WordPoint[] {
 
 /* ================================================================== */
 /*  Background stardust particles — scattered around the sphere          */
+/*  Desktop: 16 particles, single-layer glow. Mobile: disabled (0).      */
 /* ================================================================== */
 
-const BG_PARTICLE_COUNT = 36;
+const BG_DESKTOP_COUNT = 16;
 const BG_FONT_MIN = 8;
 const BG_FONT_MAX = 16;
 
@@ -117,10 +118,10 @@ interface BgParticle {
  * Generate background particles placed outside the central sphere area.
  * The exclusion zone is a circle centered at (50%, 50%) with a generous radius.
  */
-function generateBgParticles(words: WordCloudWord[]): BgParticle[] {
-  if (words.length === 0) return [];
+function generateBgParticles(words: WordCloudWord[], count: number): BgParticle[] {
+  if (words.length === 0 || count <= 0) return [];
 
-  const EXCLUSION_RADIUS_PCT = 26; // percentage of viewport — keeps particles away from sphere
+  const EXCLUSION_RADIUS_PCT = 26;
 
   function isInsideExclusion(x: number, y: number): boolean {
     const dx = x - 50;
@@ -128,35 +129,33 @@ function generateBgParticles(words: WordCloudWord[]): BgParticle[] {
     return Math.sqrt(dx * dx + dy * dy) < EXCLUSION_RADIUS_PCT;
   }
 
-  // Generate candidate positions in 8 regions (4 corners + 4 edges)
   const regions: { xRange: [number, number]; yRange: [number, number] }[] = [
-    { xRange: [4, 22],  yRange: [4, 20]  },  // top-left corner
-    { xRange: [78, 96], yRange: [4, 20]  },  // top-right corner
-    { xRange: [4, 22],  yRange: [80, 96] },  // bottom-left corner
-    { xRange: [78, 96], yRange: [80, 96] },  // bottom-right corner
-    { xRange: [22, 78], yRange: [3, 14]  },  // top edge
-    { xRange: [22, 78], yRange: [86, 97] },  // bottom edge
-    { xRange: [3, 14],  yRange: [20, 80] },  // left edge
-    { xRange: [86, 97], yRange: [20, 80] },  // right edge
+    { xRange: [4, 22],  yRange: [4, 20]  },
+    { xRange: [78, 96], yRange: [4, 20]  },
+    { xRange: [4, 22],  yRange: [80, 96] },
+    { xRange: [78, 96], yRange: [80, 96] },
+    { xRange: [22, 78], yRange: [3, 14]  },
+    { xRange: [22, 78], yRange: [86, 97] },
+    { xRange: [3, 14],  yRange: [20, 80] },
+    { xRange: [86, 97], yRange: [20, 80] },
   ];
 
   const particles: BgParticle[] = [];
 
-  for (let i = 0; i < BG_PARTICLE_COUNT; i++) {
+  for (let i = 0; i < count; i++) {
     const region = regions[i % regions.length];
     const xPct =
       region.xRange[0] + Math.random() * (region.xRange[1] - region.xRange[0]);
     const yPct =
       region.yRange[0] + Math.random() * (region.yRange[1] - region.yRange[0]);
 
-    // Skip if inside exclusion zone (safety check)
     if (isInsideExclusion(xPct, yPct)) continue;
 
     particles.push({
       fontSize: BG_FONT_MIN + Math.random() * (BG_FONT_MAX - BG_FONT_MIN),
       xPct,
       yPct,
-      baseOpacity: 0.15 + Math.random() * 0.3,
+      baseOpacity: 0.18 + Math.random() * 0.28,
       twinklePhase: Math.random() * Math.PI * 2,
       labelOffset: Math.random() * 100,
     });
@@ -205,6 +204,22 @@ export function WordSphereModal({ open, onClose, words }: Props) {
   const bgParticlesRef = useRef<BgParticle[]>([]);
   const wordPoolRef = useRef<WordCloudWord[]>([]); // for bg particle label cycling
 
+  /* ---- Mobile detection: disable bg particles on small screens ---- */
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 640);
+  }, []);
+
+  /* ---- Entrance animation: bg shows instantly, content fades in ---- */
+  const [entering, setEntering] = useState(true);
+  useEffect(() => {
+    if (open) {
+      setEntering(true);
+      const timer = setTimeout(() => setEntering(false), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
+
   // Rebuild sphere points and bg particles when words change
   const prevWordsKey = useRef("");
   const wordsKey = words.map((w) => `${w.label}:${w.count}`).join(",");
@@ -213,7 +228,7 @@ export function WordSphereModal({ open, onClose, words }: Props) {
     wordPoolRef.current = words;
     const padded = padWords(words);
     wordsRef.current = buildWords(words, padded);
-    bgParticlesRef.current = generateBgParticles(words);
+    bgParticlesRef.current = generateBgParticles(words, isMobile ? 0 : BG_DESKTOP_COUNT);
   }
 
   /* ---- Auto-rotate + inertia + twinkle (sphere + background) ---- */
@@ -282,7 +297,7 @@ export function WordSphereModal({ open, onClose, words }: Props) {
         `0 0 ${Math.round(28 * glowIntensity)}px rgba(180,220,255,${glowAlpha3.toFixed(2)})`;
     }
 
-    // ── Update background stardust particles ──
+    // ── Update background stardust particles (lightweight, desktop only) ──
     if (bgRef.current) {
       const bgEls = bgRef.current.children;
       const bps = bgParticlesRef.current;
@@ -292,28 +307,15 @@ export function WordSphereModal({ open, onClose, words }: Props) {
         if (!el) continue;
         const bp = bps[i];
 
-        // Cycle word label over time — each particle at independent phase
+        // Cycle word label
         if (pool.length > 0) {
           const wordIdx = Math.floor((t * 0.35 + bp.labelOffset) % pool.length);
           el.textContent = pool[wordIdx].label;
         }
 
-        // Twinkle: same frequency as sphere words
+        // Subtle opacity twinkle only — no per-frame glow recalculation
         const twinkle = 0.85 + 0.15 * Math.sin(t * 1.8 + bp.twinklePhase);
-        const opacity = bp.baseOpacity * twinkle;
-
-        // Glow: same triple-layer as sphere words
-        const glowIntensity = 0.7 + 0.3 * Math.sin(t * 2.3 + bp.twinklePhase + 0.5);
-        const glowAlpha1 = 0.6 + 0.25 * glowIntensity;
-        const glowAlpha2 = 0.45 + 0.2 * glowIntensity;
-        const glowAlpha3 = 0.3 + 0.15 * glowIntensity;
-
-        el.style.opacity = String(opacity);
-        el.style.fontSize = `${bp.fontSize}px`;
-        el.style.textShadow =
-          `0 0 ${Math.round(6 * glowIntensity)}px rgba(255,255,255,${glowAlpha1.toFixed(2)}), ` +
-          `0 0 ${Math.round(14 * glowIntensity)}px rgba(255,255,255,${glowAlpha2.toFixed(2)}), ` +
-          `0 0 ${Math.round(28 * glowIntensity)}px rgba(180,220,255,${glowAlpha3.toFixed(2)})`;
+        el.style.opacity = String(bp.baseOpacity * twinkle);
       }
     }
 
@@ -361,7 +363,7 @@ export function WordSphereModal({ open, onClose, words }: Props) {
     return (
       <div
         className="fixed inset-0 z-30 flex items-center justify-center"
-        style={{ background: "rgba(0,0,0,0.85)" }}
+        style={{ background: isMobile ? "rgba(0,0,0,0.88)" : "rgba(0,0,0,0.85)" }}
         onClick={onOverlayClick}
       >
         <p className="max-w-xs text-center text-white/70 text-base leading-relaxed px-6">
@@ -371,13 +373,16 @@ export function WordSphereModal({ open, onClose, words }: Props) {
     );
   }
 
+  const hasBgParticles = bgParticlesRef.current.length > 0;
+
   return (
     <div
       className="fixed inset-0 z-30 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.85)" }}
+      style={{ background: isMobile ? "rgba(0,0,0,0.88)" : "rgba(0,0,0,0.85)" }}
       onClick={onOverlayClick}
     >
-      {/* ── Background stardust layer ── */}
+      {/* ── Background stardust layer (desktop only, skipped on mobile) ── */}
+      {hasBgParticles && (
       <div
         ref={bgRef}
         className="absolute inset-0 pointer-events-none overflow-hidden"
@@ -394,14 +399,16 @@ export function WordSphereModal({ open, onClose, words }: Props) {
               left: `${p.xPct}%`,
               top: `${p.yPct}%`,
               transform: "translate(-50%, -50%)",
-              opacity: p.baseOpacity,
-              willChange: "opacity",
+              opacity: entering ? 0 : p.baseOpacity,
+              textShadow: "0 0 8px rgba(255,255,255,0.45)",
+              transition: `opacity 500ms ease-out ${Math.round(p.labelOffset * 5)}ms`,
             }}
           >
             {wordPoolRef.current[i % wordPoolRef.current.length]?.label ?? ""}
           </span>
         ))}
       </div>
+      )}
 
       {/* ── 3D Sphere ── */}
       <div
@@ -412,6 +419,9 @@ export function WordSphereModal({ open, onClose, words }: Props) {
           height: "min(80vw, 360px)",
           touchAction: "none",
           zIndex: 1,
+          opacity: entering ? 0 : 1,
+          transform: entering ? "scale(0.92)" : "scale(1)",
+          transition: "opacity 500ms ease-out 200ms, transform 600ms ease-out 200ms",
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
