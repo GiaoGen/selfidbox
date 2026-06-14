@@ -12,10 +12,12 @@ export interface QuizMeta {
 
 /** Global style knobs that influence AI generation tone. Range 0–100. */
 export interface QuizStyleControls {
-  abstractness: number;  // 0 = 真实, 100 = 抽象
-  seriousness: number;   // 0 = 搞怪, 100 = 严肃
-  depth: number;         // 0 = 轻松, 100 = 深度
-  poeticness: number;    // 0 = 直白, 100 = 文艺
+  abstractness: number;     // 0 = 真实, 100 = 抽象
+  seriousness: number;      // 0 = 轻松, 100 = 严肃
+  depth: number;            // 0 = 轻松/偏好, 100 = 深度/价值观
+  poeticness: number;       // 0 = 直白, 100 = 文艺
+  title_relevance: number;  // 0 = 泛化/间接, 100 = 紧扣主题
+  goofiness: number;        // 0 = 正常, 100 = 搞怪/荒诞
 }
 
 export const DEFAULT_STYLE: QuizStyleControls = {
@@ -23,6 +25,8 @@ export const DEFAULT_STYLE: QuizStyleControls = {
   seriousness: 50,
   depth: 50,
   poeticness: 50,
+  title_relevance: 40,
+  goofiness: 50,
 };
 
 export interface Result {
@@ -54,7 +58,6 @@ export function mapAIResults(aiResults: AIResult[]): Result[] {
     traits: ai.traits,
     shareText: ai.share_text,
     isPinned: false,
-    image_url: undefined,
   }));
 }
 

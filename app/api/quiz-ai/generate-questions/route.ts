@@ -3,6 +3,7 @@ import { trackAISuccess, trackAIError, extractTokens } from "@/lib/ai/track-ai-u
 import {
   QUIZ_QUESTIONS_SYSTEM,
   buildQuizQuestionsPrompt,
+  resolveStyleStrategy,
 } from "@/lib/prompts/quiz-questions";
 import type { ExistingQuestion } from "@/lib/prompts/quiz-questions";
 
@@ -99,6 +100,8 @@ export async function POST(request: NextRequest) {
     seriousness?: number;
     depth?: number;
     poeticness?: number;
+    title_relevance?: number;
+    goofiness?: number;
     results?: { key: string; name: string; description: string; traits: string[] }[];
     factors?: { key: string; name: string; description?: string }[];
     result_vectors?: Record<string, Record<string, number>>;
@@ -124,6 +127,8 @@ export async function POST(request: NextRequest) {
     seriousness,
     depth,
     poeticness,
+    title_relevance,
+    goofiness,
     results,
     factors,
     result_vectors,
@@ -173,6 +178,22 @@ export async function POST(request: NextRequest) {
   const s = seriousness ?? 50;
   const d = depth ?? 50;
   const p = poeticness ?? 50;
+  const tr = title_relevance ?? 40;
+  const g = goofiness ?? 50;
+
+  if (process.env.NODE_ENV === "development") {
+    const debugControls = {
+      abstractness:  { value: a,  strategy: resolveStyleStrategy("abstractness", a).label },
+      seriousness:   { value: s,  strategy: resolveStyleStrategy("seriousness", s).label },
+      goofiness:     { value: g,  strategy: resolveStyleStrategy("goofiness", g).label },
+      depth:         { value: d,  strategy: resolveStyleStrategy("depth", d).label },
+      poeticness:    { value: p,  strategy: resolveStyleStrategy("poeticness", p).label },
+      title_relevance: { value: tr, strategy: resolveStyleStrategy("title_relevance", tr).label },
+      question_count: qc,
+      options_per_question: opq,
+    };
+    console.log("[Quiz Questions Style Controls]", debugControls);
+  }
 
   const resultsText = results
     .map(
@@ -219,6 +240,8 @@ export async function POST(request: NextRequest) {
     seriousness: s,
     depth: d,
     poeticness: p,
+    title_relevance: tr,
+    goofiness: g,
     resultsText,
     factorsText,
     resultVectorsText: vectorsText,

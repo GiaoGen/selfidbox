@@ -39,6 +39,10 @@ function mergePinnedResult(
   if (original.share_text && typeof original.share_text === "string" && original.share_text.trim()) {
     merged.share_text = original.share_text;
   }
+  // image_url: never override if original has one
+  if (original.image_url && typeof original.image_url === "string" && original.image_url.trim()) {
+    merged.image_url = original.image_url;
+  }
   return merged;
 }
 
@@ -230,6 +234,7 @@ export async function POST(request: NextRequest) {
             description: original.description ?? "",
             traits: original.traits ?? [],
             share_text: original.share_text ?? "",
+            image_url: original.image_url ?? "",
           });
         }
       }

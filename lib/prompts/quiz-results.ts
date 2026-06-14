@@ -47,6 +47,7 @@ export interface ExistingResult {
   description?: string;
   traits?: string[];
   share_text?: string;
+  image_url?: string | null;
   is_pinned: boolean;
 }
 

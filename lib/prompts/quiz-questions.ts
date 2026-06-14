@@ -11,13 +11,12 @@ QUESTION RULES:
 
 1. RESULTS-DRIVEN: Every question MUST help distinguish between the provided results. Study their names, traits, and descriptions. Design questions that probe DIFFERENCES — if a question doesn't separate at least 2 results, it's useless.
 
-2. THEME-BINDING: Questions must feel native to THIS quiz, not a generic personality test. Use the quiz title as the creative anchor. Questions unrelated to the quiz theme are invalid.
+2. THEME-BINDING (controlled by title_relevance in the user message):
+- HIGH title_relevance (70-100): Questions must be tightly bound to the quiz theme/title. Every question and option should clearly reference the theme. Use theme-specific scenarios, vocabulary, and imagery.
+- MEDIUM title_relevance (31-69): A mix — some questions connect to the quiz theme, others probe personality through general life choices, emotional reactions, and value judgments.
+- LOW title_relevance (0-30): Questions should feel NATURAL and life-based. Use everyday situations, emotional choices, relationship patterns, and value judgments to indirectly reveal the result personality. The quiz theme provides only a light creative flavor — do NOT force theme keywords into every question. Let the theme emerge indirectly through the type of person each result describes.
 
-3. ANTI-TEMPLATE — FORBIDDEN generic scenarios (unless directly required by the quiz theme):
-- 周末/休息日做什么、聚会/派对上的行为、旅行/出游带什么、看风景想到什么
-- 朋友难过怎么安慰、中彩票怎么花、理想生活什么样、面对困难怎么办
-- Any scenario that could appear in ANY personality quiz regardless of theme.
-Instead: generate questions that ONLY make sense for this specific quiz.
+3. ANTI-TEMPLATE — Avoid scenarios that could appear in ANY personality quiz regardless of theme (weekend plans, party behavior, travel packing, lottery winnings, comforting a friend). Instead: generate questions that make sense for THIS specific quiz, given its theme and style parameters.
 
 4. OPTION SEMANTICS — factor_effects MUST follow from option meaning, not random:
 - "自己解决" → +independence, -attachment
@@ -30,11 +29,7 @@ Instead: generate questions that ONLY make sense for this specific quiz.
 - Each question covers DIFFERENT factors.
 - ALL factors must be covered across the question set.
 
-6. STYLE (0-100, shape question text and option wording):
-- abstractness: 0=concrete/everyday → 100=metaphorical/imaginative
-- seriousness: 0=playful/humorous → 100=serious/formal
-- depth: 0=surface/preferences → 100=values/inner-conflict
-- poeticness: 0=direct/plain → 100=lyrical/imagery-rich
+6. STYLE PARAMETERS — The user message provides 6 style values (0-100) with EXPLICIT STRATEGY instructions for each. These strategies are MANDATORY — they define HOW to write, not just what to write about. A question set at opposite ends of a parameter must feel like a COMPLETELY different quiz. The strategy instructions in the user message take precedence over any default assumptions.
 
 7. GENERATE exactly the requested question_count, each with the requested options_per_question.
 
@@ -48,6 +43,78 @@ OUTPUT:
 {"questions":[{"text":"...","description":"","options":[{"label":"A","text":"...","factor_effects":{"factor_key":2,"another_factor":-1}}]}]}
 - Labels: sequential uppercase A, B, C, D...
 - All text in Chinese except factor keys (English snake_case).`;
+
+/* ------------------------------------------------------------------ */
+/*  Strategy helpers: map numeric values to behavioral instructions    */
+/* ------------------------------------------------------------------ */
+
+type StyleControl = "abstractness" | "seriousness" | "goofiness" | "depth" | "poeticness" | "title_relevance";
+
+interface StyleStrategy {
+  label: string;
+  instruction: string;
+}
+
+function band(v: number): "very_low" | "low" | "mid" | "high" | "very_high" {
+  if (v <= 20) return "very_low";
+  if (v <= 40) return "low";
+  if (v <= 60) return "mid";
+  if (v <= 80) return "high";
+  return "very_high";
+}
+
+const STRATEGIES: Record<StyleControl, Record<string, StyleStrategy>> = {
+  abstractness: {
+    very_low:  { label: "VERY CONCRETE",  instruction: "Use ONLY concrete, everyday situations. Specific places, objects, people, routines. No metaphors, no abstract concepts. Example: \"周末你更愿意去哪里？\" not \"如果时间是一种颜色，你会选择？\"" },
+    low:       { label: "CONCRETE",       instruction: "Mostly concrete situations with occasional light metaphor. Questions grounded in daily life." },
+    mid:       { label: "BALANCED",       instruction: "Mix of concrete situations and abstract framing. Some everyday, some conceptual." },
+    high:      { label: "ABSTRACT",       instruction: "Mostly metaphorical, imaginative, dream-like scenarios. Abstract concepts, symbolic choices, hypothetical worlds." },
+    very_high: { label: "VERY ABSTRACT",  instruction: "Generate PURELY abstract, metaphorical questions. Dream logic, synesthesia, symbolic landscapes. Replace ALL concrete situations with conceptual alternatives. Example: \"如果你的记忆是一种天气，它更接近？\" A reader should NOT encounter a single mundane daily-life scenario." },
+  },
+  seriousness: {
+    very_low:  { label: "VERY CASUAL",    instruction: "Like a BuzzFeed quiz or party game. Use slang, emoji-worthy phrasing, relatable everyday humor. The quiz should feel FUN and light. Questions can be playful and unpretentious." },
+    low:       { label: "CASUAL",         instruction: "Relaxed, friendly tone. Light humor is welcome. Feels like a conversation with a witty friend." },
+    mid:       { label: "BALANCED",       instruction: "Neither stiff nor silly. Clear, approachable but not frivolous." },
+    high:      { label: "SERIOUS",        instruction: "Formal, restrained, dignified. Like a quality magazine personality assessment. Minimal humor, precise language." },
+    very_high: { label: "VERY SERIOUS",   instruction: "Clinical and formal, like a real psychological assessment or academic survey instrument. NO jokes. NO slang. NO casual language. Use precise, measured wording throughout." },
+  },
+  goofiness: {
+    very_low:  { label: "NORMAL",         instruction: "Standard quiz question style. Straightforward, reasonable scenarios and options." },
+    low:       { label: "MILDLY PLAYFUL", instruction: "Occasional witty or clever twists, but mostly conventional. A light touch of personality." },
+    mid:       { label: "PLAYFUL",        instruction: "Noticeably playful. Options can include clever subversions, mild absurdity, internet-native humor. Still grounded in real personality measurement." },
+    high:      { label: "VERY PLAYFUL",   instruction: "Absurd premises, unexpected twists, anti-trope humor. Options SHOULD include deliberately ridiculous but ideologically meaningful choices. The quiz should feel surprising and fun. IMPORTANT: absurdity is the DELIVERY, not the content — questions must still distinguish factors and produce real results." },
+    very_high: { label: "MAXIMUM GOOFY",  instruction: "Go ALL OUT on absurdity and anti-trope humor. Every question should subvert expectations. Options can be wildly creative, internet-poisoned, surreal. Readers should laugh out loud. BUT: every option's factor_effects must still be semantically justified — the absurdity is in the SCENARIO, not in the measurement logic. The quiz must still WORK as a personality test." },
+  },
+  depth: {
+    very_low:  { label: "SURFACE",        instruction: "Pure preferences, daily habits, aesthetic choices. \"你更喜欢猫还是狗？\" Simple likes/dislikes. No introspection required." },
+    low:       { label: "SHALLOW",        instruction: "Mostly surface-level preferences and habits. Occasional light introspection. Easy to answer quickly." },
+    mid:       { label: "BALANCED",       instruction: "Mix of surface preferences and introspective questions. Some habit-based, some value-based." },
+    high:      { label: "DEEP",           instruction: "Focus on inner values, moral dilemmas, relationship dynamics, identity questions. Most questions require genuine self-reflection." },
+    very_high: { label: "VERY DEEP",      instruction: "Existential, philosophical, emotionally probing. Questions about identity, meaning, regret, transformation, core values. \"你如何面对生命中无法挽回的遗憾？\" Every question should provoke genuine introspection. No surface-level preference questions." },
+  },
+  poeticness: {
+    very_low:  { label: "DIRECT",         instruction: "Plain, direct, conversational Chinese. Short sentences. Everyday vocabulary. \"你喜欢热闹还是安静？\"" },
+    low:       { label: "PLAIN",          instruction: "Clear and direct, with occasional vivid phrasing. Unpretentious but not flat." },
+    mid:       { label: "BALANCED",       instruction: "Mix of direct and evocative language. Some imagery, some plain statements." },
+    high:      { label: "LYRICAL",        instruction: "Rich imagery, sensory details, literary phrasing. Questions read like poetry or literature. \"你是被喧嚣填满，还是在寂静里听见自己？\"" },
+    very_high: { label: "VERY LYRICAL",   instruction: "MAXIMUM literary quality. Every question is a miniature poem. Dense imagery, rhythm, synesthesia, metaphor. Language itself is part of the quiz experience. Questions should be quotable, beautiful, memorable." },
+  },
+  title_relevance: {
+    very_low:  { label: "INDIRECT",       instruction: "Questions feel life-based and universal, NOT theme-bound. Almost NEVER mention the quiz title or its keywords directly. The theme emerges INDIRECTLY through the personality types being measured. Readers might forget what quiz they're taking — and that's INTENTIONAL." },
+    low:       { label: "LOOSE",          instruction: "Mostly indirect. Occasional subtle theme nods. Theme is a background flavor, not a foreground element." },
+    mid:       { label: "BALANCED",       instruction: "Some questions tie to the theme, others probe through general life scenarios." },
+    high:      { label: "TIGHT",          instruction: "Most questions are woven around the quiz theme/title. Theme-specific vocabulary, scenarios, and references throughout." },
+    very_high: { label: "VERY TIGHT",     instruction: "EVERY question MUST be unmistakably about the quiz theme. Use theme-specific scenarios, jargon, imagery, and references. A reader should instantly know what quiz they're taking from any single question. Questions that could belong to a different quiz theme are INVALID." },
+  },
+};
+
+export function resolveStyleStrategy(control: StyleControl, value: number): StyleStrategy {
+  return STRATEGIES[control][band(value)];
+}
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
 
 export interface ExistingQuestion {
   text?: string;
@@ -66,6 +133,8 @@ export interface BuildQuizQuestionsPromptInput {
   seriousness: number;
   depth: number;
   poeticness: number;
+  title_relevance: number;
+  goofiness: number;
   resultsText: string;
   factorsText: string;
   resultVectorsText: string;
@@ -74,6 +143,10 @@ export interface BuildQuizQuestionsPromptInput {
   options_per_question: number;
   existing_questions?: ExistingQuestion[];
 }
+
+/* ------------------------------------------------------------------ */
+/*  Prompt builder                                                     */
+/* ------------------------------------------------------------------ */
 
 export function buildQuizQuestionsPrompt(
   input: BuildQuizQuestionsPromptInput,
@@ -84,10 +157,12 @@ export function buildQuizQuestionsPrompt(
     quiz_type = "personality",
     audienceStr,
     toneStr,
-    abstractness: a,
-    seriousness: s,
-    depth: d,
-    poeticness: p,
+    abstractness,
+    seriousness,
+    depth,
+    poeticness,
+    title_relevance,
+    goofiness,
     resultsText,
     factorsText,
     resultVectorsText,
@@ -96,6 +171,24 @@ export function buildQuizQuestionsPrompt(
     options_per_question,
     existing_questions,
   } = input;
+
+  // Resolve all strategies
+  const controls: { name: string; value: number; strategy: StyleStrategy }[] = [
+    { name: "ABSTRACTNESS",    value: abstractness,    strategy: resolveStyleStrategy("abstractness", abstractness) },
+    { name: "SERIOUSNESS",     value: seriousness,     strategy: resolveStyleStrategy("seriousness", seriousness) },
+    { name: "GOOFINESS",       value: goofiness,       strategy: resolveStyleStrategy("goofiness", goofiness) },
+    { name: "DEPTH",           value: depth,           strategy: resolveStyleStrategy("depth", depth) },
+    { name: "POETICNESS",      value: poeticness,      strategy: resolveStyleStrategy("poeticness", poeticness) },
+    { name: "TITLE_RELEVANCE", value: title_relevance, strategy: resolveStyleStrategy("title_relevance", title_relevance) },
+  ];
+
+  // Build strategy block
+  const strategyBlock = controls
+    .map(
+      (c) =>
+        `${c.name} = ${c.value} → STRATEGY: ${c.strategy.label}\n${c.strategy.instruction}`,
+    )
+    .join("\n\n");
 
   let existingBlock = "";
   if (existing_questions && existing_questions.length > 0) {
@@ -114,15 +207,19 @@ export function buildQuizQuestionsPrompt(
     existingBlock = `\n已有题目（保留 pinned 的非空字段，只补全缺失字段；不要生成与 pinned 场景或主题相似的题目）：\n${lines.join("\n")}`;
   }
 
-  const styleLine =
-    `风格：抽象度${a}/100(${a >= 70 ? "抽象" : a <= 30 ? "真实" : "平衡"}) ` +
-    `严肃度${s}/100(${s >= 70 ? "严肃" : s <= 30 ? "搞怪" : "平衡"}) ` +
-    `深度${d}/100(${d >= 70 ? "深度" : d <= 30 ? "轻松" : "平衡"}) ` +
-    `文艺度${p}/100(${p >= 70 ? "文艺" : p <= 30 ? "直白" : "平衡"})`;
-
   return `标题：「${title}」${hook ? ` 副标题：「${hook}」` : ""}
 类型：${quiz_type} | 受众：${audienceStr} | 语气：${toneStr}
-${styleLine}
+
+======================================================================
+STYLE STRATEGIES (MANDATORY — these define HOW to write every question):
+======================================================================
+
+${strategyBlock}
+
+======================================================================
+END STYLE STRATEGIES
+======================================================================
+
 生成：${question_count} 题 × ${options_per_question} 选项 | 覆盖 ${factorKeys.length} 个因子：${factorKeys.join(", ")}
 
 结果人格（题目必须能区分这些结果）：

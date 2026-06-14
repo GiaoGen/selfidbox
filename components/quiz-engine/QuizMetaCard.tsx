@@ -143,18 +143,6 @@ export function QuizMetaCard({ meta, onChange, bgColor, stepNumber, stepLabel }:
           <p className={`mt-3 text-base leading-6 ${light ? "text-white/60" : "opacity-60"}`}>{meta.description}</p>
         ) : null
       )}
-
-      {/* Cover Image URL */}
-      {isEditing && (
-        <div className="mt-3">
-          <InlineEditableInput
-            value={meta.cover_image_url ?? ""}
-            onChange={(v) => update({ cover_image_url: v })}
-            placeholder="封面图片 URL（可选）"
-            className={`text-sm ${mutedClass}`}
-          />
-        </div>
-      )}
     </section>
   );
 }

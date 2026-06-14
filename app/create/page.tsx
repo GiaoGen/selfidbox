@@ -135,6 +135,8 @@ interface QuizState {
   seriousness: number;
   depth: number;
   poeticness: number;
+  title_relevance: number;
+  goofiness: number;
 }
 
 const emptyMeta: QuizMeta = {
@@ -212,36 +214,47 @@ function RangeSelector({
   max,
   value,
   onChange,
+  inverted,
+  disabledBelow,
 }: {
   min: number;
   max: number;
   value: number;
   onChange: (v: number) => void;
   inverted?: boolean;
+  disabledBelow?: number;
 }) {
   const options: number[] = [];
   for (let i = min; i <= max; i++) options.push(i);
+
+  const disabledThreshold = disabledBelow ?? min;
 
   return (
     <span
       className="inline-flex items-center gap-px rounded-full p-px text-[10px] overflow-x-auto max-w-[220px] sm:max-w-[300px]"
       style={{ scrollbarWidth: "none", backgroundColor: "#fff" }}
     >
-      {options.map((n) => (
-        <button
-          key={n}
-          type="button"
-          onClick={() => onChange(n)}
-          className="shrink-0 rounded-full px-1.5 py-0 font-semibold transition-all"
-          style={
-            value === n
-              ? { backgroundColor: "var(--ink)", color: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
-              : { color: "var(--ink)" }
-          }
-        >
-          {n}
-        </button>
-      ))}
+      {options.map((n) => {
+        const disabled = n < disabledThreshold;
+        return (
+          <button
+            key={n}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(n)}
+            className="shrink-0 rounded-full px-1.5 py-0 font-semibold transition-all disabled:cursor-not-allowed"
+            style={
+              value === n
+                ? { backgroundColor: "var(--ink)", color: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
+                : disabled
+                  ? { color: "var(--ink)", opacity: 0.25 }
+                  : { color: "var(--ink)" }
+            }
+          >
+            {n}
+          </button>
+        );
+      })}
     </span>
   );
 }
@@ -360,7 +373,8 @@ function CreatePageContent() {
           setEditError(data.error ?? "加载失败");
           return;
         }
-        setQuiz(data.quiz);
+        // Merge with DEFAULT_STYLE so new fields get defaults on old saved quizzes
+        setQuiz({ ...DEFAULT_STYLE, ...data.quiz });
       })
       .catch(() => setEditError("网络错误"))
       .finally(() => setEditLoading(false));
@@ -386,6 +400,19 @@ function CreatePageContent() {
   const [discriminationOpen, setDiscriminationOpen] = useState(false);
   const [coverageOpen, setCoverageOpen] = useState(false);
   const [optionVectorEditor, setOptionVectorEditor] = useState<{ qIndex: number; oIndex: number } | null>(null);
+
+  /* ---- Auto-correct count selectors when content exceeds current value ---- */
+  useEffect(() => {
+    setResultCount((prev) => Math.max(prev, quiz.results.length));
+  }, [quiz.results.length]);
+
+  useEffect(() => {
+    setFactorCount((prev) => Math.max(prev, quiz.factors.length));
+  }, [quiz.factors.length]);
+
+  useEffect(() => {
+    setQuestionCount((prev) => Math.max(prev, quiz.questions.length));
+  }, [quiz.questions.length]);
 
   /* ---- Meta ---- */
 
@@ -595,7 +622,7 @@ function CreatePageContent() {
             .split("/")
             .map((s) => s.trim())
             .filter(Boolean),
-          result_count: resultCount,
+          result_count: Math.max(resultCount, quiz.results.length),
           abstractness: quiz.abstractness,
           seriousness: quiz.seriousness,
           depth: quiz.depth,
@@ -607,6 +634,7 @@ function CreatePageContent() {
             description: r.description || undefined,
             traits: r.traits.length > 0 ? r.traits : undefined,
             share_text: r.shareText || undefined,
+            image_url: r.image_url || undefined,
             is_pinned: r.isPinned,
           })),
         }),
@@ -620,7 +648,14 @@ function CreatePageContent() {
       }
 
       const aiResults = data.results as AIResult[];
-      const allResults = mapAIResults(aiResults);
+      const allResults = mapAIResults(aiResults).map((newResult) => {
+        // Preserve image_url from existing result with the same key
+        const existing = quiz.results.find((r) => r.id === newResult.id);
+        if (existing?.image_url) {
+          return { ...newResult, image_url: existing.image_url };
+        }
+        return newResult;
+      });
 
       setQuiz((prev) => {
         const pinnedIds = new Set(
@@ -654,7 +689,8 @@ function CreatePageContent() {
     setAiFactorsError("");
 
     const pinnedFactors = quiz.factors.filter((f) => f.isPinned);
-    const remaining = Math.max(1, factorCount - pinnedFactors.length);
+    const totalTarget = Math.max(factorCount, quiz.factors.length);
+    const remaining = Math.max(1, totalTarget - pinnedFactors.length);
 
     try {
       const res = await fetch("/api/quiz-ai/generate-factors", {
@@ -827,6 +863,8 @@ function CreatePageContent() {
           seriousness: quiz.seriousness,
           depth: quiz.depth,
           poeticness: quiz.poeticness,
+          title_relevance: quiz.title_relevance,
+          goofiness: quiz.goofiness,
           results: quiz.results.map((r) => ({
             key: r.id,
             name: r.name,
@@ -842,7 +880,7 @@ function CreatePageContent() {
           result_vectors: Object.fromEntries(
             quiz.resultVectors.map((rv) => [rv.resultId, rv.values]),
           ),
-          question_count: questionCount,
+          question_count: Math.max(questionCount, quiz.questions.length),
           options_per_question: optionsPerQuestion,
           existing_questions: quiz.questions.map((q) => ({
             text: q.text || undefined,
@@ -998,7 +1036,7 @@ function CreatePageContent() {
           style={{ backgroundColor: bgStyle, color: textOn(bgStyle) }}
         >
           <QuizStyleControls
-            style={{ abstractness: quiz.abstractness, seriousness: quiz.seriousness, depth: quiz.depth, poeticness: quiz.poeticness }}
+            style={{ abstractness: quiz.abstractness, seriousness: quiz.seriousness, depth: quiz.depth, poeticness: quiz.poeticness, title_relevance: quiz.title_relevance, goofiness: quiz.goofiness }}
             onChange={updateStyle}
             accentColor={undefined}
             inverted={invStyle}
@@ -1017,7 +1055,7 @@ function CreatePageContent() {
           <StepDivider inverted={inv2} />
           <div className="flex items-center justify-between">
             <div className="flex flex-wrap items-center gap-2">
-              <RangeSelector min={4} max={16} value={resultCount} onChange={setResultCount} inverted={inv2} />
+              <RangeSelector min={4} max={16} value={resultCount} onChange={setResultCount} inverted={inv2} disabledBelow={results.length} />
             </div>
             <AddBtn onClick={addResult} label="添加" inverted={inv2} />
           </div>
@@ -1094,7 +1132,7 @@ function CreatePageContent() {
           </div>
           <StepDivider inverted={inv3} />
           <div className="flex flex-wrap items-center gap-2">
-            <RangeSelector min={4} max={16} value={factorCount} onChange={setFactorCount} inverted={inv3} />
+            <RangeSelector min={4} max={16} value={factorCount} onChange={setFactorCount} inverted={inv3} disabledBelow={factors.length} />
           </div>
           {aiFactorsError && <p className="text-sm text-red-400">{aiFactorsError}</p>}
           <FactorList
@@ -1235,7 +1273,7 @@ function CreatePageContent() {
           <StepDivider inverted={inv6} />
           <div className="flex items-center justify-between">
             <div className="flex flex-wrap items-center gap-1.5">
-              <RangeSelector min={4} max={20} value={questionCount} onChange={setQuestionCount} inverted={inv6} />
+              <RangeSelector min={4} max={20} value={questionCount} onChange={setQuestionCount} inverted={inv6} disabledBelow={questions.length} />
               <span className={`text-[10px] ${inv6 ? "text-white/50" : "text-[var(--muted)]"}`}>题</span>
               <RangeSelector min={2} max={6} value={optionsPerQuestion} onChange={setOptionsPerQuestion} inverted={inv6} />
               <span className={`text-[10px] ${inv6 ? "text-white/50" : "text-[var(--muted)]"}`}>选</span>
