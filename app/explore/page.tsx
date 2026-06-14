@@ -99,7 +99,7 @@ export default async function ExplorePage({
 
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pt-2 pb-6 sm:px-6 lg:px-8">
         <ExploreClient
           sites={allCards}
           trending={trending}

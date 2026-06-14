@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { motion } from "framer-motion";
 import { RotatingCardModal } from "@/components/share/RotatingCardModal";
 import { QuizResultShareCard } from "@/components/share/QuizResultShareCard";
 import { useSourceCardOpen } from "@/components/profile/useSourceCardOpen";
@@ -165,8 +166,18 @@ export function CoverFlowSources() {
             style={{ paddingLeft: sidePad, paddingRight: sidePad, gap: GAP }}
           >
             {cards.map((src, i) => (
-              <div
+              <motion.div
                 key={src.id}
+                className="shrink-0"
+                initial={{ opacity: 0, y: 12, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{
+                  duration: 0.25,
+                  delay: i * 0.05,
+                  ease: "easeOut",
+                }}
+              >
+              <div
                 ref={(el) => { cardRefs.current[i] = el; }}
                 className="shrink-0 cursor-pointer"
                 style={{
@@ -201,6 +212,7 @@ export function CoverFlowSources() {
                   />
                 </div>
               </div>
+              </motion.div>
             ))}
           </div>
         </div>
