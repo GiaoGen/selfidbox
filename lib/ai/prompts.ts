@@ -1,9 +1,9 @@
-import { createClient as createSSRClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** Create a fresh SSR client per call (reads cookies from current request). */
-async function getDb(): Promise<SupabaseClient> {
-  return createSSRClient();
+/** Create a service_role client. Admin-only — bypasses RLS. */
+function getDb(): SupabaseClient {
+  return createServiceClient();
 }
 
 /* ------------------------------------------------------------------ */

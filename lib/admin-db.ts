@@ -1,9 +1,9 @@
-import { createClient as createSSRClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { withTimeout } from "./supabase-timeout";
 
-async function getDb(): Promise<SupabaseClient> {
-  return createSSRClient();
+function getDb(): SupabaseClient {
+  return createServiceClient();
 }
 
 /* ------------------------------------------------------------------ */
