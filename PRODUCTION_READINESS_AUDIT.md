@@ -136,13 +136,16 @@ Tailwind v4 + PostCSS 插件位于 `devDependencies`。在 `--omit=dev` 的生�
 - [ ] 评估是否需要迁移到 `lib/supabase/server.ts` 的 SSR 客户端
 - [ ] 若这些调用必须使用 service_role，确保仅在后端使用且不暴露给客户端
 
-### MEDIUM — 数据库 RLS 策略未确认
+### MEDIUM — 数据库 RLS 策略 ~~未确认~~ ✅ 已完成（2026-06-16）
 
-Supabase 迁移目录中仅有一个 storage 策略。核心表（`reports`、`user_profile`、`quiz_attempts`、`quizzes` 等）的 RLS 策略未在代码仓库中体现。
+**全部 14 张表已启用 RLS，分两轮执行：**
 
-**行动：**
-- [ ] 在 Supabase Dashboard 确认所有表已启用 RLS
-- [ ] 将现有 RLS 策略导出为迁移文件并纳入版本控制
+| 轮次 | 迁移文件 | 涉及表 |
+|:---:|------|------|
+| 1 | `010_rls_private_user_data.sql` | user_profile, reports, quiz_attempts, quiz_attempt_answers, ai_usage_logs |
+| 2 | `011_rls_public_mixed_tables.sql` | quizzes, quiz_factors, quiz_results, quiz_questions, quiz_options, ai_prompts, test_sites, test_categories, test_site_clicks |
+
+RLS 策略已在 Supabase Dashboard 执行并通过验证（探索页、Quiz、Admin CRUD 均正常）。
 
 ---
 
@@ -357,7 +360,7 @@ Supabase 迁移目录中仅有一个 storage 策略。核心表（`reports`、`u
 |---|------|------|------|
 | 11 | 添加安全响应头（CSP 等） | 安全 | ✅ `next.config.ts` 已添加 CSP/HSTS/X-Content-Type-Options/X-Frame-Options/Referrer-Policy/Permissions-Policy |
 | 12 | 中间件路由保护 | 安全 | ✅ `middleware.ts` 已添加 `/admin`、`/profile`、`/create` 保护 |
-| 13 | 确认 RLS 策略 | 安全 | ⬜ `supabase/rls-policies.sql` 已就绪，需登录 Dashboard 检查/执行 |
+| 13 | 确认 RLS 策略 | 安全 | ✅ 全部 14 张表 RLS 已启用，两轮 migration 已执行并验证通过 |
 | 14 | 根布局 OpenGraph / Twitter 元数据 | SEO | ✅ `app/layout.tsx` 已添加 |
 | 15 | 各页面添加 `generateMetadata()` | SEO | ✅ `explore`/`profile`/`quizzes/[slug]`/`test-sites/[id]` 已添加 |
 | 16 | 集成错误追踪服务 | 可观测性 | ⬜ 需注册第三方服务 |
