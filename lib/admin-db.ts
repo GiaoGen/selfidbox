@@ -1,5 +1,10 @@
-import { supabase } from "./supabase";
+import { createClient as createSSRClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { withTimeout } from "./supabase-timeout";
+
+async function getDb(): Promise<SupabaseClient> {
+  return createSSRClient();
+}
 
 /* ------------------------------------------------------------------ */
 /*  Row types (extends existing with admin-only fields)                */
@@ -49,7 +54,7 @@ export interface AdminTestSiteRow {
 export async function getAdminCategories(): Promise<AdminCategoryRow[]> {
   return withTimeout(
     async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (await getDb())
         .from("test_categories")
         .select("*")
         .order("sort_order", { ascending: true });
@@ -65,7 +70,7 @@ export async function getAdminCategories(): Promise<AdminCategoryRow[]> {
 export async function getAdminCategoryById(id: string): Promise<AdminCategoryRow | null> {
   return withTimeout(
     async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (await getDb())
         .from("test_categories")
         .select("*")
         .eq("id", id)
@@ -82,7 +87,7 @@ export async function getAdminCategoryById(id: string): Promise<AdminCategoryRow
 export async function createCategory(
   payload: Omit<AdminCategoryRow, "id" | "created_at">
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await (await getDb())
     .from("test_categories")
     .insert(payload)
     .select()
@@ -96,7 +101,7 @@ export async function updateCategory(
   id: string,
   payload: Partial<Omit<AdminCategoryRow, "id" | "created_at">>
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await (await getDb())
     .from("test_categories")
     .update({ ...payload, id })
     .eq("id", id)
@@ -108,7 +113,7 @@ export async function updateCategory(
 }
 
 export async function deleteCategory(id: string) {
-  const { error } = await supabase
+  const { error } = await (await getDb())
     .from("test_categories")
     .delete()
     .eq("id", id);
@@ -131,7 +136,7 @@ export async function getAdminTestSites(
 ): Promise<AdminTestSiteRow[]> {
   return withTimeout(
     async () => {
-      let query = supabase
+      let query = (await getDb())
         .from("test_sites")
         .select("*, category:test_categories(*)")
         .order("sort_order", { ascending: true });
@@ -161,7 +166,7 @@ export async function getAdminTestSiteById(
 ): Promise<AdminTestSiteRow | null> {
   return withTimeout(
     async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (await getDb())
         .from("test_sites")
         .select("*, category:test_categories(*)")
         .eq("id", id)
@@ -178,7 +183,7 @@ export async function getAdminTestSiteById(
 export async function createTestSite(
   payload: Omit<AdminTestSiteRow, "id" | "created_at" | "updated_at" | "category">
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await (await getDb())
     .from("test_sites")
     .insert(payload)
     .select()
@@ -192,7 +197,7 @@ export async function updateTestSite(
   id: string,
   payload: Partial<Omit<AdminTestSiteRow, "id" | "created_at" | "updated_at" | "category">>
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await (await getDb())
     .from("test_sites")
     .update({ ...payload, id })
     .eq("id", id)
@@ -204,7 +209,7 @@ export async function updateTestSite(
 }
 
 export async function deleteTestSite(id: string) {
-  const { error } = await supabase
+  const { error } = await (await getDb())
     .from("test_sites")
     .delete()
     .eq("id", id);
@@ -219,7 +224,7 @@ export async function deleteTestSite(id: string) {
 export async function getAdminStats() {
   return withTimeout(
     async () => {
-      const { data: sites, error } = await supabase
+      const { data: sites, error } = await (await getDb())
         .from("test_sites")
         .select("status");
 
@@ -240,7 +245,7 @@ export async function getAdminStats() {
 export async function getRecentTestSites(limit = 5): Promise<AdminTestSiteRow[]> {
   return withTimeout(
     async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (await getDb())
         .from("test_sites")
         .select("*, category:test_categories(*)")
         .order("created_at", { ascending: false })
@@ -292,8 +297,8 @@ export async function getAdminQuizzes(
     async () => {
       // Fetch quizzes and categories in parallel (avoids FK dependency)
       const [quizResult, catResult] = await Promise.all([
-        (() => {
-          let q = supabase
+        (async () => {
+          let q = (await getDb())
             .from("quizzes")
             .select("*")
             .order("created_at", { ascending: false });
@@ -301,7 +306,7 @@ export async function getAdminQuizzes(
           if (filters?.status) q = q.eq("status", filters.status);
           return q;
         })(),
-        supabase.from("test_categories").select("*"),
+        (await getDb()).from("test_categories").select("*"),
       ]);
 
       if (quizResult.error) throw quizResult.error;
@@ -327,7 +332,7 @@ export async function getAdminQuizById(
 ): Promise<AdminQuizRow | null> {
   return withTimeout(
     async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (await getDb())
         .from("quizzes")
         .select("*")
         .eq("id", id)
@@ -338,7 +343,7 @@ export async function getAdminQuizById(
 
       // Fetch category separately if needed
       if (quiz.category_id) {
-        const { data: cat } = await supabase
+        const { data: cat } = await (await getDb())
           .from("test_categories")
           .select("*")
           .eq("id", quiz.category_id)
@@ -369,7 +374,7 @@ export async function updateQuizMetadata(
   id: string,
   input: UpdateQuizMetadataInput,
 ): Promise<AdminQuizRow> {
-  const { data, error } = await supabase
+  const { data, error } = await (await getDb())
     .from("quizzes")
     .update(input)
     .eq("id", id)
@@ -384,15 +389,15 @@ export async function updateQuizMetadata(
 export async function deleteQuiz(id: string): Promise<void> {
   // Delete sub-rows first (cascade not guaranteed on all environments)
   await Promise.all([
-    supabase.from("quiz_options").delete().eq("quiz_id", id),
-    supabase.from("quiz_questions").delete().eq("quiz_id", id),
-    supabase.from("quiz_results").delete().eq("quiz_id", id),
-    supabase.from("quiz_factors").delete().eq("quiz_id", id),
-    supabase.from("quiz_attempt_answers").delete().eq("quiz_id", id),
-    supabase.from("quiz_attempts").delete().eq("quiz_id", id),
+    (await getDb()).from("quiz_options").delete().eq("quiz_id", id),
+    (await getDb()).from("quiz_questions").delete().eq("quiz_id", id),
+    (await getDb()).from("quiz_results").delete().eq("quiz_id", id),
+    (await getDb()).from("quiz_factors").delete().eq("quiz_id", id),
+    (await getDb()).from("quiz_attempt_answers").delete().eq("quiz_id", id),
+    (await getDb()).from("quiz_attempts").delete().eq("quiz_id", id),
   ]);
 
-  const { error } = await supabase.from("quizzes").delete().eq("id", id);
+  const { error } = await (await getDb()).from("quizzes").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
 
@@ -405,7 +410,7 @@ export async function getAdminQuizStats(): Promise<{
   submitted: number;
   archived: number;
 }> {
-  const { data, error } = await supabase
+  const { data, error } = await (await getDb())
     .from("quizzes")
     .select("status");
 

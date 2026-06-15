@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     let profile_rebuild_result: unknown;
     try {
-      profile_rebuild_result = await rebuildUserProfileFromAllSources(userId);
+      profile_rebuild_result = await rebuildUserProfileFromAllSources(userId, authSupabase);
     } catch (rebuildErr) {
       console.error("[ProfileSourcesDelete] profile rebuild failed:", rebuildErr);
       return NextResponse.json(

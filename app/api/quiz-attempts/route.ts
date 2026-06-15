@@ -136,7 +136,7 @@ export async function POST(request: Request) {
   console.log("[QuizAttempt] updating user_profile");
 
   try {
-    const result = await rebuildUserProfile(user.id);
+    const result = await rebuildUserProfile(user.id, supabase);
     console.log(
       "[QuizAttempt] profile_rebuild_result",
       JSON.stringify(result),

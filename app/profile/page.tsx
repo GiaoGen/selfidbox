@@ -83,8 +83,8 @@ export default async function ProfilePage() {
   }
 
   const [profile, sources] = await Promise.all([
-    getUserProfile(user.id),
-    getProfileSources(user.id),
+    getUserProfile(user.id, supabase),
+    getProfileSources(user.id, supabase),
   ]);
   const hasProfile =
     profile != null &&

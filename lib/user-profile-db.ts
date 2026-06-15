@@ -1,5 +1,5 @@
-import { supabase } from "./supabase";
-import { keyedSingleQuery } from "./cache";
+import { supabase as defaultSupabase } from "./supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
 
 export interface DimOut {
@@ -38,10 +38,15 @@ export interface ProfileSourceEntry {
   share_text?: string | null;
 }
 
-export async function getProfileSources(userId: string): Promise<ProfileSourceEntry[]> {
+export async function getProfileSources(
+  userId: string,
+  client?: SupabaseClient,
+): Promise<ProfileSourceEntry[]> {
+  const db = client ?? defaultSupabase;
+
   /* ---- A. Reports ---- */
 
-  const { data: reports, error: reportError } = await supabase
+  const { data: reports, error: reportError } = await db
     .from("reports")
     .select("id, created_at, user_id, report_type, main_result, parse_status, input_type, image_url")
     .eq("user_id", userId)
@@ -52,7 +57,7 @@ export async function getProfileSources(userId: string): Promise<ProfileSourceEn
 
   /* ---- B. Quiz attempts ---- */
 
-  const { data: attempts, error: attemptError } = await supabase
+  const { data: attempts, error: attemptError } = await db
     .from("quiz_attempts")
     .select("id, created_at, quiz_id, final_result_name, final_result_key")
     .eq("user_id", userId)
@@ -68,7 +73,7 @@ export async function getProfileSources(userId: string): Promise<ProfileSourceEn
   const quizMap: Record<string, { title: string; slug: string }> = {};
 
   if (quizIds.length > 0) {
-    const { data: quizzes, error: quizError } = await supabase
+    const { data: quizzes, error: quizError } = await db
       .from("quizzes")
       .select("id, title, slug")
       .in("id", quizIds);
@@ -93,7 +98,7 @@ export async function getProfileSources(userId: string): Promise<ProfileSourceEn
   }> = {};
 
   if (quizIds.length > 0) {
-    const { data: allResults, error: resultsError } = await supabase
+    const { data: allResults, error: resultsError } = await db
       .from("quiz_results")
       .select("quiz_id, key, subtitle, description, image_url, traits, share_text")
       .in("quiz_id", quizIds);
@@ -168,22 +173,33 @@ export async function getProfileSources(userId: string): Promise<ProfileSourceEn
 /*  Cached user_profile reader                                         */
 /* ------------------------------------------------------------------ */
 
-export const getUserProfile = keyedSingleQuery(
-  "getUserProfile",
-  async (userId: string) => {
-    const { data, error } = await supabase
-      .from("user_profile")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
+const _getUserProfileCache = new Map<string, { data: UserProfileRow | null; expiry: number }>();
+const _CACHE_TTL = 5000; // 5 sec
 
-    // PGRST116 = 0 rows, expected when user has no profile yet
-    if (error) {
-      if (error.code !== "PGRST116") throw error;
-      return null;
-    }
+export async function getUserProfile(
+  userId: string,
+  client?: SupabaseClient,
+): Promise<UserProfileRow | null> {
+  const cached = _getUserProfileCache.get(userId);
+  if (cached && cached.expiry > Date.now()) {
+    return cached.data;
+  }
 
-    return data as UserProfileRow | null;
-  },
-  5, // 5 sec — short, so OCR upload → refresh sees new data quickly
-);
+  const db = client ?? defaultSupabase;
+  const { data, error } = await db
+    .from("user_profile")
+    .select("*")
+    .eq("user_id", userId)
+    .single();
+
+  // PGRST116 = 0 rows, expected when user has no profile yet
+  if (error) {
+    if (error.code !== "PGRST116") throw error;
+    _getUserProfileCache.set(userId, { data: null, expiry: Date.now() + _CACHE_TTL });
+    return null;
+  }
+
+  const result = data as UserProfileRow | null;
+  _getUserProfileCache.set(userId, { data: result, expiry: Date.now() + _CACHE_TTL });
+  return result;
+}

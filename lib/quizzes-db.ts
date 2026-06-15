@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { cache } from "react";
-import { supabase } from "./supabase";
+import { createClient as createSSRClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { keyedSingleQuery } from "./cache";
 import type {
   QuizMeta,
@@ -20,12 +21,16 @@ import type {
 } from "./quiz-runtime";
 import type { AdminCategoryRow } from "./admin-db";
 
+async function getDb(): Promise<SupabaseClient> {
+  return createSSRClient();
+}
+
 /* ------------------------------------------------------------------ */
 /*  Read: get full quiz by slug                                        */
 /* ------------------------------------------------------------------ */
 
 export const getQuizBySlug = cache(async (slug: string): Promise<QuizRuntimeData | null> => {
-  const { data: quiz, error: quizError } = await supabase
+  const { data: quiz, error: quizError } = await (await getDb())
     .from("quizzes")
     .select("id, slug, title, hook, quiz_type, status, attempt_count")
     .eq("slug", slug)
@@ -43,17 +48,17 @@ export const getQuizBySlug = cache(async (slug: string): Promise<QuizRuntimeData
     { data: resultRows },
     { data: questionRows },
   ] = await Promise.all([
-    supabase
+    (await getDb())
       .from("quiz_factors")
       .select("key, name")
       .eq("quiz_id", quiz.id)
       .order("sort_order"),
-    supabase
+    (await getDb())
       .from("quiz_results")
       .select("id, key, name, subtitle, description, traits, result_vector, image_url, share_text")
       .eq("quiz_id", quiz.id)
       .order("sort_order"),
-    supabase
+    (await getDb())
       .from("quiz_questions")
       .select("id, text, question_order")
       .eq("quiz_id", quiz.id)
@@ -64,8 +69,8 @@ export const getQuizBySlug = cache(async (slug: string): Promise<QuizRuntimeData
 
   if (questionRows) {
     const optionResults = await Promise.all(
-      questionRows.map((q) =>
-        supabase
+      questionRows.map(async (q) =>
+        (await getDb())
           .from("quiz_options")
           .select("id, label, text, factor_effects")
           .eq("question_id", q.id)
@@ -130,7 +135,7 @@ export interface QuizDetailRow {
 export const getQuizDetail = keyedSingleQuery(
   "getQuizDetail",
   async (slug: string): Promise<QuizDetailRow | null> => {
-  const { data, error } = await supabase
+  const { data, error } = await (await getDb())
     .from("quizzes")
     .select("*")
     .eq("slug", slug)
@@ -142,7 +147,7 @@ export const getQuizDetail = keyedSingleQuery(
   const quiz = data as QuizDetailRow;
 
   if (quiz.category_id) {
-    const { data: cat } = await supabase
+    const { data: cat } = await (await getDb())
       .from("test_categories")
       .select("*")
       .eq("id", quiz.category_id)
@@ -170,7 +175,7 @@ export async function getRelatedQuizzes(
   categoryId: string,
   excludeSlug: string,
 ): Promise<QuizDetailRelatedRow[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (await getDb())
     .from("quizzes")
     .select("id, slug, title, hook, description, attempt_count")
     .eq("category_id", categoryId)
@@ -223,7 +228,7 @@ function generateSlug(): string {
 async function uniqueSlug(): Promise<string> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const slug = generateSlug();
-    const { data } = await supabase
+    const { data } = await (await getDb())
       .from("quizzes")
       .select("id")
       .eq("slug", slug)
@@ -239,7 +244,7 @@ export async function saveQuizSchema(
 ): Promise<SaveQuizResult> {
   const slug = await uniqueSlug();
 
-  const { data: quiz, error: quizError } = await supabase
+  const { data: quiz, error: quizError } = await (await getDb())
     .from("quizzes")
     .insert({
       slug,
@@ -271,7 +276,7 @@ export async function saveQuizSchema(
   const quizId = quiz.id;
 
   async function rollback() {
-    await supabase.from("quizzes").delete().eq("id", quizId);
+    await (await getDb()).from("quizzes").delete().eq("id", quizId);
   }
 
   const factorRows = input.factors.map((f, i) => ({
@@ -282,7 +287,7 @@ export async function saveQuizSchema(
     sort_order: i,
   }));
 
-  const { error: factorError } = await supabase
+  const { error: factorError } = await (await getDb())
     .from("quiz_factors")
     .insert(factorRows);
   if (factorError) {
@@ -306,7 +311,7 @@ export async function saveQuizSchema(
     };
   });
 
-  const { error: resultError } = await supabase
+  const { error: resultError } = await (await getDb())
     .from("quiz_results")
     .insert(resultRows);
   if (resultError) {
@@ -315,7 +320,7 @@ export async function saveQuizSchema(
   }
 
   for (const [qi, q] of input.questions.entries()) {
-    const { data: questionRow, error: questionError } = await supabase
+    const { data: questionRow, error: questionError } = await (await getDb())
       .from("quiz_questions")
       .insert({
         quiz_id: quizId,
@@ -340,7 +345,7 @@ export async function saveQuizSchema(
       factor_effects: opt.effects,
     }));
 
-    const { error: optionError } = await supabase
+    const { error: optionError } = await (await getDb())
       .from("quiz_options")
       .insert(optionRows);
     if (optionError) {
@@ -369,7 +374,7 @@ export interface CreatorQuizRow {
 export async function getQuizzesByCreator(
   userId: string,
 ): Promise<CreatorQuizRow[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (await getDb())
     .from("quizzes")
     .select("id, slug, title, hook, status, attempt_count, created_at")
     .eq("creator_user_id", userId)
@@ -392,7 +397,7 @@ export async function getQuizForEdit(
   userId: string,
 ): Promise<SaveQuizInput | null> {
   // 1. Quiz meta
-  const { data: quiz, error: quizError } = await supabase
+  const { data: quiz, error: quizError } = await (await getDb())
     .from("quizzes")
     .select("title, hook, quiz_type, audience, tone, creator_user_id, abstractness, seriousness, depth, poeticness")
     .eq("id", quizId)
@@ -402,21 +407,21 @@ export async function getQuizForEdit(
   if (quiz.creator_user_id !== userId) return null;
 
   // 2. Results
-  const { data: resultRows } = await supabase
+  const { data: resultRows } = await (await getDb())
     .from("quiz_results")
     .select("key, name, subtitle, description, traits, share_text, image_url, result_vector")
     .eq("quiz_id", quizId)
     .order("sort_order");
 
   // 3. Factors
-  const { data: factorRows } = await supabase
+  const { data: factorRows } = await (await getDb())
     .from("quiz_factors")
     .select("key, name, description")
     .eq("quiz_id", quizId)
     .order("sort_order");
 
   // 4. Questions + options
-  const { data: questionRows } = await supabase
+  const { data: questionRows } = await (await getDb())
     .from("quiz_questions")
     .select("id, text, question_order")
     .eq("quiz_id", quizId)
@@ -426,7 +431,7 @@ export async function getQuizForEdit(
 
   if (questionRows) {
     for (const q of questionRows) {
-      const { data: optionRows } = await supabase
+      const { data: optionRows } = await (await getDb())
         .from("quiz_options")
         .select("label, text, factor_effects")
         .eq("question_id", q.id)
@@ -491,7 +496,7 @@ export async function updateQuizSchema(
   quizId: string,
 ): Promise<SaveQuizResult> {
   // Fetch existing slug — do NOT regenerate on edit
-  const { data: existing } = await supabase
+  const { data: existing } = await (await getDb())
     .from("quizzes")
     .select("slug")
     .eq("id", quizId)
@@ -501,7 +506,7 @@ export async function updateQuizSchema(
   if (!slug) throw new Error("Quiz not found");
 
   // 1. Update quizzes row (slug preserved)
-  const { error: updateError } = await supabase
+  const { error: updateError } = await (await getDb())
     .from("quizzes")
     .update({
       title: input.meta.title,
@@ -529,10 +534,10 @@ export async function updateQuizSchema(
 
   // 2. Delete old sub-rows
   await Promise.all([
-    supabase.from("quiz_options").delete().eq("quiz_id", quizId),
-    supabase.from("quiz_questions").delete().eq("quiz_id", quizId),
-    supabase.from("quiz_results").delete().eq("quiz_id", quizId),
-    supabase.from("quiz_factors").delete().eq("quiz_id", quizId),
+    (await getDb()).from("quiz_options").delete().eq("quiz_id", quizId),
+    (await getDb()).from("quiz_questions").delete().eq("quiz_id", quizId),
+    (await getDb()).from("quiz_results").delete().eq("quiz_id", quizId),
+    (await getDb()).from("quiz_factors").delete().eq("quiz_id", quizId),
   ]);
 
   // 3. Re-insert factors
@@ -544,7 +549,7 @@ export async function updateQuizSchema(
     sort_order: i,
   }));
 
-  const { error: factorError } = await supabase
+  const { error: factorError } = await (await getDb())
     .from("quiz_factors")
     .insert(factorRows);
   if (factorError) {
@@ -568,7 +573,7 @@ export async function updateQuizSchema(
     };
   });
 
-  const { error: resultError } = await supabase
+  const { error: resultError } = await (await getDb())
     .from("quiz_results")
     .insert(resultRows);
   if (resultError) {
@@ -577,7 +582,7 @@ export async function updateQuizSchema(
 
   // 5. Re-insert questions + options
   for (const [qi, q] of input.questions.entries()) {
-    const { data: questionRow, error: questionError } = await supabase
+    const { data: questionRow, error: questionError } = await (await getDb())
       .from("quiz_questions")
       .insert({
         quiz_id: quizId,
@@ -601,7 +606,7 @@ export async function updateQuizSchema(
       factor_effects: opt.effects,
     }));
 
-    const { error: optionError } = await supabase
+    const { error: optionError } = await (await getDb())
       .from("quiz_options")
       .insert(optionRows);
     if (optionError) {

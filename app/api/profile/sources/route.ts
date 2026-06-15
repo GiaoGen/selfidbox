@@ -14,7 +14,7 @@ export async function GET() {
       );
     }
 
-    const sources = await getProfileSources(user.id);
+    const sources = await getProfileSources(user.id, supabase);
     return NextResponse.json({ ok: true, sources });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

@@ -14,6 +14,22 @@ export default async function AdminLayout({
     redirect("/login");
   }
 
+  const adminIds = (process.env.ADMIN_USER_IDS ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  if (!adminIds.includes(user.id)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--canvas)]">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold text-[var(--ink)]">403</h1>
+          <p className="mt-2 text-sm text-[var(--muted)]">无权访问管理后台</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       {/* Mobile nav bar */}

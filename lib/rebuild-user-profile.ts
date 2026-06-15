@@ -1,4 +1,5 @@
-import { supabase } from "./supabase";
+import { supabase as defaultSupabase } from "./supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { trackAISuccess, trackAIError } from "@/lib/ai/track-ai-usage";
 import { generateAISelfidProfile } from "@/lib/prompts/profile-summary";
 import { logger } from "@/lib/logger";
@@ -277,7 +278,11 @@ const SOCIAL_CN: Record<string, string> = {
 /*  MAIN                                                               */
 /* ================================================================== */
 
-export async function rebuildUserProfile(userId: string): Promise<RebuildResult> {
+export async function rebuildUserProfile(
+  userId: string,
+  client?: SupabaseClient,
+): Promise<RebuildResult> {
+  const supabase = client ?? defaultSupabase;
   logger.debug(`[ProfileRebuild] start userId: ${userId}`);
 
   /* ---- 1. Read existing user_profile ---- */
@@ -547,6 +552,7 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
     if (aiResult.text) {
       selfid_profile = aiResult.text;
       trackAISuccess({
+        client: supabase,
         userId,
         feature: "profile_summary",
         model: "deepseek-chat",
@@ -559,6 +565,7 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
       });
     } else {
       trackAIError({
+        client: supabase,
         userId,
         feature: "profile_summary",
         model: "deepseek-chat",
@@ -622,7 +629,11 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
 /*  If no sources remain → resets to empty/initial profile.             */
 /* ================================================================== */
 
-export async function rebuildUserProfileFromAllSources(userId: string): Promise<RebuildResult> {
+export async function rebuildUserProfileFromAllSources(
+  userId: string,
+  client?: SupabaseClient,
+): Promise<RebuildResult> {
+  const supabase = client ?? defaultSupabase;
   logger.debug(`[ProfileRebuild-Full] start userId: ${userId}`);
 
   /* ---- 1. Read ALL reports ---- */
@@ -834,6 +845,7 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
     if (aiResult.text) {
       selfid_profile = aiResult.text;
       trackAISuccess({
+        client: supabase,
         userId,
         feature: "profile_summary",
         model: "deepseek-chat",
@@ -846,6 +858,7 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
       });
     } else {
       trackAIError({
+        client: supabase,
         userId,
         feature: "profile_summary",
         model: "deepseek-chat",

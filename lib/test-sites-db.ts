@@ -1,6 +1,11 @@
-import { supabase } from "./supabase";
+import { createClient as createSSRClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TestSite, TestAccent } from "./test-sites";
 import { listQuery, keyedSingleQuery, keyedObjectQuery } from "./cache";
+
+async function getDb(): Promise<SupabaseClient> {
+  return createSSRClient();
+}
 
 /* ------------------------------------------------------------------ */
 /*  Supabase row shapes                                                */
@@ -127,7 +132,7 @@ export function mapCategory(row: CategoryRow): ExploreCategory {
 export const getCategories = listQuery(
   "getCategories",
   async () => {
-    const { data, error } = await supabase
+    const { data, error } = await (await getDb())
       .from("test_categories")
       .select("*")
       .eq("status", "published")
@@ -142,7 +147,7 @@ export const getCategories = listQuery(
 export const getPublishedTestSites = listQuery(
   "getPublishedTestSites",
   async () => {
-    const { data, error } = await supabase
+    const { data, error } = await (await getDb())
       .from("test_sites")
       .select(`
         *,
@@ -161,7 +166,7 @@ export const getPublishedTestSites = listQuery(
 export const getTestSiteBySlug = keyedSingleQuery(
   "getTestSiteBySlug",
   async (slug: string) => {
-    const { data, error } = await supabase
+    const { data, error } = await (await getDb())
       .from("test_sites")
       .select(`
         *,
@@ -180,7 +185,7 @@ export const getTestSiteBySlug = keyedSingleQuery(
 export const getTestSitesByCategory = keyedObjectQuery(
   "getTestSitesByCategory",
   async (categorySlug: string) => {
-    const { data: category, error: categoryError } = await supabase
+    const { data: category, error: categoryError } = await (await getDb())
       .from("test_categories")
       .select("id, slug, name, description")
       .eq("slug", categorySlug)
@@ -190,7 +195,7 @@ export const getTestSitesByCategory = keyedObjectQuery(
     if (categoryError) throw categoryError;
     if (!category) return { category: null, sites: [] as TestSiteRow[] };
 
-    const { data: sites, error: sitesError } = await supabase
+    const { data: sites, error: sitesError } = await (await getDb())
       .from("test_sites")
       .select(`
         *,
@@ -219,7 +224,7 @@ function computePopularityScore(clickCount: number, createdAt: string) {
 }
 
 export async function updateTestSitePopularity(testSiteId: string) {
-  const { data: site, error } = await supabase
+  const { data: site, error } = await (await getDb())
     .from("test_sites")
     .select("click_count, created_at")
     .eq("id", testSiteId)
@@ -233,7 +238,7 @@ export async function updateTestSitePopularity(testSiteId: string) {
   const clickCount = site.click_count ?? 0;
   const score = computePopularityScore(clickCount, site.created_at);
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await (await getDb())
     .from("test_sites")
     .update({ popularity_score: score })
     .eq("id", testSiteId);
@@ -257,7 +262,7 @@ export async function updateTestSitePopularity(testSiteId: string) {
 }
 
 export async function recordTestSiteClick(slug: string) {
-  const { data: site, error: findError } = await supabase
+  const { data: site, error: findError } = await (await getDb())
     .from("test_sites")
     .select("id, click_count, created_at")
     .eq("slug", slug)
@@ -272,8 +277,8 @@ export async function recordTestSiteClick(slug: string) {
   const popularityScore = computePopularityScore(newClickCount, site.created_at);
 
   const [{ error: insertError }, { error: updateError }] = await Promise.all([
-    supabase.from("test_site_clicks").insert({ test_site_id: site.id }),
-    supabase
+    (await getDb()).from("test_site_clicks").insert({ test_site_id: site.id }),
+    (await getDb())
       .from("test_sites")
       .update({
         click_count: newClickCount,

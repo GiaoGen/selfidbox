@@ -1,4 +1,5 @@
-import { supabase } from "./supabase";
+import { supabase as defaultSupabase } from "./supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /* ================================================================== */
 /*  getSourceDetail                                                    */
@@ -46,11 +47,13 @@ export async function getSourceDetail(
   userId: string,
   sourceType: "report" | "quiz",
   id: string,
+  client?: SupabaseClient,
 ): Promise<SourceDetail> {
+  const db = client ?? defaultSupabase;
   if (sourceType === "report") {
-    return getReportDetail(userId, id);
+    return getReportDetail(userId, id, db);
   }
-  return getQuizAttemptDetail(userId, id);
+  return getQuizAttemptDetail(userId, id, db);
 }
 
 /* ---- Report detail ---- */
@@ -58,8 +61,9 @@ export async function getSourceDetail(
 async function getReportDetail(
   userId: string,
   id: string,
+  db: SupabaseClient,
 ): Promise<ReportDetailData | null> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("reports")
     .select(
       "id, report_type, main_result, created_at, input_type, image_url, normalized_summary, core_vector, social_vector",
@@ -89,8 +93,9 @@ async function getReportDetail(
 async function getQuizAttemptDetail(
   userId: string,
   id: string,
+  db: SupabaseClient,
 ): Promise<QuizDetailData | null> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("quiz_attempts")
     .select("id, created_at, quiz_id, final_result_name, final_result_key, user_vector")
     .eq("id", id)
@@ -100,7 +105,7 @@ async function getQuizAttemptDetail(
   if (error || !data) return null;
 
   // Join: quiz title + slug
-  const { data: quiz } = await supabase
+  const { data: quiz } = await db
     .from("quizzes")
     .select("title, slug")
     .eq("id", data.quiz_id)
@@ -114,7 +119,7 @@ async function getQuizAttemptDetail(
   let resultShareText: string | null = null;
 
   if (data.final_result_key && data.quiz_id) {
-    const { data: resultRow } = await supabase
+    const { data: resultRow } = await db
       .from("quiz_results")
       .select("subtitle, description, image_url, traits, share_text")
       .eq("quiz_id", data.quiz_id)

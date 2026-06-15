@@ -90,7 +90,7 @@ export async function POST(request: Request) {
     if (shouldRebuild) {
       console.log("[OCR Proxy] calling rebuildUserProfile");
       try {
-        const result = await rebuildUserProfile(userId);
+        const result = await rebuildUserProfile(userId, supabase);
         profileRebuildResult = result;
         console.log(`[OCR Proxy] profile_rebuild_result: ${JSON.stringify(result)}`);
       } catch (err) {

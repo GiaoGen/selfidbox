@@ -1,4 +1,10 @@
-import { supabase } from "@/lib/supabase";
+import { createClient as createSSRClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+/** Create a fresh SSR client per call (reads cookies from current request). */
+async function getDb(): Promise<SupabaseClient> {
+  return createSSRClient();
+}
 
 /* ------------------------------------------------------------------ */
 /*  In-memory prompt cache                                              */
@@ -85,6 +91,7 @@ export function validatePromptContent(
 export async function getPromptTemplate(
   key: string,
 ): Promise<PromptFetchResult> {
+  const supabase = await getDb();
   // 1. Check in-memory cache
   const cached = promptCache.get(key);
   if (cached) {
@@ -167,6 +174,7 @@ export async function getPromptTemplate(
  * Fetch all prompts for admin listing.
  */
 export async function getAllPrompts(): Promise<AiPromptRow[]> {
+  const supabase = await getDb();
   const { data, error } = await supabase
     .from("ai_prompts")
     .select("*")
@@ -183,6 +191,7 @@ export async function getAllPrompts(): Promise<AiPromptRow[]> {
  * Fetch a single prompt by key for admin edit (returns even inactive rows).
  */
 export async function getPromptByKey(key: string): Promise<AiPromptRow | null> {
+  const supabase = await getDb();
   const { data, error } = await supabase
     .from("ai_prompts")
     .select("*")
@@ -206,6 +215,7 @@ export async function upsertPrompt(
     is_active: boolean;
   },
 ): Promise<void> {
+  const supabase = await getDb();
   // Get current version
   const current = await getPromptByKey(key);
   const newVersion = (current?.version ?? 0) + 1;

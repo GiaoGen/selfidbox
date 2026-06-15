@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   }
 
   /* ---- 3. Fetch ---- */
-  const detail = await getSourceDetail(user.id, sourceType, id);
+  const detail = await getSourceDetail(user.id, sourceType, id, supabase);
 
   if (!detail) {
     return NextResponse.json(
