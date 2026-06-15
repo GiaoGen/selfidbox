@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   getCategories,
   getPublishedTestSites,
@@ -9,6 +10,7 @@ import { getExploreQuizCards } from "@/lib/explore/fetch";
 import { testSiteToExploreCard } from "@/lib/explore/mapper";
 import type { ExploreCard } from "@/lib/explore/types";
 import { ExploreClient } from "@/components/explore/ExploreClient";
+import { logger } from "@/lib/logger";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -49,6 +51,16 @@ function getTrending(cards: ExploreCard[]): ExploreCard[] {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Metadata                                                            */
+/* ------------------------------------------------------------------ */
+
+export const metadata: Metadata = {
+  title: "Explore — Discover Personality Quizzes",
+  description:
+    "Browse and discover AI-powered personality quizzes and test sites. Find your SelfID.",
+};
+
+/* ------------------------------------------------------------------ */
 /*  Page (server — data fetch only)                                    */
 /* ------------------------------------------------------------------ */
 
@@ -76,7 +88,7 @@ export default async function ExplorePage({
     ...quizCards,
   ]);
 
-  console.log("[Explore] Data merge:", {
+  logger.debug("[Explore] Data merge:", {
     officialCards: siteCards.length,
     quizCards: quizCards.length,
     allCards: allCards.length,

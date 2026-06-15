@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { trackAISuccess, trackAIError } from "@/lib/ai/track-ai-usage";
 import { generateAISelfidProfile } from "@/lib/prompts/profile-summary";
+import { logger } from "@/lib/logger";
 
 /* ================================================================== */
 /*  rebuildUserProfile(userId)                                         */
@@ -277,7 +278,7 @@ const SOCIAL_CN: Record<string, string> = {
 /* ================================================================== */
 
 export async function rebuildUserProfile(userId: string): Promise<RebuildResult> {
-  console.log(`[ProfileRebuild] start userId: ${userId}`);
+  logger.debug(`[ProfileRebuild] start userId: ${userId}`);
 
   /* ---- 1. Read existing user_profile ---- */
 
@@ -290,12 +291,12 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
       .single();
 
     if (error && error.code !== "PGRST116") {
-      console.warn(`[ProfileRebuild] read existing profile failed: ${error.message}`);
+      logger.warn(`[ProfileRebuild] read existing profile failed: ${error.message}`);
     } else if (data) {
       oldProfile = data as Record<string, unknown>;
     }
   } catch (err) {
-    console.warn("[ProfileRebuild] read existing profile threw", err);
+    logger.warn("[ProfileRebuild] read existing profile threw", err);
   }
 
   const oldUpdatedAt = oldProfile?.updated_at as string | undefined;
@@ -315,10 +316,10 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
     if (dim) oldSocial[key] = dim;
   }
 
-  console.log(`[ProfileRebuild] existing profile: ${oldProfile ? "found" : "not found"}`);
-  console.log(`[ProfileRebuild] old report_count: ${oldReportCount}`);
-  console.log(`[ProfileRebuild] old core keys: [${Object.keys(oldCore).join(", ") || "(none)"}]`);
-  console.log(`[ProfileRebuild] old social keys: [${Object.keys(oldSocial).join(", ") || "(none)"}]`);
+  logger.debug(`[ProfileRebuild] existing profile: ${oldProfile ? "found" : "not found"}`);
+  logger.debug(`[ProfileRebuild] old report_count: ${oldReportCount}`);
+  logger.debug(`[ProfileRebuild] old core keys: [${Object.keys(oldCore).join(", ") || "(none)"}]`);
+  logger.debug(`[ProfileRebuild] old social keys: [${Object.keys(oldSocial).join(", ") || "(none)"}]`);
 
   /* ---- 2. Read NEW reports (created after last profile update) ---- */
 
@@ -336,12 +337,12 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
 
     const { data, error } = await query;
     if (error) {
-      console.warn(`[ProfileRebuild] reports query failed: ${error.message}`);
+      logger.warn(`[ProfileRebuild] reports query failed: ${error.message}`);
     } else {
       newReportRows = (data ?? []) as Record<string, unknown>[];
     }
   } catch (err) {
-    console.warn("[ProfileRebuild] reports query threw", err);
+    logger.warn("[ProfileRebuild] reports query threw", err);
   }
 
   /* ---- 3. Read NEW quiz_attempts (not yet fused) ---- */
@@ -357,12 +358,12 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.warn(`[ProfileRebuild] quiz_attempts query failed: ${error.message}`);
+      logger.warn(`[ProfileRebuild] quiz_attempts query failed: ${error.message}`);
     } else {
       newAttemptRows = (data ?? []) as Record<string, unknown>[];
     }
   } catch (err) {
-    console.warn("[ProfileRebuild] quiz_attempts query threw", err);
+    logger.warn("[ProfileRebuild] quiz_attempts query threw", err);
   }
 
   // Deduplicate: latest per quiz_id
@@ -375,13 +376,13 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
     newAttempts.push(r);
   }
 
-  console.log(`[ProfileRebuild] new reports count: ${newReportRows.length}`);
-  console.log(`[ProfileRebuild] new quiz attempts count: ${newAttempts.length} (total unfused: ${newAttemptRows.length})`);
+  logger.debug(`[ProfileRebuild] new reports count: ${newReportRows.length}`);
+  logger.debug(`[ProfileRebuild] new quiz attempts count: ${newAttempts.length} (total unfused: ${newAttemptRows.length})`);
 
   /* ---- 4. No new sources → skip ---- */
 
   if (newReportRows.length === 0 && newAttempts.length === 0) {
-    console.log("[ProfileRebuild] NO_NEW_SOURCES — user_profile unchanged");
+    logger.debug("[ProfileRebuild] NO_NEW_SOURCES — user_profile unchanged");
     return { ok: false, reason: "NO_NEW_SOURCES" };
   }
 
@@ -408,7 +409,7 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
     const socialDims = extractReportDims(r.social_vector, SOCIAL_KEYS, fallbackWeight);
 
     if (coreDims.size === 0 && socialDims.size === 0) {
-      console.warn(`[ProfileRebuild] skipping report[${r.id}] — no valid Selfid keys`);
+      logger.warn(`[ProfileRebuild] skipping report[${r.id}] — no valid Selfid keys`);
       continue;
     }
 
@@ -431,7 +432,7 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
   for (const row of newAttempts) {
     const uv = normalizeJsonb(row.user_vector);
     if (!uv) {
-      console.warn(`[ProfileRebuild] skipping quiz_attempt[${row.id}] — user_vector null`);
+      logger.warn(`[ProfileRebuild] skipping quiz_attempt[${row.id}] — user_vector null`);
       continue;
     }
 
@@ -442,13 +443,13 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
 
     const allInvalid = [...core.invalidKeys, ...social.invalidKeys];
     if (allInvalid.length > 0) {
-      console.warn(
+      logger.warn(
         `[ProfileRebuild] quiz_attempt[${row.id}] invalid keys skipped: [${allInvalid.join(", ")}]`,
       );
     }
 
     if (core.dims.size === 0 && social.dims.size === 0) {
-      console.warn(`[ProfileRebuild] skipping quiz_attempt[${row.id}] — no valid Selfid keys`);
+      logger.warn(`[ProfileRebuild] skipping quiz_attempt[${row.id}] — no valid Selfid keys`);
       continue;
     }
 
@@ -470,12 +471,12 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
     const old = oldCore[key];
     const cur = core_vector[key];
     if (old && cur) {
-      console.log(
+      logger.debug(
         `[ProfileRebuild] dim "core.${key}": old_value=${old.value} new_value=${cur.value} ` +
         `weight=${cur.count} new_count=${cur.count} new_confidence=${cur.confidence}`,
       );
     } else if (cur) {
-      console.log(
+      logger.debug(
         `[ProfileRebuild] dim "core.${key}": NEW — value=${cur.value} weight=${cur.count} ` +
         `new_count=${cur.count} new_confidence=${cur.confidence}`,
       );
@@ -485,12 +486,12 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
     const old = oldSocial[key];
     const cur = social_vector[key];
     if (old && cur) {
-      console.log(
+      logger.debug(
         `[ProfileRebuild] dim "social.${key}": old_value=${old.value} new_value=${cur.value} ` +
         `weight=${cur.count} new_count=${cur.count} new_confidence=${cur.confidence}`,
       );
     } else if (cur) {
-      console.log(
+      logger.debug(
         `[ProfileRebuild] dim "social.${key}": NEW — value=${cur.value} weight=${cur.count} ` +
         `new_count=${cur.count} new_confidence=${cur.confidence}`,
       );
@@ -512,7 +513,7 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
   /* ---- 10. Cumulative report_count ---- */
 
   const newReportCount = oldReportCount + reportsUsed + attemptsUsed;
-  console.log(
+  logger.debug(
     `[ProfileRebuild] report_count: ${oldReportCount} → ${newReportCount} ` +
     `(+${reportsUsed} reports, +${attemptsUsed} attempts)`,
   );
@@ -566,10 +567,10 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
       });
     }
   } catch (err) {
-    console.warn("[ProfileRebuild] AI summary failed, using fallback:", err);
+    logger.warn("[ProfileRebuild] AI summary failed, using fallback:", err);
   }
 
-  console.log(`[ProfileRebuild] selfid_profile: "${selfid_profile}"`);
+  logger.debug(`[ProfileRebuild] selfid_profile: "${selfid_profile}"`);
 
   /* ---- 13. Upsert ---- */
 
@@ -587,11 +588,11 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
   );
 
   if (upsertError) {
-    console.error(`[ProfileRebuild] upsert failed: ${upsertError.message}`);
+    logger.error(`[ProfileRebuild] upsert failed: ${upsertError.message}`);
     throw new Error(`用户档案更新失败：${upsertError.message}`);
   }
 
-  console.log(`[ProfileRebuild] upsert success — user_id=${userId} report_count=${newReportCount}`);
+  logger.debug(`[ProfileRebuild] upsert success — user_id=${userId} report_count=${newReportCount}`);
 
   /* ---- 12. Mark quiz_attempts as fused ---- */
 
@@ -602,9 +603,9 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
       .in("id", fusedAttemptIds);
 
     if (fuseError) {
-      console.warn(`[ProfileRebuild] mark fused failed (non-fatal): ${fuseError.message}`);
+      logger.warn(`[ProfileRebuild] mark fused failed (non-fatal): ${fuseError.message}`);
     } else {
-      console.log(`[ProfileRebuild] marked ${fusedAttemptIds.length} quiz_attempt(s) as fused`);
+      logger.debug(`[ProfileRebuild] marked ${fusedAttemptIds.length} quiz_attempt(s) as fused`);
     }
   }
 
@@ -622,7 +623,7 @@ export async function rebuildUserProfile(userId: string): Promise<RebuildResult>
 /* ================================================================== */
 
 export async function rebuildUserProfileFromAllSources(userId: string): Promise<RebuildResult> {
-  console.log(`[ProfileRebuild-Full] start userId: ${userId}`);
+  logger.debug(`[ProfileRebuild-Full] start userId: ${userId}`);
 
   /* ---- 1. Read ALL reports ---- */
 
@@ -635,12 +636,12 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
       .eq("parse_status", "normalized");
 
     if (error) {
-      console.warn(`[ProfileRebuild-Full] reports query failed: ${error.message}`);
+      logger.warn(`[ProfileRebuild-Full] reports query failed: ${error.message}`);
     } else {
       allReportRows = (data ?? []) as Record<string, unknown>[];
     }
   } catch (err) {
-    console.warn("[ProfileRebuild-Full] reports query threw", err);
+    logger.warn("[ProfileRebuild-Full] reports query threw", err);
   }
 
   /* ---- 2. Read ALL quiz_attempts ---- */
@@ -655,12 +656,12 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.warn(`[ProfileRebuild-Full] quiz_attempts query failed: ${error.message}`);
+      logger.warn(`[ProfileRebuild-Full] quiz_attempts query failed: ${error.message}`);
     } else {
       allAttemptRows = (data ?? []) as Record<string, unknown>[];
     }
   } catch (err) {
-    console.warn("[ProfileRebuild-Full] quiz_attempts query threw", err);
+    logger.warn("[ProfileRebuild-Full] quiz_attempts query threw", err);
   }
 
   // Deduplicate: latest per quiz_id
@@ -673,12 +674,12 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
     allAttempts.push(r);
   }
 
-  console.log(`[ProfileRebuild-Full] reports: ${allReportRows.length}, quiz_attempts: ${allAttempts.length}`);
+  logger.debug(`[ProfileRebuild-Full] reports: ${allReportRows.length}, quiz_attempts: ${allAttempts.length}`);
 
   /* ---- 3. No sources → reset to empty/initial profile ---- */
 
   if (allReportRows.length === 0 && allAttempts.length === 0) {
-    console.log("[ProfileRebuild-Full] no sources — resetting to empty profile");
+    logger.debug("[ProfileRebuild-Full] no sources — resetting to empty profile");
 
     const emptyCore: Record<string, DimOut> = {};
     const emptySocial: Record<string, DimOut> = {};
@@ -697,7 +698,7 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
     );
 
     if (upsertError) {
-      console.error(`[ProfileRebuild-Full] empty upsert failed: ${upsertError.message}`);
+      logger.error(`[ProfileRebuild-Full] empty upsert failed: ${upsertError.message}`);
       throw new Error(`用户档案重置失败：${upsertError.message}`);
     }
 
@@ -731,7 +732,7 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
     const socialDims = extractReportDims(r.social_vector, SOCIAL_KEYS, fallbackWeight);
 
     if (coreDims.size === 0 && socialDims.size === 0) {
-      console.warn(`[ProfileRebuild-Full] skipping report[${r.id}] — no valid Selfid keys`);
+      logger.warn(`[ProfileRebuild-Full] skipping report[${r.id}] — no valid Selfid keys`);
       continue;
     }
 
@@ -754,7 +755,7 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
   for (const row of allAttempts) {
     const uv = normalizeJsonb(row.user_vector);
     if (!uv) {
-      console.warn(`[ProfileRebuild-Full] skipping quiz_attempt[${row.id}] — user_vector null`);
+      logger.warn(`[ProfileRebuild-Full] skipping quiz_attempt[${row.id}] — user_vector null`);
       continue;
     }
 
@@ -765,13 +766,13 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
 
     const allInvalid = [...core.invalidKeys, ...social.invalidKeys];
     if (allInvalid.length > 0) {
-      console.warn(
+      logger.warn(
         `[ProfileRebuild-Full] quiz_attempt[${row.id}] invalid keys skipped: [${allInvalid.join(", ")}]`,
       );
     }
 
     if (core.dims.size === 0 && social.dims.size === 0) {
-      console.warn(`[ProfileRebuild-Full] skipping quiz_attempt[${row.id}] — no valid Selfid keys`);
+      logger.warn(`[ProfileRebuild-Full] skipping quiz_attempt[${row.id}] — no valid Selfid keys`);
       continue;
     }
 
@@ -788,7 +789,7 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
   }
 
   const newReportCount = reportsUsed + attemptsUsed;
-  console.log(
+  logger.debug(
     `[ProfileRebuild-Full] fused ${reportsUsed} reports + ${attemptsUsed} quiz_attempts = ${newReportCount} total`,
   );
 
@@ -853,10 +854,10 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
       });
     }
   } catch (err) {
-    console.warn("[ProfileRebuild-Full] AI summary failed, using fallback:", err);
+    logger.warn("[ProfileRebuild-Full] AI summary failed, using fallback:", err);
   }
 
-  console.log(`[ProfileRebuild-Full] selfid_profile: "${selfid_profile}"`);
+  logger.debug(`[ProfileRebuild-Full] selfid_profile: "${selfid_profile}"`);
 
   /* ---- 10. Upsert ---- */
 
@@ -874,11 +875,11 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
   );
 
   if (upsertError) {
-    console.error(`[ProfileRebuild-Full] upsert failed: ${upsertError.message}`);
+    logger.error(`[ProfileRebuild-Full] upsert failed: ${upsertError.message}`);
     throw new Error(`用户档案更新失败：${upsertError.message}`);
   }
 
-  console.log(`[ProfileRebuild-Full] upsert success — user_id=${userId} report_count=${newReportCount}`);
+  logger.debug(`[ProfileRebuild-Full] upsert success — user_id=${userId} report_count=${newReportCount}`);
 
   /* ---- 9. Mark quiz_attempts as fused ---- */
 
@@ -889,9 +890,9 @@ export async function rebuildUserProfileFromAllSources(userId: string): Promise<
       .in("id", fusedAttemptIds);
 
     if (fuseError) {
-      console.warn(`[ProfileRebuild-Full] mark fused failed (non-fatal): ${fuseError.message}`);
+      logger.warn(`[ProfileRebuild-Full] mark fused failed (non-fatal): ${fuseError.message}`);
     } else {
-      console.log(`[ProfileRebuild-Full] marked ${fusedAttemptIds.length} quiz_attempt(s) as fused`);
+      logger.debug(`[ProfileRebuild-Full] marked ${fusedAttemptIds.length} quiz_attempt(s) as fused`);
     }
   }
 

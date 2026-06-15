@@ -1,7 +1,6 @@
 import { randomBytes } from "crypto";
 import { cache } from "react";
 import { supabase } from "./supabase";
-import { DEV_USER_ID } from "./dev-user";
 import { keyedSingleQuery } from "./cache";
 import type {
   QuizMeta,
@@ -186,63 +185,6 @@ export async function getRelatedQuizzes(
   }
 
   return (data ?? []) as QuizDetailRelatedRow[];
-}
-
-/* ------------------------------------------------------------------ */
-/*  Write: save quiz attempt                                           */
-/* ------------------------------------------------------------------ */
-
-export interface SaveAttemptInput {
-  quizId: string;
-  userVector: Record<string, number>;
-  ranking: RankedRuntimeResult[];
-  answers: AnswerRecord[];
-}
-
-export async function saveQuizAttempt(input: SaveAttemptInput) {
-  const top = input.ranking[0];
-
-  const { data: attempt, error: attemptError } = await supabase
-    .from("quiz_attempts")
-    .insert({
-      quiz_id: input.quizId,
-      user_id: DEV_USER_ID,
-      user_vector: input.userVector,
-      similarity_ranking: input.ranking.slice(0, 3).map((r) => ({
-        result_key: r.result.key,
-        result_name: r.result.name,
-        similarity: r.similarity,
-      })),
-      final_result_id: top?.result.id ?? null,
-      final_result_key: top?.result.key ?? null,
-      final_result_name: top?.result.name ?? null,
-      included_in_profile: true,
-      profile_weight: 0.3,
-    })
-    .select("id")
-    .single();
-
-  if (attemptError) {
-    throw new Error(`保存答题记录失败：${attemptError.message}`);
-  }
-
-  const answerRows = input.answers.map((a) => ({
-    attempt_id: attempt.id,
-    quiz_id: input.quizId,
-    question_id: a.questionId,
-    option_id: a.optionId,
-  }));
-
-  const { error: answerError } = await supabase
-    .from("quiz_attempt_answers")
-    .insert(answerRows);
-
-  if (answerError) {
-    // best-effort: don't rollback attempt, just log
-    console.error("保存答题选项失败：", answerError.message);
-  }
-
-  return { attemptId: attempt.id };
 }
 
 /* ------------------------------------------------------------------ */

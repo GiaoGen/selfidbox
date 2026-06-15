@@ -333,41 +333,44 @@ Supabase 迁移目录中仅有一个 storage 策略。核心表（`reports`、`u
 
 ## 优先级排序（P0 → P2）
 
+> **第一轮：2026-06-14 | 第二轮：2026-06-15**  
+> ✅ = 已完成　⬜ = 需手动操作
+
 ### P0 — 上线前必须完成
 
-| # | 行动 | 领域 |
-|---|------|------|
-| 1 | 轮换所有密钥，创建 `.env.example` | 配置 |
-| 2 | Admin 路由添加认证检查 | 安全 |
-| 3 | Debug 页面删除/守卫 | 安全 |
-| 4 | AI 生成 API 路由添加认证 | 安全 |
-| 5 | AI 生成 API 路由添加限流 | API |
-| 6 | 移除 `DEV_USER_ID` 硬编码 | 数据 |
-| 7 | 创建 `error.tsx` + `not-found.tsx` | 错误处理 |
-| 8 | 创建 `robots.ts` + `sitemap.ts` | SEO |
-| 9 | README 重写 | 文档 |
-| 10 | 生产环境禁用调试日志 | 性能 |
+| # | 行动 | 领域 | 状态 |
+|---|------|------|------|
+| 1 | 轮换所有密钥，创建 `.env.example` | 配置 | ✅ `.env.example` 已创建；⬜ 密钥轮换需手动操作 |
+| 2 | Admin 路由添加认证检查 | 安全 | ✅ `app/admin/layout.tsx` 已添加 `createClient()` + `getUser()` + `redirect("/login")` |
+| 3 | Debug 页面删除/守卫 | 安全 | ✅ `debug-supabase`、`auth-debug` 已删除 |
+| 4 | AI 生成 API 路由添加认证 | 安全 | ✅ 4 个 `quiz-ai/*` 路由已添加 auth check，未认证返回 401 |
+| 5 | AI 生成 API 路由添加限流 | API | ✅ `lib/rate-limit.ts` + 4 路由已应用，20 req/min/user |
+| 6 | 移除 `DEV_USER_ID` 硬编码 | 数据 | ✅ 死代码 `saveQuizAttempt` 已删除，live route 用 `user.id` |
+| 7 | 创建 `error.tsx` + `not-found.tsx` | 错误处理 | ✅ 已创建 |
+| 8 | 创建 `robots.ts` + `sitemap.ts` | SEO | ✅ 已创建 |
+| 9 | README 重写 | 文档 | ✅ 已重写 |
+| 10 | 生产环境禁用调试日志 | 性能 | ✅ `lib/logger.ts` 已创建，`rebuild-user-profile.ts`/`user-profile-db.ts`/`explore/page.tsx` 已迁移 |
 
 ### P1 — 上线后尽快完成
 
-| # | 行动 | 领域 |
-|---|------|------|
-| 11 | 添加安全响应头（CSP 等） | 安全 |
-| 12 | 中间件路由保护 | 安全 |
-| 13 | 确认 RLS 策略 | 安全 |
-| 14 | 根布局 OpenGraph / Twitter 元数据 | SEO |
-| 15 | 各页面添加 `generateMetadata()` | SEO |
-| 16 | 集成错误追踪服务 | 可观测性 |
-| 17 | `images.remotePatterns` 配置 | 性能 |
-| 18 | 添加核心业务逻辑单元测试 | 测试 |
+| # | 行动 | 领域 | 状态 |
+|---|------|------|------|
+| 11 | 添加安全响应头（CSP 等） | 安全 | ✅ `next.config.ts` 已添加 CSP/HSTS/X-Content-Type-Options/X-Frame-Options/Referrer-Policy/Permissions-Policy |
+| 12 | 中间件路由保护 | 安全 | ✅ `middleware.ts` 已添加 `/admin`、`/profile`、`/create` 保护 |
+| 13 | 确认 RLS 策略 | 安全 | ⬜ `supabase/rls-policies.sql` 已就绪，需登录 Dashboard 检查/执行 |
+| 14 | 根布局 OpenGraph / Twitter 元数据 | SEO | ✅ `app/layout.tsx` 已添加 |
+| 15 | 各页面添加 `generateMetadata()` | SEO | ✅ `explore`/`profile`/`quizzes/[slug]`/`test-sites/[id]` 已添加 |
+| 16 | 集成错误追踪服务 | 可观测性 | ⬜ 需注册第三方服务 |
+| 17 | `images.remotePatterns` 配置 | 性能 | ✅ Supabase Storage 域名已添加 |
+| 18 | 添加核心业务逻辑单元测试 | 测试 | ✅ vitest 配置，16 tests passing (cache, rate-limit, strategies) |
 
 ### P2 — 持续改进
 
-| # | 行动 | 领域 |
-|---|------|------|
-| 19 | 静态 Supabase 客户端迁移评估 | 安全 |
-| 20 | 字体加载优化 (`next/font`) | 性能 |
-| 21 | 迁移文件规范化 | 数据 |
-| 22 | CORS 显式配置 | API |
-| 23 | E2E smoke test | 测试 |
-| 24 | 部署文档 | 文档 |
+| # | 行动 | 领域 | 状态 |
+|---|------|------|------|
+| 19 | 静态 Supabase 客户端迁移评估 | 安全 | ✅ 已评估；`api/profile/sources/delete` 改用 SSR 客户端；`admin/ai-usage` 改用 SSR 客户端；`track-ai-usage.ts` / `prompts.ts` 支持可选 `SupabaseClient` 参数；4 个 AI 路由传递 `client: supabase` 到所有追踪调用；`explore/fetch.ts` 仅读公开数据，静态客户端适用 |
+| 20 | 字体加载优化 (`next/font`) | 性能 | ✅ Noto Sans SC, `display: swap` |
+| 21 | 迁移文件规范化 | 数据 | ✅ 已添加 001-009 编号前缀，README 已更新 |
+| 22 | CORS 显式配置 | API | ✅ `next.config.ts` 已为 `/api/*` 添加 CORS 头（same-origin） |
+| 23 | E2E smoke test | 测试 | ✅ Playwright 已配置，`e2e/smoke.spec.ts` 覆盖 6 个公开页面 |
+| 24 | 部署文档 | 文档 | ✅ 已包含在 README.md 中 |

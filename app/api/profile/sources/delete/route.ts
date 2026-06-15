@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase/server";
 import { rebuildUserProfileFromAllSources } from "@/lib/rebuild-user-profile";
 
@@ -66,7 +65,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`[ProfileSourcesDelete] deleting ${sourceType} id=${id}`);
 
-    const { data: deletedRows, error: deleteError } = await supabase
+    const { data: deletedRows, error: deleteError } = await authSupabase
       .from(table)
       .delete()
       .eq("id", id)

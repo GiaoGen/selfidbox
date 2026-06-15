@@ -1,10 +1,26 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { TestSiteDetail } from "@/components/TestSiteDetail";
 import {
   getTestSiteBySlug,
   getTestSitesByCategory,
   mapTestSite,
 } from "@/lib/test-sites-db";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const row = await getTestSiteBySlug(id);
+  if (!row) return { title: "Not Found" };
+  const site = mapTestSite(row);
+  return {
+    title: `${site.name} — Test Site`,
+    description: site.description || `查看 ${site.name} 的详细信息`,
+  };
+}
 
 export default async function TestSitePage({
   params,

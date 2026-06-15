@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { keyedSingleQuery } from "./cache";
+import { logger } from "@/lib/logger";
 
 export interface DimOut {
   value: number;
@@ -46,8 +47,8 @@ export async function getProfileSources(userId: string): Promise<ProfileSourceEn
     .eq("user_id", userId)
     .eq("parse_status", "normalized");
 
-  console.log("[ProfileSources] reports count", reports?.length);
-  console.log("[ProfileSources] reports error", reportError);
+  logger.debug("[ProfileSources] reports count", reports?.length);
+  logger.debug("[ProfileSources] reports error", reportError);
 
   /* ---- B. Quiz attempts ---- */
 
@@ -151,14 +152,14 @@ export async function getProfileSources(userId: string): Promise<ProfileSourceEn
     });
   }
 
-  console.log("[ProfileSources] quiz sources count", quizSources.length);
+  logger.debug("[ProfileSources] quiz sources count", quizSources.length);
 
   /* ---- E. Merge & sort newest first ---- */
 
   const sources = [...reportSources, ...quizSources];
   sources.sort((a, b) => b.created_at.localeCompare(a.created_at));
 
-  console.log("[ProfileSources] final sources count", sources.length);
+  logger.debug("[ProfileSources] final sources count", sources.length);
 
   return sources;
 }

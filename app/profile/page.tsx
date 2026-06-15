@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { getUserProfile, getProfileSources, type ProfileSourceEntry } from "@/lib/user-profile-db";
 import { ProfileRadar, type RadarPoint } from "@/components/ProfileRadar";
 import { ProfileInteractions } from "@/components/profile/ProfileInteractions";
@@ -6,6 +7,11 @@ import { ScreenshotReportUploader } from "@/components/profile/ScreenshotReportU
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Profile — Your Personality Portrait",
+  description: "View your AI-generated personality profile, radar charts, and quiz result collection.",
+};
 
 /* ------------------------------------------------------------------ */
 /*  Dimension name mapping (EN key → CN label)                          */

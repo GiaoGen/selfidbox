@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { supabase as defaultSupabase } from "@/lib/supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { estimateCost } from "./model-pricing";
 
 /* ------------------------------------------------------------------ */
@@ -15,11 +16,14 @@ export interface TrackAICallInput {
   success?: boolean;
   errorMessage?: string | null;
   metadata?: Record<string, unknown>;
+  /** Optional SSR client for RLS user context. Falls back to static anon client. */
+  client?: SupabaseClient;
 }
 
 /** Fire-and-forget: logs usage without blocking or throwing. */
 async function logUsage(input: TrackAICallInput): Promise<void> {
   try {
+    const db = input.client ?? defaultSupabase;
     const total =
       input.totalTokens ??
       (input.promptTokens ?? 0) + (input.completionTokens ?? 0);
@@ -30,7 +34,7 @@ async function logUsage(input: TrackAICallInput): Promise<void> {
       input.completionTokens ?? 0,
     );
 
-    await supabase.from("ai_usage_logs").insert({
+    await db.from("ai_usage_logs").insert({
       user_id: input.userId ?? null,
       feature: input.feature,
       model: input.model ?? null,

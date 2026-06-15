@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { SELFID_FACTOR_KEYS } from "@/lib/selfid-factors";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { trackAISuccess, trackAIError, extractTokens } from "@/lib/ai/track-ai-usage";
 import {
   QUIZ_FACTORS_SYSTEM,
@@ -16,6 +18,16 @@ export async function POST(request: NextRequest) {
       { error: "DeepSeek API key not configured" },
       { status: 500 },
     );
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
+  }
+
+  if (!checkRateLimit(`ai:factors:${user.id}`, 20, 60_000)) {
+    return NextResponse.json({ error: "RATE_LIMITED" }, { status: 429 });
   }
 
   let body: {
@@ -106,6 +118,7 @@ export async function POST(request: NextRequest) {
       const errText = await dsResponse.text().catch(() => "");
       console.error("[quiz-ai:factors] DeepSeek API error", dsResponse.status, errText);
       trackAIError({
+        client: supabase,
         userId,
         feature: "quiz_generate_factors",
         model: MODEL,
@@ -123,6 +136,7 @@ export async function POST(request: NextRequest) {
     if (!rawContent) {
       console.error("[quiz-ai:factors] Empty response from DeepSeek", dsData);
       trackAIError({
+        client: supabase,
         userId,
         feature: "quiz_generate_factors",
         model: MODEL,
@@ -151,6 +165,7 @@ export async function POST(request: NextRequest) {
     } catch {
       console.error("[quiz-ai:factors] Failed to parse AI JSON", jsonStr.slice(0, 500));
       trackAIError({
+        client: supabase,
         userId,
         feature: "quiz_generate_factors",
         model: MODEL,
@@ -165,6 +180,7 @@ export async function POST(request: NextRequest) {
 
     if (!parsed.factors || !Array.isArray(parsed.factors)) {
       trackAIError({
+        client: supabase,
         userId,
         feature: "quiz_generate_factors",
         model: MODEL,
@@ -208,7 +224,8 @@ export async function POST(request: NextRequest) {
     }
 
     trackAISuccess({
-      userId,
+        client: supabase,
+        userId,
       feature: "quiz_generate_factors",
       model: MODEL,
       ...extractTokens(dsData),
@@ -219,7 +236,8 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error("[quiz-ai:factors] Unexpected error", err);
     trackAIError({
-      userId,
+        client: supabase,
+        userId,
       feature: "quiz_generate_factors",
       model: MODEL,
       errorMessage: err instanceof Error ? err.message : "Internal server error",

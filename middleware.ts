@@ -21,8 +21,19 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  // Refresh the auth session — no route protection, no redirect
-  await supabase.auth.getUser();
+  // Refresh the auth session
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Protected routes — redirect unauthenticated users to /login
+  const protectedPaths = ["/admin", "/profile", "/create"];
+  const isProtected = protectedPaths.some(
+    (path) => request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(path + "/"),
+  );
+
+  if (isProtected && !user) {
+    const loginUrl = new URL("/login", request.url);
+    return NextResponse.redirect(loginUrl);
+  }
 
   return response;
 }

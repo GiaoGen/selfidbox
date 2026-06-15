@@ -1,9 +1,10 @@
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 async function getRecentUsage() {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("ai_usage_logs")
     .select("*")
