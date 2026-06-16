@@ -1,6 +1,22 @@
 ﻿
 ---
 
+## Recent — 2026-06-17
+
+### Explore 卡片改为小票样式
+
+1. **TestCard 组件重写**：`app/explore/_components/test-card.tsx`
+2. **视觉变更**：
+   - 移除 Nippon 日本传统色饱和色块背景 → 白底 (`bg-white`)
+   - 大圆角 (24px) → 直角矩形 (`rounded-none`)
+   - 四周均匀微阴影 (`shadow-[0_2px_12px_rgba(0,0,0,0.08)]`)
+   - 三段式布局：上部（标题 + 种类）、中部（描述）、下部（时间/tags + 来源）
+   - 段间用 2px 虚线分割（`border-t-2 border-dashed`）
+3. **字体层级**：标题 semibold (600)、描述 normal (400)、元信息 light (300)
+4. **不改**：TrendingCard、ExploreClient、CategoryPage、数据层
+
+---
+
 ## Recent — 2026-06-10
 
 ### Prompt Inventory 盘点

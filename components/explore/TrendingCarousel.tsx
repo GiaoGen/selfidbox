@@ -114,7 +114,7 @@ export function TrendingCarousel({ children }: { children: React.ReactNode }) {
 
   return (
     <section className="overflow-visible bg-transparent">
-      <div className="overflow-hidden bg-transparent">
+      <div className="overflow-hidden py-5">
         <div
           ref={scrollRef}
           onScroll={handleScroll}
@@ -124,7 +124,7 @@ export function TrendingCarousel({ children }: { children: React.ReactNode }) {
           {slides.map((child, i) => (
             <div
               key={i}
-              className="w-full shrink-0 snap-center flex justify-center px-2 bg-transparent"
+              className="w-full shrink-0 snap-center bg-transparent"
             >
               {child}
             </div>
@@ -134,7 +134,7 @@ export function TrendingCarousel({ children }: { children: React.ReactNode }) {
 
       {/* Dots */}
       {total > 1 && (
-        <div className="mt-3 flex items-center justify-center gap-1.5">
+        <div className="mt-4 flex items-center justify-center gap-2">
           {Array.from({ length: total }).map((_, i) => (
             <button
               key={i}
@@ -146,10 +146,10 @@ export function TrendingCarousel({ children }: { children: React.ReactNode }) {
                 scrollTo(i + 1, true);
                 scheduleResume();
               }}
-              className={`h-1.5 rounded-full transition-all ${
+              className={`rounded-full transition-all duration-300 ${
                 i === displayIndex
-                  ? "w-5 bg-[var(--ink)]"
-                  : "w-1.5 bg-[var(--ink)]/20"
+                  ? "h-[2px] w-4 bg-[var(--ink)]"
+                  : "h-[2px] w-[2px] bg-[var(--ink)]/15 hover:bg-[var(--ink)]/35"
               }`}
             />
           ))}

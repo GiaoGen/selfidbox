@@ -1,27 +1,17 @@
-import Link from "next/link";
+"use client";
+
 import { RelatedTestSites } from "@/components/RelatedTestSites";
-import { ExternalTestButton } from "@/components/test-sites/ExternalTestButton";
+import { StampCard } from "@/components/StampCard";
 import type { TestSite } from "@/lib/test-sites";
 
-const accentClasses: Record<TestSite["accent"], string> = {
-  pink: "bg-[#ff4d8b] text-white",
-  teal: "bg-[#1a3a3a] text-white",
-  lavender: "bg-[#b8a4ed] text-[#0a0a0a]",
-  peach: "bg-[#ffb084] text-[#0a0a0a]",
-  ochre: "bg-[#e8b94a] text-[#0a0a0a]",
-  mint: "bg-[#a4d4c5] text-[#0a0a0a]",
+const accentClasses: Record<TestSite["accent"], { bg: string; text: string }> = {
+  pink: { bg: "#ff4d8b", text: "#ffffff" },
+  teal: { bg: "#1a3a3a", text: "#ffffff" },
+  lavender: { bg: "#b8a4ed", text: "#0a0a0a" },
+  peach: { bg: "#ffb084", text: "#0a0a0a" },
+  ochre: { bg: "#e8b94a", text: "#0a0a0a" },
+  mint: { bg: "#a4d4c5", text: "#0a0a0a" },
 };
-
-function DetailPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[22px] bg-white/60 p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-        {label}
-      </p>
-      <p className="mt-2 text-base font-semibold text-[var(--ink)]">{value}</p>
-    </div>
-  );
-}
 
 export function TestSiteDetail({
   site,
@@ -30,63 +20,93 @@ export function TestSiteDetail({
   site: TestSite;
   relatedSites: TestSite[];
 }) {
+  const accent = accentClasses[site.accent];
+  const isDark = accent.text === "#ffffff";
+  const tintColor = isDark ? "rgba(255,255,255,0.55)" : "rgba(10,10,10,0.45)";
+  const borderColor = isDark ? "rgba(255,255,255,0.25)" : "rgba(10,10,10,0.15)";
+
+  const hasLongDesc = site.longDescription && site.longDescription !== site.description;
+
+  function handleCTAClick() {
+    window.open(site.url, "_blank", "noopener,noreferrer");
+    fetch(`/api/test-sites/${site.id}/click`, { method: "POST" }).catch(() => {});
+  }
+
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
+        {/* ---- 小票卡片：标题 + 描述 + tags ---- */}
         <section
-          className={`overflow-hidden rounded-[36px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.08)] sm:p-8 ${accentClasses[site.accent]}`}
+          className="p-5 shadow-[0_4px_20px_rgba(0,0,0,0.10)] sm:p-6"
+          style={{ backgroundColor: accent.bg, color: accent.text }}
         >
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-full bg-white/28 px-3 py-1 text-sm font-semibold">
-              {site.categoryLabel}
-            </span>
-            {site.tags.slice(0, 3).map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-white/28 px-3 py-1 text-sm font-semibold"
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-
-          <div className="mt-8 space-y-5">
-            <h1 className="text-5xl font-semibold leading-[0.95] tracking-[-0.05em] sm:text-7xl">
+          {/* 上部：标题 + 种类 */}
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
               {site.name}
             </h1>
-            <p className="max-w-3xl text-base leading-7 opacity-85 sm:text-lg">
-              {site.longDescription}
-            </p>
+            <span className="shrink-0 pt-0.5 text-xs font-light" style={{ color: tintColor }}>
+              {site.categoryLabel}
+            </span>
           </div>
 
-          <div className="mt-8">
-            <ExternalTestButton
-              testSiteId={site.id}
-              url={site.url}
-            />
-          </div>
-        </section>
+          <hr className="my-3 border-t-2 border-dashed" style={{ borderColor }} />
 
-        <section className="rounded-[32px] bg-[var(--surface-card)] p-5 sm:p-6">
-          <p className="text-sm font-semibold text-[var(--muted)]">简介</p>
-          <p className="mt-3 text-base leading-7 text-[var(--body)]">
+          {/* 中部：描述 + tags */}
+          <p className="text-sm font-normal leading-6" style={{ color: tintColor }}>
             {site.description}
           </p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {site.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-white px-4 py-2 text-sm font-semibold"
-              >
-                #{tag}
-              </span>
-            ))}
+          {site.tags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5 text-xs font-light" style={{ color: tintColor }}>
+              {site.tags.map((tag) => (
+                <span key={tag}>#{tag}</span>
+              ))}
+            </div>
+          )}
+
+          <hr className="my-3 border-t-2 border-dashed" style={{ borderColor }} />
+
+          {/* 下部：来源 */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-light" style={{ color: tintColor }}>
+              {site.sourceName}
+            </span>
+            <span className="text-xs font-light" style={{ color: tintColor }}>站外</span>
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2">
-          <DetailPill label="预计完成时间" value={`${site.estimatedMinutes} 分钟`} />
-          <DetailPill label="测试难度" value={site.difficulty} />
+        {/* ---- 详细描述（仅 longDescription 有值时） ---- */}
+        {hasLongDesc && (
+          <section className="bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.10)] sm:p-6">
+            <h2 className="text-base font-semibold text-[var(--ink)]">详细描述</h2>
+            <hr className="my-3 border-t-2 border-dashed border-[var(--hairline)]" />
+            <p className="text-sm font-normal leading-6 text-[var(--body)]">
+              {site.longDescription}
+            </p>
+          </section>
+        )}
+
+        {/* ---- 邮票：时间 + 难度 + CTA ---- */}
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <StampCard colorKey={`duration-${site.id}`}>
+            <div className="text-center">
+              <p className="text-[10px] font-light uppercase tracking-[0.15em] opacity-50">时长</p>
+              <p className="mt-1 text-xl font-semibold">{site.estimatedMinutes} min</p>
+            </div>
+          </StampCard>
+
+          <StampCard colorKey={`difficulty-${site.id}`}>
+            <div className="text-center">
+              <p className="text-[10px] font-light uppercase tracking-[0.15em] opacity-50">难度</p>
+              <p className="mt-1 text-xl font-semibold">{site.difficulty}</p>
+            </div>
+          </StampCard>
+
+          <StampCard colorKey={`cta-${site.id}`} onClick={handleCTAClick}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </StampCard>
         </section>
 
         <RelatedTestSites sites={relatedSites} />
