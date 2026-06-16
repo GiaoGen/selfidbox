@@ -3,17 +3,41 @@
 
 ## Recent — 2026-06-17
 
+### Explore 筛选区域 UI 重构
+
+1. **合并时间+种类到单行**：`components/explore/ExploreClient.tsx`
+2. 时间选择器移到种类 tabs 同行最左侧，点击展开下拉菜单
+3. 所有按钮移除圆角色块背景，整行底部 `border-b` 一条贯穿线
+4. 种类选中态直角矩形 + 分色：`hot`=猩猩緋红，其他=Nippon 确定性取色
+5. 外部点击自动关闭下拉
+
+### 详情页重构 — TestSiteDetail + QuizDetail
+
+1. **Hero 卡片**：`rounded-[36px]` 色块 → 小票样式（直角、Nippon 色底、虚线三段式）
+2. **longDescription 独立小票卡**：仅 TestSiteDetail，有值且 ≠ description 时渲染
+3. **详情信息 → 邮票 grid**：`components/StampCard.tsx`（新建），正方形四边锯齿（`radial-gradient`）
+4. TestSiteDetail 邮票：时长 + 难度 + CTA（播放 icon，外链+click tracking）
+5. QuizDetail 邮票：已完成次数 + 发布时间 + CTA（播放 icon，Link 跳转）
+6. 每张邮票独立 Nippon 取色（`colorKey` prop → `nipponColorForSlug`）
+7. QuizDetail 相关推荐也改为小票直角样式
+
+### 轮播卡片改为小票样式
+
+1. **TrendingCard**：`components/explore/TrendingCard.tsx`
+2. 复用 TestCard 三段虚线布局，保留 `#N · 本周热门` rank 徽章 + 内发光
+3. 上下边缘锯齿穿孔（`radial-gradient` 圆点 2.5px / 8px 间距）
+4. 卡片 `w-full h-full flex-col justify-center` 填满轮播区域
+5. 图片从模糊背景改为左图右文直显（`w-1/3 aspect-square`）
+6. **TrendingCarousel**：移除 slide wrapper `px-2`/`flex justify-center`，恢复 `overflow-hidden py-5`
+7. 指示器改为极简线型 dots（激活=2px 细线，非激活=2×2px 微点）
+
 ### Explore 卡片改为小票样式
 
-1. **TestCard 组件重写**：`app/explore/_components/test-card.tsx`
-2. **视觉变更**：
-   - 移除 Nippon 日本传统色饱和色块背景 → 白底 (`bg-white`)
-   - 大圆角 (24px) → 直角矩形 (`rounded-none`)
-   - 四周均匀微阴影 (`shadow-[0_2px_12px_rgba(0,0,0,0.08)]`)
-   - 三段式布局：上部（标题 + 种类）、中部（描述）、下部（时间/tags + 来源）
-   - 段间用 2px 虚线分割（`border-t-2 border-dashed`）
-3. **字体层级**：标题 semibold (600)、描述 normal (400)、元信息 light (300)
-4. **不改**：TrendingCard、ExploreClient、CategoryPage、数据层
+1. **TestCard**：`app/explore/_components/test-card.tsx`
+2. Nippon 取色底 + 直角矩形 + 四周微阴影
+3. 三段虚线分割：上（标题+种类）/ 中（描述+图片）/ 下（时间+tags+来源）
+4. quiz 结果图片：左图右文 `w-1/3 aspect-square`
+5. 字体层级：标题 semibold / 描述 normal / 元信息 light
 
 ---
 
