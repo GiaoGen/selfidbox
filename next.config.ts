@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    clientTraceMetadata: ["sentry-trace", "baggage"],
+  },
   images: {
     remotePatterns: [
       {
@@ -41,7 +44,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self'",
-              "connect-src 'self' https://*.supabase.co https://api.deepseek.com",
+              "connect-src 'self' https://*.supabase.co https://api.deepseek.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
               "frame-ancestors 'none'",
             ].join("; "),
           },

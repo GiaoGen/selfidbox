@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { cache } from "react";
 import { createClient as createSSRClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { keyedSingleQuery } from "./cache";
 import type {
@@ -23,6 +24,13 @@ import type { AdminCategoryRow } from "./admin-db";
 
 async function getDb(): Promise<SupabaseClient> {
   return createSSRClient();
+}
+
+/** Returns a service-role client that bypasses RLS.
+ *  Only used for write operations where the API route
+ *  has already performed its own auth check. */
+function getServiceDb(): SupabaseClient {
+  return createServiceClient();
 }
 
 /* ------------------------------------------------------------------ */
@@ -244,7 +252,7 @@ export async function saveQuizSchema(
 ): Promise<SaveQuizResult> {
   const slug = await uniqueSlug();
 
-  const { data: quiz, error: quizError } = await (await getDb())
+  const { data: quiz, error: quizError } = await getServiceDb()
     .from("quizzes")
     .insert({
       slug,
@@ -276,7 +284,7 @@ export async function saveQuizSchema(
   const quizId = quiz.id;
 
   async function rollback() {
-    await (await getDb()).from("quizzes").delete().eq("id", quizId);
+    await getServiceDb().from("quizzes").delete().eq("id", quizId);
   }
 
   const factorRows = input.factors.map((f, i) => ({
@@ -287,7 +295,7 @@ export async function saveQuizSchema(
     sort_order: i,
   }));
 
-  const { error: factorError } = await (await getDb())
+  const { error: factorError } = await getServiceDb()
     .from("quiz_factors")
     .insert(factorRows);
   if (factorError) {
@@ -311,7 +319,7 @@ export async function saveQuizSchema(
     };
   });
 
-  const { error: resultError } = await (await getDb())
+  const { error: resultError } = await getServiceDb()
     .from("quiz_results")
     .insert(resultRows);
   if (resultError) {
@@ -320,7 +328,7 @@ export async function saveQuizSchema(
   }
 
   for (const [qi, q] of input.questions.entries()) {
-    const { data: questionRow, error: questionError } = await (await getDb())
+    const { data: questionRow, error: questionError } = await getServiceDb()
       .from("quiz_questions")
       .insert({
         quiz_id: quizId,
@@ -345,7 +353,7 @@ export async function saveQuizSchema(
       factor_effects: opt.effects,
     }));
 
-    const { error: optionError } = await (await getDb())
+    const { error: optionError } = await getServiceDb()
       .from("quiz_options")
       .insert(optionRows);
     if (optionError) {
@@ -396,8 +404,10 @@ export async function getQuizForEdit(
   quizId: string,
   userId: string,
 ): Promise<SaveQuizInput | null> {
+  const db = getServiceDb();
+
   // 1. Quiz meta
-  const { data: quiz, error: quizError } = await (await getDb())
+  const { data: quiz, error: quizError } = await db
     .from("quizzes")
     .select("title, hook, quiz_type, audience, tone, creator_user_id, abstractness, seriousness, depth, poeticness")
     .eq("id", quizId)
@@ -407,21 +417,21 @@ export async function getQuizForEdit(
   if (quiz.creator_user_id !== userId) return null;
 
   // 2. Results
-  const { data: resultRows } = await (await getDb())
+  const { data: resultRows } = await db
     .from("quiz_results")
     .select("key, name, subtitle, description, traits, share_text, image_url, result_vector")
     .eq("quiz_id", quizId)
     .order("sort_order");
 
   // 3. Factors
-  const { data: factorRows } = await (await getDb())
+  const { data: factorRows } = await db
     .from("quiz_factors")
     .select("key, name, description")
     .eq("quiz_id", quizId)
     .order("sort_order");
 
   // 4. Questions + options
-  const { data: questionRows } = await (await getDb())
+  const { data: questionRows } = await db
     .from("quiz_questions")
     .select("id, text, question_order")
     .eq("quiz_id", quizId)
@@ -431,7 +441,7 @@ export async function getQuizForEdit(
 
   if (questionRows) {
     for (const q of questionRows) {
-      const { data: optionRows } = await (await getDb())
+      const { data: optionRows } = await db
         .from("quiz_options")
         .select("label, text, factor_effects")
         .eq("question_id", q.id)
@@ -496,7 +506,7 @@ export async function updateQuizSchema(
   quizId: string,
 ): Promise<SaveQuizResult> {
   // Fetch existing slug — do NOT regenerate on edit
-  const { data: existing } = await (await getDb())
+  const { data: existing } = await getServiceDb()
     .from("quizzes")
     .select("slug")
     .eq("id", quizId)
@@ -506,7 +516,7 @@ export async function updateQuizSchema(
   if (!slug) throw new Error("Quiz not found");
 
   // 1. Update quizzes row (slug preserved)
-  const { error: updateError } = await (await getDb())
+  const { error: updateError } = await getServiceDb()
     .from("quizzes")
     .update({
       title: input.meta.title,
@@ -534,10 +544,10 @@ export async function updateQuizSchema(
 
   // 2. Delete old sub-rows
   await Promise.all([
-    (await getDb()).from("quiz_options").delete().eq("quiz_id", quizId),
-    (await getDb()).from("quiz_questions").delete().eq("quiz_id", quizId),
-    (await getDb()).from("quiz_results").delete().eq("quiz_id", quizId),
-    (await getDb()).from("quiz_factors").delete().eq("quiz_id", quizId),
+    getServiceDb().from("quiz_options").delete().eq("quiz_id", quizId),
+    getServiceDb().from("quiz_questions").delete().eq("quiz_id", quizId),
+    getServiceDb().from("quiz_results").delete().eq("quiz_id", quizId),
+    getServiceDb().from("quiz_factors").delete().eq("quiz_id", quizId),
   ]);
 
   // 3. Re-insert factors
@@ -549,7 +559,7 @@ export async function updateQuizSchema(
     sort_order: i,
   }));
 
-  const { error: factorError } = await (await getDb())
+  const { error: factorError } = await getServiceDb()
     .from("quiz_factors")
     .insert(factorRows);
   if (factorError) {
@@ -573,7 +583,7 @@ export async function updateQuizSchema(
     };
   });
 
-  const { error: resultError } = await (await getDb())
+  const { error: resultError } = await getServiceDb()
     .from("quiz_results")
     .insert(resultRows);
   if (resultError) {
@@ -582,7 +592,7 @@ export async function updateQuizSchema(
 
   // 5. Re-insert questions + options
   for (const [qi, q] of input.questions.entries()) {
-    const { data: questionRow, error: questionError } = await (await getDb())
+    const { data: questionRow, error: questionError } = await getServiceDb()
       .from("quiz_questions")
       .insert({
         quiz_id: quizId,
@@ -606,7 +616,7 @@ export async function updateQuizSchema(
       factor_effects: opt.effects,
     }));
 
-    const { error: optionError } = await (await getDb())
+    const { error: optionError } = await getServiceDb()
       .from("quiz_options")
       .insert(optionRows);
     if (optionError) {

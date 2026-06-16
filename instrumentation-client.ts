@@ -8,3 +8,5 @@ Sentry.init({
   // Trace 10% of requests in production to catch regressions
   tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
 });
+
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

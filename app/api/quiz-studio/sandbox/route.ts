@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -26,8 +27,10 @@ export async function POST(request: Request) {
     );
   }
 
+  const serviceDb = createServiceClient();
+
   /* ---- 3. Verify ownership ---- */
-  const { data: quiz, error: quizError } = await supabase
+  const { data: quiz, error: quizError } = await serviceDb
     .from("quizzes")
     .select("id, creator_user_id, status")
     .eq("id", quizId)
@@ -55,7 +58,7 @@ export async function POST(request: Request) {
   }
 
   /* ---- 4. Update ---- */
-  const { error: updateError } = await supabase
+  const { error: updateError } = await serviceDb
     .from("quizzes")
     .update({ status: "sandbox" })
     .eq("id", quizId);
