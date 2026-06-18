@@ -87,7 +87,17 @@ export function TestSiteDetail({
         )}
 
         {/* ---- 邮票：时间 + 难度 + CTA ---- */}
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <section className={`grid grid-cols-2 gap-3 ${site.coverImageUrl ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+          {site.coverImageUrl && (
+            <div className="aspect-square w-full overflow-hidden">
+              <img
+                src={site.coverImageUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            </div>
+          )}
           <StampCard colorKey={`duration-${site.id}`}>
             <div className="text-center">
               <p className="text-[10px] font-light uppercase tracking-[0.15em] opacity-50">时长</p>

@@ -124,6 +124,14 @@ export const getQuizBySlug = cache(async (slug: string): Promise<QuizRuntimeData
 /*  Read: quiz detail (for /quizzes/[slug] detail page)                 */
 /* ------------------------------------------------------------------ */
 
+function hashSlug(s: string): number {
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
 export interface QuizDetailRow {
   id: string;
   slug: string;
@@ -131,6 +139,7 @@ export interface QuizDetailRow {
   hook: string;
   description: string | null;
   cover_image_url: string | null;
+  image_url: string | null;
   category_id: string | null;
   quiz_type: string;
   status: string;
@@ -165,6 +174,17 @@ export const getQuizDetail = keyedSingleQuery(
     quiz.category = null;
   }
 
+  // fetch result image from quiz_results (deterministic pick)
+  {
+    const { data: results } = await (await getDb())
+      .from("quiz_results")
+      .select("image_url")
+      .eq("quiz_id", quiz.id)
+      .not("image_url", "is", null);
+    const images = (results ?? []).map((r: Record<string, unknown>) => r.image_url as string).filter(Boolean);
+    quiz.image_url = images.length > 0 ? images[hashSlug(quiz.slug) % images.length] : null;
+  }
+
   return quiz;
 },
   60, // 1 min TTL
@@ -176,7 +196,10 @@ export interface QuizDetailRelatedRow {
   title: string;
   hook: string;
   description: string | null;
+  cover_image_url: string | null;
+  image_url: string | null;
   attempt_count: number;
+  created_at: string;
 }
 
 export async function getRelatedQuizzes(
@@ -185,7 +208,7 @@ export async function getRelatedQuizzes(
 ): Promise<QuizDetailRelatedRow[]> {
   const { data, error } = await (await getDb())
     .from("quizzes")
-    .select("id, slug, title, hook, description, attempt_count")
+    .select("id, slug, title, hook, description, cover_image_url, attempt_count, created_at")
     .eq("category_id", categoryId)
     .eq("status", "published")
     .neq("slug", excludeSlug)
@@ -197,7 +220,31 @@ export async function getRelatedQuizzes(
     return [];
   }
 
-  return (data ?? []) as QuizDetailRelatedRow[];
+  const quizzes = (data ?? []) as QuizDetailRelatedRow[];
+
+  // fetch result images from quiz_results (deterministic pick per quiz)
+  if (quizzes.length > 0) {
+    const quizIds = quizzes.map((q) => q.id);
+    const { data: results } = await (await getDb())
+      .from("quiz_results")
+      .select("quiz_id, image_url")
+      .in("quiz_id", quizIds)
+      .not("image_url", "is", null);
+
+    const imageMap = new Map<string, string[]>();
+    for (const row of (results ?? []) as { quiz_id: string; image_url: string }[]) {
+      const urls = imageMap.get(row.quiz_id) || [];
+      urls.push(row.image_url);
+      imageMap.set(row.quiz_id, urls);
+    }
+
+    for (const q of quizzes) {
+      const images = imageMap.get(q.id) || [];
+      q.image_url = images.length > 0 ? images[hashSlug(q.slug) % images.length] : null;
+    }
+  }
+
+  return quizzes;
 }
 
 /* ------------------------------------------------------------------ */

@@ -81,7 +81,7 @@ const GRID_LEVELS = 5; // 0, 25, 50, 75, 100 → 4 圈可见环
 
 export function ProfileRadar({
   title,
-  subtitle,
+  subtitle: _subtitle,
   data,
   color = "#ff4d8b",
   maxValue = 100,
@@ -101,26 +101,13 @@ export function ProfileRadar({
   );
 
   return (
-    <section className="rounded-[32px] bg-[var(--surface-card)] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.07)] sm:p-6">
-      {/* 标题区 */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-[var(--muted)]">{subtitle}</p>
-          <h2 className="mt-1 text-3xl font-semibold leading-tight">{title}</h2>
-        </div>
-        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[var(--muted)]">
-          {N}D
-        </span>
-      </div>
-
-      {/* 雷达图 */}
-      <div className="mt-4 w-full max-w-[420px] mx-auto">
-        <svg
-          viewBox={`0 0 ${SIZE} ${SIZE}`}
-          className="w-full h-auto"
-          role="img"
-          aria-label={`${title} – ${subtitle}`}
-        >
+    <div className="w-full select-none">
+      <svg
+        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        className="w-full h-auto"
+        role="img"
+        aria-label={`${title}`}
+      >
           {/* ================================================================ */}
           {/*  背景网格 – 八边形（N 边形）同心环                                   */}
           {/* ================================================================ */}
@@ -129,8 +116,9 @@ export function ProfileRadar({
               key={`grid-${idx}`}
               points={polygonPoints(CX, CY, r, N)}
               fill="none"
-              stroke="#d8d0bd"
-              strokeWidth={idx === gridRings.length - 1 ? 2 : 1}
+              stroke="#1c1c1c"
+              strokeOpacity={idx === gridRings.length - 1 ? 0.18 : 0.07}
+              strokeWidth={1}
             />
           ))}
 
@@ -144,7 +132,8 @@ export function ProfileRadar({
               y1={CY}
               x2={end.x}
               y2={end.y}
-              stroke="#d8d0bd"
+              stroke="#1c1c1c"
+              strokeOpacity={0.08}
               strokeWidth={1}
             />
           ))}
@@ -174,19 +163,18 @@ export function ProfileRadar({
                 cy={v.y}
                 r={4}
                 fill={color}
-                stroke="#fff"
+                stroke="#fffaf0"
                 strokeWidth={2}
               />
             );
           })}
 
           {/* ================================================================ */}
-          {/*  维度名称标签（多边形顶点外侧）                                        */}
+          {/*  维度名称标签（多边形顶点外侧）— 常显                                 */}
           {/* ================================================================ */}
           {data.map((d, i) => {
             const v = vertex(CX, CY, RADIUS + LABEL_OFFSET, i, N);
 
-            // 根据标签在水平方向的位置决定 text-anchor
             let textAnchor: "start" | "middle" | "end" = "middle";
             if (v.x < CX - 60) textAnchor = "end";
             else if (v.x > CX + 60) textAnchor = "start";
@@ -198,10 +186,9 @@ export function ProfileRadar({
                 y={v.y}
                 textAnchor={textAnchor}
                 dominantBaseline="middle"
-                fill="#3a3a3a"
+                fill="#4a4a4a"
                 fontSize={13}
                 fontWeight={600}
-                style={{ userSelect: "none" }}
               >
                 {d.name}
               </text>
@@ -209,7 +196,7 @@ export function ProfileRadar({
           })}
 
           {/* ================================================================ */}
-          {/*  刻度标签（沿顶部第一条轴放置）                                        */}
+          {/*  刻度标签（沿顶部第一条轴放置）— 常显                                 */}
           {/* ================================================================ */}
           {gridRings.map(({ r, value }) => {
             const v = vertex(CX, CY, r, 0, N);
@@ -219,16 +206,14 @@ export function ProfileRadar({
                 x={v.x - 8}
                 y={v.y - 5}
                 textAnchor="end"
-                fill="#9a9a9a"
+                fill="#999999"
                 fontSize={10}
-                style={{ userSelect: "none" }}
               >
                 {value}
               </text>
             );
           })}
         </svg>
-      </div>
-    </section>
+    </div>
   );
 }

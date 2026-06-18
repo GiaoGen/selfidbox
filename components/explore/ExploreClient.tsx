@@ -63,7 +63,7 @@ function searchCards(cards: ExploreCard[], query: string): ExploreCard[] {
 /* ------------------------------------------------------------------ */
 
 const TAB_COLORS: Record<string, { bg: string; text: string }> = {
-  hot: { bg: "#E83015", text: "#FCFAF2" },
+  hot: { bg: "#A96369", text: "#FCFAF2" },
 };
 
 function getTabColor(id: string): { bg: string; text: string } {

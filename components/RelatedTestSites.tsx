@@ -1,14 +1,6 @@
 import Link from "next/link";
 import type { TestSite } from "@/lib/test-sites";
-
-const accentClasses: Record<TestSite["accent"], string> = {
-  pink: "bg-[#ff4d8b] text-white",
-  teal: "bg-[#1a3a3a] text-white",
-  lavender: "bg-[#b8a4ed] text-[#0a0a0a]",
-  peach: "bg-[#ffb084] text-[#0a0a0a]",
-  ochre: "bg-[#e8b94a] text-[#0a0a0a]",
-  mint: "bg-[#a4d4c5] text-[#0a0a0a]",
-};
+import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
 
 export function RelatedTestSites({ sites }: { sites: TestSite[] }) {
   if (sites.length === 0) {
@@ -27,11 +19,15 @@ export function RelatedTestSites({ sites }: { sites: TestSite[] }) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        {sites.map((site) => (
+        {sites.map((site) => {
+          const bg = nipponColorForSlug(site.id);
+          const fg = textColorForNipponBg(bg);
+          return (
           <Link
             key={site.id}
             href={`/test-sites/${site.id}`}
-            className={`flex min-h-44 flex-col justify-between rounded-[28px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.08)] ${accentClasses[site.accent]}`}
+            className="flex min-h-44 flex-col justify-between rounded-[28px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.08)]"
+            style={{ backgroundColor: bg, color: fg }}
           >
             <div>
               <span className="rounded-full bg-white/28 px-3 py-1 text-xs font-semibold">
@@ -45,7 +41,8 @@ export function RelatedTestSites({ sites }: { sites: TestSite[] }) {
               {site.description}
             </p>
           </Link>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

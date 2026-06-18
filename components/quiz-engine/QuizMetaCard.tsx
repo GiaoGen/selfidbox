@@ -95,7 +95,7 @@ export function QuizMetaCard({ meta, onChange, bgColor, stepNumber, stepLabel }:
 
   return (
     <section
-      className="overflow-hidden rounded-[32px] p-6 shadow-[0_18px_50px_rgba(10,10,10,0.08)] sm:p-8"
+      className="overflow-hidden p-6 shadow-[0_18px_50px_rgba(10,10,10,0.08)] sm:p-8"
       style={sectionStyle}
     >
       {/* When stepLabel is provided, render step header */}

@@ -4,7 +4,6 @@ import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
 
 export function TrendingCard({ site: card, rank }: { site: ExploreCard; rank: number }) {
   const sourceLabel = card.source_type === "official" ? "站外" : "SelfIDBox";
-  const isOfficial = card.source_type === "official";
 
   const bgColor = card.bg_color || nipponColorForSlug(card.id);
   const textColor = card.text_color || textColorForNipponBg(bgColor);
@@ -49,11 +48,11 @@ export function TrendingCard({ site: card, rank }: { site: ExploreCard; rank: nu
       />
 
       <div className="relative">
-        {/* ---- 上部：rank 徽章 + 种类 ---- */}
+        {/* ---- 上部：标题 + 种类 ---- */}
         <div className="flex items-start justify-between gap-3">
-          <span className="text-base font-semibold leading-snug">
-            #{rank} · 本周热门
-          </span>
+          <h2 className="text-2xl font-semibold leading-tight tracking-[-0.02em] sm:text-3xl">
+            {card.title}
+          </h2>
           <span className="shrink-0 pt-0.5 text-xs font-light" style={{ color: tintColor }}>
             {card.categoryLabel || "测评"}
           </span>
@@ -62,10 +61,10 @@ export function TrendingCard({ site: card, rank }: { site: ExploreCard; rank: nu
         {/* ---- 虚线分割 ---- */}
         <hr className="my-3 border-t-2 border-dashed" style={{ borderColor }} />
 
-        {/* ---- 中部：图片（有图时） + 标题 + 描述 ---- */}
+        {/* ---- 中部：图片（有图时） + 描述 ---- */}
         {card.image ? (
           <div className="flex gap-3">
-            <div className="w-1/3 shrink-0 aspect-square overflow-hidden">
+            <div className="w-1/3 shrink-0 min-w-0 aspect-square overflow-hidden">
               <img
                 src={card.image}
                 alt=""
@@ -73,43 +72,24 @@ export function TrendingCard({ site: card, rank }: { site: ExploreCard; rank: nu
                 loading="lazy"
               />
             </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-2xl font-semibold leading-tight tracking-[-0.02em] sm:text-3xl">
-                {card.title}
-              </h2>
-              <p className="mt-2 line-clamp-3 text-sm font-normal leading-6" style={{ color: tintColor }}>
-                {card.description}
-              </p>
-            </div>
-          </div>
-        ) : (
-          <>
-            <h2 className="text-2xl font-semibold leading-tight tracking-[-0.02em] sm:text-3xl">
-              {card.title}
-            </h2>
-            <p className="mt-2 line-clamp-2 text-sm font-normal leading-6" style={{ color: tintColor }}>
+            <p className="flex-1 line-clamp-4 text-sm font-normal leading-6" style={{ color: tintColor }}>
               {card.description}
             </p>
-          </>
+          </div>
+        ) : (
+          <p className="line-clamp-3 text-sm font-normal leading-6" style={{ color: tintColor }}>
+            {card.description}
+          </p>
         )}
 
         {/* ---- 虚线分割 ---- */}
         <hr className="my-3 border-t-2 border-dashed" style={{ borderColor }} />
 
-        {/* ---- 下部：时间 + tags（左） / 来源（右） ---- */}
+        {/* ---- 下部：本周热门（左） / 来源（右） ---- */}
         <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 text-xs font-light" style={{ color: tintColor }}>
-            {isOfficial && card.estimatedMinutes != null && (
-              <>
-                <span className="shrink-0">⏱ {card.estimatedMinutes} min</span>
-                {card.tags.length > 0 && <span className="shrink-0">·</span>}
-              </>
-            )}
-            {card.tags.slice(0, 3).map((tag) => (
-              <span key={tag} className="shrink-0">#{tag}</span>
-            ))}
-            {!isOfficial && card.tags.length === 0 && <span>&nbsp;</span>}
-          </div>
+          <span className="text-xs font-light" style={{ color: tintColor }}>
+            #{rank} · 本周热门
+          </span>
           <span className="shrink-0 text-xs font-light" style={{ color: tintColor }}>
             {sourceLabel}
           </span>

@@ -96,12 +96,36 @@ export default async function ProfilePage() {
   const hasSocial = Object.keys(socialVector).length > 0;
 
   return (
-    <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
-      <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
+    <>
+      <div className="fixed inset-0" style={{ backgroundColor: "#fffaf0" }} aria-hidden />
+      <main className="relative min-h-screen text-[#1c1c1c]">
+        <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
+        {/* ── Radar charts — top, horizontal scroll ── */}
+        {hasCore && (
+          <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mx-4 px-4">
+            <div className="snap-center shrink-0 w-[72vw] max-w-[360px]">
+              <ProfileRadar
+                title="核心人格"
+                subtitle=""
+                data={toRadarPoints(coreVector)}
+                color="#ff4d8b"
+              />
+            </div>
+            {hasSocial && (
+              <div className="snap-center shrink-0 w-[72vw] max-w-[360px]">
+                <ProfileRadar
+                  title="社会表达"
+                  subtitle=""
+                  data={toRadarPoints(socialVector)}
+                  color="#1a3a3a"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {hasProfile ? (
           <ProfileInteractions
-            title={profile!.selfid_profile ?? ""}
-            description={profile!.summary ?? ""}
             initialSources={sources}
           />
         ) : (
@@ -115,26 +139,8 @@ export default async function ProfilePage() {
             <ScreenshotReportUploader />
           </>
         )}
-
-        {hasCore && (
-          <section className="flex flex-col gap-5">
-            <ProfileRadar
-              title="核心人格"
-              subtitle=""
-              data={toRadarPoints(coreVector)}
-              color="#ff4d8b"
-            />
-            {hasSocial && (
-              <ProfileRadar
-                title="社会表达"
-                subtitle=""
-                data={toRadarPoints(socialVector)}
-                color="#1a3a3a"
-              />
-            )}
-          </section>
-        )}
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   );
 }

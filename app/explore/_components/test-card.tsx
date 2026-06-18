@@ -74,7 +74,7 @@ export function TestCard({ site: card }: { site: ExploreCard }) {
             </span>
           ))}
           {!isOfficial && card.tags.length === 0 && (
-            <span>&nbsp;</span>
+            <span>{formatDate(card.created_at)}</span>
           )}
         </div>
         <span className="shrink-0 text-xs font-light" style={{ color: tintColor }}>
@@ -83,4 +83,12 @@ export function TestCard({ site: card }: { site: ExploreCard }) {
       </div>
     </Link>
   );
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }

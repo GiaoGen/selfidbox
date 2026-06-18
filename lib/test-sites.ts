@@ -25,6 +25,7 @@ export type TestSite = {
   featured?: boolean;
   created_at?: string;
   popularity_score?: number;
+  coverImageUrl?: string;
 };
 
 export const importEmail = "demo@selfidbox.com";

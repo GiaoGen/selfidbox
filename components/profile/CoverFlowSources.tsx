@@ -147,14 +147,14 @@ export function CoverFlowSources({
         <div
           className="pointer-events-none absolute inset-x-0 top-0 z-20 h-16"
           style={{
-            background: "linear-gradient(to bottom, var(--canvas) 0%, transparent 100%)",
+            background: "linear-gradient(to bottom, #fffaf0 0%, transparent 100%)",
           }}
         />
         {/* Bottom edge fade */}
         <div
           className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-16"
           style={{
-            background: "linear-gradient(to top, var(--canvas) 0%, transparent 100%)",
+            background: "linear-gradient(to top, #fffaf0 0%, transparent 100%)",
           }}
         />
 
