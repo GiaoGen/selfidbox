@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback, useRef, useMemo } from "react";
-import type { QuizRuntimeData, AnswerRecord, RankedRuntimeResult } from "@/lib/quiz-runtime";
-import { calculateUserVector, rankRuntimeResults, MAX_SANDBOX_ATTEMPTS } from "@/lib/quiz-runtime";
+import type { QuizRuntimeData, AnswerRecord, RankedRuntimeResult, RankedRuntimeResultV2 } from "@/lib/quiz-runtime";
+import { calculateUserVector, rankRuntimeResults, rankRuntimeResultsV2, MAX_SANDBOX_ATTEMPTS } from "@/lib/quiz-runtime";
 import { createClient } from "@/lib/supabase/client";
 import { useNipponTheme } from "./useNipponTheme";
 import { ResultBackgroundManager } from "./ResultBackgroundManager";
@@ -25,7 +25,7 @@ export function QuizPlayer({ quiz }: Props) {
   const [answers, setAnswers] = useState<AnswerRecord[]>([]);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [direction, setDirection] = useState(1);
-  const [ranking, setRanking] = useState<RankedRuntimeResult[] | null>(null);
+  const [ranking, setRanking] = useState<RankedRuntimeResult[] | RankedRuntimeResultV2[] | null>(null);
   const [userVector, setUserVector] = useState<Record<string, number> | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [syncError, setSyncError] = useState<string>("");
@@ -47,13 +47,27 @@ export function QuizPlayer({ quiz }: Props) {
       return rankRuntimeResults(defaultVector, quiz.results);
     }
     const vector = calculateUserVector(factorKeys, answeredSoFar);
-    return rankRuntimeResults(vector, quiz.results);
-  }, [answers, currentIndex, factorKeys, quiz.results]);
+    const { ranked } = rankRuntimeResultsV2(
+      vector,
+      quiz.results,
+      quiz.questions,
+      factorKeys,
+    );
+    return ranked;
+  }, [answers, currentIndex, factorKeys, quiz.results, quiz.questions]);
 
   const finishQuiz = useCallback(
     async (finalAnswers: AnswerRecord[]) => {
       const vector = calculateUserVector(factorKeys, finalAnswers);
-      const ranked = rankRuntimeResults(vector, quiz.results);
+      const { ranked, debug } = rankRuntimeResultsV2(
+        vector,
+        quiz.results,
+        quiz.questions,
+        factorKeys,
+      );
+      if (process.env.NODE_ENV === "development") {
+        console.log("[ScoringV2 debug]", debug);
+      }
       setUserVector(vector);
       setRanking(ranked);
       setPhase("result");
@@ -91,7 +105,7 @@ export function QuizPlayer({ quiz }: Props) {
         setSyncError(err instanceof Error ? err.message : "网络错误");
       }
     },
-    [factorKeys, quiz.id, quiz.results, supabase],
+    [factorKeys, quiz.id, quiz.results, quiz.questions, supabase],
   );
 
   const handleSelect = useCallback(

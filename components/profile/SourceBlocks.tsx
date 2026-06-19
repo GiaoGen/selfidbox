@@ -1,8 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
+import { RotatingCardModal } from "@/components/share/RotatingCardModal";
+import { QuizResultShareCard } from "@/components/share/QuizResultShareCard";
+import { useSourceCardOpen } from "@/components/profile/useSourceCardOpen";
 import type { ProfileSourceEntry } from "@/lib/user-profile-db";
+import type { QuizDetailData, ReportDetailData } from "@/lib/source-detail-db";
 
 /* ================================================================== */
 /*  Constants                                                          */
@@ -185,7 +189,7 @@ function placeBlocks(entries: ProfileSourceEntry[]): PlacedBlock[] {
           }
         }
 
-        const bg = nipponColorForSlug(item.entry.id);
+        const bg = item.entry.card_color || nipponColorForSlug(item.entry.id);
         // Re-derive size from shape area, then pick font size
         const area = colSpan * rowSpan;
         const size = (
@@ -257,6 +261,15 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
 
   const blocks = useMemo(() => placeBlocks(entries), [entries]);
 
+  /* -- Card modal (shared hook: cache + three-tier fetch) -- */
+  const { cardOpen, cardLoading, cardData, cardType, openCard, closeCard } =
+    useSourceCardOpen();
+
+  const handleBlockClick = useCallback(
+    (entry: ProfileSourceEntry) => { openCard(entry); },
+    [openCard],
+  );
+
   /* -- Row height = column width → 1×1 squares -- */
   const gridRef = useRef<HTMLDivElement>(null);
   const [rowH, setRowH] = useState(0);
@@ -278,9 +291,10 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
   if (blocks.length === 0) return null;
 
   return (
-    <div
-      ref={gridRef}
-      className="grid"
+    <>
+      <div
+        ref={gridRef}
+        className="grid"
       style={{
         gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`,
         gridAutoRows: rowH > 0 ? `${rowH}px` : "auto",
@@ -293,7 +307,8 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
         return (
           <div
             key={b.entry.id}
-            className="flex items-center justify-center overflow-hidden select-none"
+            onClick={() => handleBlockClick(b.entry)}
+            className="flex items-center justify-center overflow-hidden select-none cursor-pointer"
             style={{
               gridColumn: `${b.col + 1} / span ${b.colSpan}`,
               gridRow: `${b.row + 1} / span ${b.rowSpan}`,
@@ -315,5 +330,56 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
         );
       })}
     </div>
+
+    {/* ── Quiz Result Share Card ── */}
+    {cardType === "quiz" && (
+      <RotatingCardModal open={cardOpen} onClose={closeCard}>
+        {cardLoading && (
+          <div className="flex items-center justify-center py-16">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+          </div>
+        )}
+        {!cardLoading && cardData && (
+          <QuizResultShareCard
+            quizTitle={(cardData as QuizDetailData).quiz_title}
+            resultName={(cardData as QuizDetailData).final_result_name}
+            resultSubtitle={(cardData as QuizDetailData).result_subtitle ?? ""}
+            resultDescription={(cardData as QuizDetailData).result_description ?? ""}
+            resultImageUrl={(cardData as QuizDetailData).result_image_url ?? undefined}
+            traits={(cardData as QuizDetailData).result_traits}
+            shareText={
+              (cardData as QuizDetailData).result_share_text ??
+              "这是我的测试结果，你也来试试。"
+            }
+            cardColor={(cardData as QuizDetailData).result_color || "#DAC9A6"}
+          />
+        )}
+      </RotatingCardModal>
+    )}
+
+    {/* ── OCR Screenshot Card ── */}
+    {cardType === "report" && (
+      <RotatingCardModal open={cardOpen} onClose={closeCard}>
+        {cardLoading && (
+          <div className="flex items-center justify-center py-16">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+          </div>
+        )}
+        {!cardLoading && cardData && (cardData as ReportDetailData).image_url ? (
+          <img
+            src={(cardData as ReportDetailData).image_url!}
+            alt="OCR 截图"
+            className="w-full select-none"
+            style={{ objectFit: "contain", maxHeight: "80vh" }}
+          />
+        ) : null}
+        {!cardLoading && cardData && !(cardData as ReportDetailData).image_url ? (
+          <div className="flex items-center justify-center rounded-2xl bg-white/10 px-8 py-16 text-white/50 text-sm">
+            未保存原始截图
+          </div>
+        ) : null}
+      </RotatingCardModal>
+    )}
+    </>
   );
 }
