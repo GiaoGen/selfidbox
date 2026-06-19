@@ -2,17 +2,8 @@ import { StampCard } from "@/components/StampCard";
 import { TestCard } from "@/app/explore/_components/test-card";
 import type { QuizDetailRow, QuizDetailRelatedRow } from "@/lib/quizzes-db";
 import { accentFromId } from "@/lib/explore/types";
-import type { AccentKey, ExploreCard } from "@/lib/explore/types";
+import type { ExploreCard } from "@/lib/explore/types";
 import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
-
-const accentClasses: Record<AccentKey, { bg: string; text: string }> = {
-  pink: { bg: "#ff4d8b", text: "#ffffff" },
-  teal: { bg: "#1a3a3a", text: "#ffffff" },
-  lavender: { bg: "#b8a4ed", text: "#0a0a0a" },
-  peach: { bg: "#ffb084", text: "#0a0a0a" },
-  ochre: { bg: "#e8b94a", text: "#0a0a0a" },
-  mint: { bg: "#a4d4c5", text: "#0a0a0a" },
-};
 
 const quizTypeLabels: Record<string, string> = {
   personality: "人格测试",
@@ -27,9 +18,9 @@ export function QuizDetail({
   quiz: QuizDetailRow;
   relatedQuizzes: QuizDetailRelatedRow[];
 }) {
-  const accent: AccentKey = accentFromId(quiz.id);
-  const ac = accentClasses[accent];
-  const isDark = ac.text === "#ffffff";
+  const bgColor = nipponColorForSlug(quiz.slug);
+  const textColor = textColorForNipponBg(bgColor);
+  const isDark = textColor === "#FCFAF2";
   const tintColor = isDark ? "rgba(255,255,255,0.55)" : "rgba(10,10,10,0.45)";
   const borderColor = isDark ? "rgba(255,255,255,0.25)" : "rgba(10,10,10,0.15)";
 
@@ -43,7 +34,7 @@ export function QuizDetail({
         {/* ---- 小票卡片：标题 + 描述 ---- */}
         <section
           className="p-5 shadow-[0_4px_20px_rgba(0,0,0,0.10)] sm:p-6"
-          style={{ backgroundColor: ac.bg, color: ac.text }}
+          style={{ backgroundColor: bgColor, color: textColor }}
         >
           {/* 上部：标题 + 种类 */}
           <div className="flex items-start justify-between gap-3">

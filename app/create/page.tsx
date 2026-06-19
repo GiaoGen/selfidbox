@@ -1402,7 +1402,7 @@ function CreatePageContent() {
             </button>
           )}
           <SaveQuizButton
-            quiz={{ meta, results, factors, resultVectors, questions, abstractness: quiz.abstractness, seriousness: quiz.seriousness, depth: quiz.depth, poeticness: quiz.poeticness }}
+            quiz={{ meta, results, factors, resultVectors, questions, abstractness: quiz.abstractness, seriousness: quiz.seriousness, depth: quiz.depth, poeticness: quiz.poeticness, title_relevance: quiz.title_relevance, goofiness: quiz.goofiness }}
             editMode={isEditMode}
             editQuizId={editQuizId}
             accentColor={undefined}

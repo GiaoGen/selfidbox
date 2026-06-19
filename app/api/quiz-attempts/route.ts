@@ -47,10 +47,10 @@ export async function POST(request: Request) {
 
   console.log("[QuizAttempt] finalResult", top?.result.key ?? "(none)");
 
-  /* ---- 2.5 Sandbox limit check ---- */
+  /* ---- 2.5 Sandbox limit check + fetch style controls ---- */
   const { data: quizRow } = await supabase
     .from("quizzes")
-    .select("status, attempt_count")
+    .select("status, attempt_count, abstractness, seriousness, depth, poeticness, title_relevance, goofiness")
     .eq("id", quizId)
     .single();
 
@@ -61,7 +61,18 @@ export async function POST(request: Request) {
     );
   }
 
-  /* ---- 3. Insert quiz_attempts ---- */
+  /* ---- 3. Compute profile weight from quiz style controls ---- */
+  const styleSum =
+    (100 - (quizRow?.abstractness ?? 50)) +
+    (quizRow?.seriousness ?? 50) +
+    (quizRow?.depth ?? 50) +
+    (100 - (quizRow?.poeticness ?? 50)) +
+    (100 - (quizRow?.title_relevance ?? 50)) +
+    (100 - (quizRow?.goofiness ?? 50));
+
+  const profileWeight = Math.min(0.95, Math.max(0.05, styleSum / 600));
+
+  /* ---- 4. Insert quiz_attempts ---- */
   console.log("[QuizAttempt] inserting attempt");
 
   const { data: attempt, error: attemptError } = await supabase
@@ -79,7 +90,7 @@ export async function POST(request: Request) {
       final_result_key: top?.result.key ?? null,
       final_result_name: top?.result.name ?? null,
       included_in_profile: true,
-      profile_weight: 0.3,
+      profile_weight: profileWeight,
     })
     .select("id")
     .single();

@@ -2,16 +2,8 @@
 
 import { RelatedTestSites } from "@/components/RelatedTestSites";
 import { StampCard } from "@/components/StampCard";
+import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
 import type { TestSite } from "@/lib/test-sites";
-
-const accentClasses: Record<TestSite["accent"], { bg: string; text: string }> = {
-  pink: { bg: "#ff4d8b", text: "#ffffff" },
-  teal: { bg: "#1a3a3a", text: "#ffffff" },
-  lavender: { bg: "#b8a4ed", text: "#0a0a0a" },
-  peach: { bg: "#ffb084", text: "#0a0a0a" },
-  ochre: { bg: "#e8b94a", text: "#0a0a0a" },
-  mint: { bg: "#a4d4c5", text: "#0a0a0a" },
-};
 
 export function TestSiteDetail({
   site,
@@ -20,8 +12,9 @@ export function TestSiteDetail({
   site: TestSite;
   relatedSites: TestSite[];
 }) {
-  const accent = accentClasses[site.accent];
-  const isDark = accent.text === "#ffffff";
+  const bgColor = nipponColorForSlug(site.id);
+  const textColor = textColorForNipponBg(bgColor);
+  const isDark = textColor === "#FCFAF2";
   const tintColor = isDark ? "rgba(255,255,255,0.55)" : "rgba(10,10,10,0.45)";
   const borderColor = isDark ? "rgba(255,255,255,0.25)" : "rgba(10,10,10,0.15)";
 
@@ -38,7 +31,7 @@ export function TestSiteDetail({
         {/* ---- 小票卡片：标题 + 描述 + tags ---- */}
         <section
           className="p-5 shadow-[0_4px_20px_rgba(0,0,0,0.10)] sm:p-6"
-          style={{ backgroundColor: accent.bg, color: accent.text }}
+          style={{ backgroundColor: bgColor, color: textColor }}
         >
           {/* 上部：标题 + 种类 */}
           <div className="flex items-start justify-between gap-3">

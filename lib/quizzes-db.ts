@@ -261,6 +261,8 @@ export interface SaveQuizInput {
   seriousness?: number;
   depth?: number;
   poeticness?: number;
+  title_relevance?: number;
+  goofiness?: number;
 }
 
 export interface SaveQuizResult {
@@ -313,6 +315,8 @@ export async function saveQuizSchema(
       seriousness: input.seriousness ?? 50,
       depth: input.depth ?? 50,
       poeticness: input.poeticness ?? 50,
+      title_relevance: input.title_relevance ?? 40,
+      goofiness: input.goofiness ?? 50,
       description: input.meta.description ?? null,
       cover_image_url: input.meta.cover_image_url ?? null,
       category_id: input.meta.category_id ?? null,
@@ -457,7 +461,7 @@ export async function getQuizForEdit(
   // 1. Quiz meta
   const { data: quiz, error: quizError } = await db
     .from("quizzes")
-    .select("title, hook, quiz_type, audience, tone, creator_user_id, abstractness, seriousness, depth, poeticness")
+    .select("title, hook, quiz_type, audience, tone, creator_user_id, abstractness, seriousness, depth, poeticness, title_relevance, goofiness")
     .eq("id", quizId)
     .single();
 
@@ -520,6 +524,8 @@ export async function getQuizForEdit(
     seriousness: (quiz as Record<string, unknown>).seriousness as number ?? 50,
     depth: (quiz as Record<string, unknown>).depth as number ?? 50,
     poeticness: (quiz as Record<string, unknown>).poeticness as number ?? 50,
+    title_relevance: (quiz as Record<string, unknown>).title_relevance as number ?? 40,
+    goofiness: (quiz as Record<string, unknown>).goofiness as number ?? 50,
     results: (resultRows ?? []).map((r: Record<string, unknown>) => ({
       id: r.key as string,
       name: r.name as string,
@@ -577,6 +583,8 @@ export async function updateQuizSchema(
       seriousness: input.seriousness ?? 50,
       depth: input.depth ?? 50,
       poeticness: input.poeticness ?? 50,
+      title_relevance: input.title_relevance ?? 40,
+      goofiness: input.goofiness ?? 50,
       description: input.meta.description ?? null,
       cover_image_url: input.meta.cover_image_url ?? null,
       category_id: input.meta.category_id ?? null,
