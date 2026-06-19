@@ -100,7 +100,23 @@ export default async function ProfilePage() {
       <div className="fixed inset-0" style={{ backgroundColor: "#fffaf0" }} aria-hidden />
       <main className="relative min-h-screen text-[#1c1c1c]">
         <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
-        {/* ── Radar charts — top, horizontal scroll ── */}
+        {hasProfile ? (
+          <ProfileInteractions
+            initialSources={sources}
+          />
+        ) : (
+          <>
+            <section className="rounded-[36px] bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_62%,#fffaf0_100%)] p-8 text-center text-[#0a0a0a] shadow-[0_18px_50px_rgba(10,10,10,0.08)] sm:p-10">
+              <p className="text-lg font-semibold">还没有人格图谱</p>
+              <p className="mt-2 text-sm opacity-70">
+                上传一张测评截图开始生成。
+              </p>
+            </section>
+            <ScreenshotReportUploader />
+          </>
+        )}
+
+        {/* ── Radar charts — bottom ── */}
         {hasCore && (
           <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mx-4 px-4">
             <div className="snap-center shrink-0 w-[72vw] max-w-[360px]">
@@ -122,22 +138,6 @@ export default async function ProfilePage() {
               </div>
             )}
           </div>
-        )}
-
-        {hasProfile ? (
-          <ProfileInteractions
-            initialSources={sources}
-          />
-        ) : (
-          <>
-            <section className="rounded-[36px] bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_62%,#fffaf0_100%)] p-8 text-center text-[#0a0a0a] shadow-[0_18px_50px_rgba(10,10,10,0.08)] sm:p-10">
-              <p className="text-lg font-semibold">还没有人格图谱</p>
-              <p className="mt-2 text-sm opacity-70">
-                上传一张测评截图开始生成。
-              </p>
-            </section>
-            <ScreenshotReportUploader />
-          </>
         )}
         </div>
       </main>
