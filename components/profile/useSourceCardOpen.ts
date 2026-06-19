@@ -53,6 +53,7 @@ export function useSourceCardOpen() {
         result_image_url: entry.image_url ?? null,
         result_traits: entry.traits ?? [],
         result_share_text: entry.share_text ?? null,
+        result_color: entry.card_color ?? null,
         user_vector: null,
       };
       detailCache.current.set(cacheKey, normalized);

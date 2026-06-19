@@ -25,6 +25,7 @@ export interface QuizResultData {
   result_vector: Record<string, number>;
   image_url: string | null;
   share_text: string | null;
+  color: string | null;
 }
 
 export interface QuizOptionData {

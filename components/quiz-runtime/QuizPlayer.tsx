@@ -166,7 +166,7 @@ export function QuizPlayer({ quiz }: Props) {
         userVector={userVector}
         syncStatus={syncStatus}
         syncError={syncError}
-        accentColor={theme.accent}
+        accentColor={ranking[0]?.result.color || theme.accent}
       />
     );
   }

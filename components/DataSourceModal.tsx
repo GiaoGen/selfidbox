@@ -364,7 +364,7 @@ export function DataSourceModal({
               shareText={
                 (cardData as QuizDetailData).result_share_text ?? "这是我的测试结果，你也来试试。"
               }
-              cardColor="#E8D5B7"
+              cardColor={(cardData as QuizDetailData).result_color || "#DAC9A6"}
             />
           )}
         </RotatingCardModal>

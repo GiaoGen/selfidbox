@@ -36,6 +36,7 @@ export interface ProfileSourceEntry {
   description?: string | null;
   traits?: string[];
   share_text?: string | null;
+  card_color?: string | null;
 }
 
 export async function getProfileSources(
@@ -95,12 +96,13 @@ export async function getProfileSources(
     image_url: string | null;
     traits: string[];
     share_text: string | null;
+    color: string | null;
   }> = {};
 
   if (quizIds.length > 0) {
     const { data: allResults, error: resultsError } = await db
       .from("quiz_results")
-      .select("quiz_id, key, subtitle, description, image_url, traits, share_text")
+      .select("quiz_id, key, subtitle, description, image_url, traits, share_text, color")
       .in("quiz_id", quizIds);
 
     if (resultsError) {
@@ -114,6 +116,7 @@ export async function getProfileSources(
           image_url: (r.image_url as string) ?? null,
           traits: (r.traits as string[]) ?? [],
           share_text: (r.share_text as string) ?? null,
+          color: (r.color as string) ?? null,
         };
       }
     }
@@ -154,6 +157,7 @@ export async function getProfileSources(
       description: card?.description ?? null,
       traits: card?.traits ?? [],
       share_text: card?.share_text ?? null,
+        card_color: card?.color ?? null,
     });
   }
 

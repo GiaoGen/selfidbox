@@ -138,8 +138,6 @@ interface NipponTheme {
   heroBg: string;
   /** 7 step backgrounds + 1 for Style Controls */
   sectionBgs: string[];
-  /** 8 colors for result cards */
-  resultColors: string[];
   /** 12 colors for chips, effects, accents */
   accentColors: string[];
 }
@@ -148,7 +146,6 @@ function useNipponTheme(): NipponTheme {
   const [theme, setTheme] = useState<NipponTheme>(() => ({
     heroBg: SSR_DEFAULT_BG,
     sectionBgs: Array.from({ length: 8 }, () => SSR_DEFAULT_BG),
-    resultColors: Array.from({ length: 8 }, () => SSR_DEFAULT_BG),
     accentColors: Array.from({ length: 12 }, () => SSR_DEFAULT_BG),
   }));
 
@@ -156,7 +153,6 @@ function useNipponTheme(): NipponTheme {
     setTheme({
       heroBg: pickRandom(NIPPON_COLORS),
       sectionBgs: Array.from({ length: 8 }, () => pickRandom(NIPPON_COLORS)),
-      resultColors: pickN(NIPPON_COLORS, 8),
       accentColors: pickN(NIPPON_COLORS, 12),
     });
   }, []);
@@ -387,7 +383,7 @@ function CreatePageContent() {
     theme.heroBg,
     ...theme.sectionBgs,
   ];
-  const { resultColors, accentColors } = theme;
+  const { accentColors } = theme;
 
   const [quiz, setQuiz] = useState<QuizState>({
     meta: emptyMeta,
@@ -504,7 +500,7 @@ function CreatePageContent() {
         ...prev,
         results: [
           ...prev.results,
-          { id, name: "新结果", description: "", traits: [], isPinned: false, color: "#FFF5E6" },
+          { id, name: "新结果", description: "", traits: [], isPinned: false, color: pickRandom(NIPPON_COLORS) },
         ],
         resultVectors: [
           ...prev.resultVectors,
@@ -695,10 +691,15 @@ function CreatePageContent() {
       const allResults = mapAIResults(aiResults).map((newResult) => {
         // Preserve image_url and color from existing result with the same key
         const existing = quiz.results.find((r) => r.id === newResult.id);
-        if (!existing) return newResult;
+        if (!existing) {
+          // New AI result — ensure it has a color
+          if (!newResult.color) newResult.color = pickRandom(NIPPON_COLORS);
+          return newResult;
+        }
         const merged = { ...newResult };
         if (existing.image_url) merged.image_url = existing.image_url;
         if (existing.color) merged.color = existing.color;
+        if (!merged.color) merged.color = pickRandom(NIPPON_COLORS);
         return merged;
       });
 
@@ -1288,7 +1289,7 @@ function CreatePageContent() {
                   index={colorIdx}
                   onValueChange={(factorId, value) => updateResultVectorValue(result.id, factorId, value)}
                   onTogglePin={() => toggleResultVectorPin(result.id)}
-                  accentColor={resultColors[colorIdx % resultColors.length]}
+                  accentColor={result.color || "#DAC9A6"}
                 />
               </>
             );

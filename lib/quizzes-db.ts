@@ -63,7 +63,7 @@ export const getQuizBySlug = cache(async (slug: string): Promise<QuizRuntimeData
       .order("sort_order"),
     (await getDb())
       .from("quiz_results")
-      .select("id, key, name, subtitle, description, traits, result_vector, image_url, share_text")
+      .select("id, key, name, subtitle, description, traits, result_vector, image_url, share_text, color")
       .eq("quiz_id", quiz.id)
       .order("sort_order"),
     (await getDb())
@@ -362,6 +362,7 @@ export async function saveQuizSchema(
       result_vector: vector?.values ?? {},
       share_text: r.shareText ?? null,
       image_url: r.image_url ?? null,
+      color: r.color ?? null,
       sort_order: i,
     };
   });
@@ -466,7 +467,7 @@ export async function getQuizForEdit(
   // 2. Results
   const { data: resultRows } = await db
     .from("quiz_results")
-    .select("key, name, subtitle, description, traits, share_text, image_url, result_vector")
+    .select("key, name, subtitle, description, traits, share_text, image_url, result_vector, color")
     .eq("quiz_id", quizId)
     .order("sort_order");
 
@@ -528,6 +529,7 @@ export async function getQuizForEdit(
       shareText: (r.share_text as string) ?? undefined,
       isPinned: false,
       image_url: (r.image_url as string) ?? undefined,
+      color: (r.color as string) ?? undefined,
     })),
     factors: (factorRows ?? []).map((f: Record<string, unknown>) => ({
       id: f.key as string,
@@ -626,6 +628,7 @@ export async function updateQuizSchema(
       result_vector: vector?.values ?? {},
       share_text: r.shareText ?? null,
       image_url: r.image_url ?? null,
+      color: r.color ?? null,
       sort_order: i,
     };
   });
