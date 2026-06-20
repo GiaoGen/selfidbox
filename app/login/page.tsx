@@ -6,14 +6,17 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { AuthUser } from "@/lib/types";
 
+type Mode = "login" | "signup" | "verify";
+
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [token, setToken] = useState("");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -57,7 +60,7 @@ export default function LoginPage() {
   );
 
   /* ------------------------------------------------------------------ */
-  /*  Sign up — username is required                                     */
+  /*  Sign up — username is required, then verify OTP inline             */
   /* ------------------------------------------------------------------ */
 
   const handleSignUp = useCallback(
@@ -86,7 +89,7 @@ export default function LoginPage() {
       }
 
       if (data.user && data.session) {
-        // Auto-confirmed — save username before redirecting
+        // Auto-confirmed — save username then redirect
         const res = await fetch("/api/user", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -106,12 +109,78 @@ export default function LoginPage() {
         return;
       }
 
-      // Email confirmation required
-      setSuccess("注册成功，请检查邮箱验证后登录。");
+      // Email OTP required — switch to inline verify mode
+      setToken("");
       setLoading(false);
+      setMode("verify");
     },
     [email, password, username, router, supabase],
   );
+
+  /* ------------------------------------------------------------------ */
+  /*  Verify OTP inline                                                   */
+  /* ------------------------------------------------------------------ */
+
+  const handleVerify = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault();
+      setError("");
+
+      const code = token.trim();
+      if (!code) {
+        setError("请输入验证码");
+        return;
+      }
+
+      setLoading(true);
+
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: code,
+        type: "email",
+      });
+
+      if (verifyError) {
+        setError(verifyError.message);
+        setLoading(false);
+        return;
+      }
+
+      // Email verified — save username
+      const trimmed = username.trim();
+      if (trimmed) {
+        await fetch("/api/user", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: trimmed }),
+        }).catch(() => {});
+      }
+
+      router.push("/explore");
+      router.refresh();
+    },
+    [email, username, token, router, supabase],
+  );
+
+  /* ------------------------------------------------------------------ */
+  /*  Resend OTP                                                          */
+  /* ------------------------------------------------------------------ */
+
+  const handleResend = useCallback(async () => {
+    setError("");
+    setLoading(true);
+
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email,
+    });
+
+    if (resendError) {
+      setError(resendError.message);
+    }
+
+    setLoading(false);
+  }, [email, supabase]);
 
   /* ------------------------------------------------------------------ */
   /*  Sign out                                                            */
@@ -125,6 +194,7 @@ export default function LoginPage() {
     setEmail("");
     setPassword("");
     setUsername("");
+    setToken("");
     setMode("login");
     router.refresh();
   }, [router, supabase]);
@@ -133,13 +203,14 @@ export default function LoginPage() {
   /*  Switch mode — reset fields + errors                                */
   /* ------------------------------------------------------------------ */
 
-  const switchMode = useCallback((next: "login" | "signup") => {
+  const switchMode = useCallback((next: Mode) => {
     setMode(next);
     setError("");
     setSuccess("");
     setEmail("");
     setPassword("");
     setUsername("");
+    setToken("");
   }, []);
 
   /* ------------------------------------------------------------------ */
@@ -218,6 +289,89 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+          ) : mode === "verify" ? (
+            /* ---- verify OTP inline ---- */
+            <>
+              <div className="text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--ink)]/8">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-[var(--ink)]"
+                  >
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  </svg>
+                </div>
+
+                <h1 className="mt-4 text-xl font-semibold tracking-[-0.02em] text-[var(--ink)]">
+                  验证邮箱
+                </h1>
+
+                <p className="mt-2 text-[15px] leading-relaxed text-[var(--muted)]">
+                  请查看邮箱中的验证码
+                </p>
+
+                <p className="mt-1 text-[13px] font-medium text-[var(--muted)]/70">
+                  {email}
+                </p>
+              </div>
+
+              <form onSubmit={handleVerify} className="mt-6 flex flex-col gap-4">
+                <div>
+                  <label
+                    htmlFor="token"
+                    className="text-[13px] font-semibold text-[var(--muted)]"
+                  >
+                    验证码
+                  </label>
+                  <input
+                    id="token"
+                    type="text"
+                    inputMode="numeric"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    required
+                    autoComplete="one-time-code"
+                    placeholder="输入 6 位验证码"
+                    className="mt-1.5 w-full rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-3 text-center text-[24px] tracking-[0.3em] text-[var(--ink)] outline-none transition-colors placeholder:text-[13px] placeholder:tracking-normal placeholder:text-[#9a9a9a] focus:border-[var(--ink)]/40"
+                    style={{ minHeight: 56 }}
+                  />
+                </div>
+
+                {error && (
+                  <p className="rounded-[12px] bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#dc2626]">
+                    {error}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="mt-1 inline-flex min-h-12 items-center justify-center rounded-full bg-[var(--ink)] px-6 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  {loading ? "..." : "验证"}
+                </button>
+              </form>
+
+              <p className="mt-4 text-center text-[13px] text-[var(--muted)]">
+                没有收到？{" "}
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={loading}
+                  className="font-semibold text-[var(--ink)] hover:underline disabled:opacity-50"
+                >
+                  重新发送
+                </button>
+              </p>
+            </>
           ) : mode === "login" ? (
             /* ---- login form ---- */
             <>

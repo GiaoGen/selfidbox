@@ -8,6 +8,7 @@ import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
 import { TrendingCarousel } from "./TrendingCarousel";
 import { TrendingCard } from "./TrendingCard";
 import { TestCard } from "@/app/explore/_components/test-card";
+import { Greeting } from "@/components/Greeting";
 
 /* ------------------------------------------------------------------ */
 /*  Filters (pure functions)                                           */
@@ -246,6 +247,11 @@ export function ExploreClient({
           </div>
         )}
       </div>
+
+      {/* ================================================================ */}
+      {/*  Greeting                                                          */}
+      {/* ================================================================ */}
+      <Greeting className="-mb-7" />
 
       {/* ================================================================ */}
       {/*  Trending Carousel                                                */}
