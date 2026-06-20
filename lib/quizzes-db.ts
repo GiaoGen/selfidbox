@@ -46,8 +46,9 @@ export const getQuizBySlug = cache(async (slug: string): Promise<QuizRuntimeData
 
   if (quizError || !quiz) return null;
 
-  // Only sandbox and published quizzes are publicly accessible
-  if (quiz.status !== "sandbox" && quiz.status !== "published") {
+  // published / sandbox / submitting are publicly runnable; archived is not
+  const PUBLIC_RUNNABLE = new Set(["published", "sandbox", "submitting"]);
+  if (!PUBLIC_RUNNABLE.has(quiz.status)) {
     return null;
   }
 

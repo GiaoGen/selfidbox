@@ -36,8 +36,7 @@ export function DataSourceModal({
 
   /* ---- Delete state ---- */
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ProfileSourceEntry | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     message: string;
@@ -75,7 +74,7 @@ export function DataSourceModal({
     if (open) {
       fetchSources();
       setOpenSwipeId(null);
-      setDeleteTarget(null);
+      setConfirmingId(null);
       setFeedback(null);
     }
   }, [open, fetchSources]);
@@ -93,64 +92,48 @@ export function DataSourceModal({
 
   /* ---- Delete handlers ---- */
 
-  const handleDeleteRequest = useCallback((entry: ProfileSourceEntry) => {
-    setDeleteTarget(entry);
+  const handleRequestConfirm = useCallback((entry: ProfileSourceEntry) => {
+    setConfirmingId(entry.id);
+    setOpenSwipeId(entry.id);
   }, []);
 
-  const handleCancelDelete = useCallback(() => {
-    setDeleteTarget(null);
+  const handleConfirmDelete = useCallback(() => {
+    if (!confirmingId) return;
+
+    const target = sources.find((s) => s.id === confirmingId);
+    if (!target) return;
+
+    // Optimistic: remove row instantly
+    setSources((prev) => prev.filter((s) => s.id !== target.id));
+    setConfirmingId(null);
     setOpenSwipeId(null);
-  }, []);
+    setFeedback({ type: "success", message: "删除完成" });
 
-  const handleConfirmDelete = useCallback(async () => {
-    if (!deleteTarget) return;
-
-    setDeleting(true);
-    setFeedback(null);
-
-    try {
-      const res = await fetch("/api/profile/sources/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          source_type: deleteTarget.source_type,
-          id: deleteTarget.id,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.ok) {
-        // Remove from local list optimistically, then re-fetch
-        setSources((prev) => prev.filter((s) => s.id !== deleteTarget.id));
-        setDeleteTarget(null);
-        setOpenSwipeId(null);
-        setFeedback({ type: "success", message: "已删除，个人图谱已更新" });
-
-        // Re-fetch to stay in sync with server state
-        fetchSources();
-
-        // Refresh the server-rendered profile page
-        router.refresh();
-      } else {
+    // Fire and forget API call
+    fetch("/api/profile/sources/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source_type: target.source_type,
+        id: target.id,
+      }),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!data.ok) {
+          setFeedback({
+            type: "error",
+            message: data.error || "删除失败，请重试",
+          });
+        }
+      })
+      .catch((err) => {
         setFeedback({
           type: "error",
-          message: data.error || "删除失败，请重试",
+          message: err instanceof Error ? err.message : "网络错误，请重试",
         });
-        setDeleteTarget(null);
-        setOpenSwipeId(null);
-      }
-    } catch (err) {
-      setFeedback({
-        type: "error",
-        message: err instanceof Error ? err.message : "网络错误，请重试",
       });
-      setDeleteTarget(null);
-      setOpenSwipeId(null);
-    } finally {
-      setDeleting(false);
-    }
-  }, [deleteTarget, fetchSources, router]);
+  }, [confirmingId, sources]);
 
   /* ---- Source item click → open card (via shared hook) ---- */
   const handleSourceClick = useCallback((entry: ProfileSourceEntry) => {
@@ -260,47 +243,6 @@ export function DataSourceModal({
             </div>
           )}
 
-          {/* Feedback banner */}
-          {feedback && (
-            <div
-              className={
-                feedback.type === "success"
-                  ? "mb-3 rounded-2xl bg-[#e8f5e9] px-4 py-2.5 text-sm font-medium text-[#2e7d32]"
-                  : "mb-3 rounded-2xl bg-[#fce4e4] px-4 py-2.5 text-sm font-medium text-[#c0392b]"
-              }
-            >
-              {feedback.message}
-            </div>
-          )}
-
-          {/* Confirmation dialog */}
-          {deleteTarget && (
-            <div className="mb-4 rounded-2xl border border-[#0a0a0a]/10 bg-white p-5 shadow-sm">
-              <p className="text-sm leading-relaxed text-[#0a0a0a]/75">
-                确定删除这条数据来源吗？删除后会重新计算你的个人图谱。
-              </p>
-              <div className="mt-4 flex gap-3 justify-end">
-                <button
-                  onClick={handleCancelDelete}
-                  disabled={deleting}
-                  className="rounded-full bg-[#0a0a0a]/8 px-4 py-2 text-sm font-semibold transition hover:bg-[#0a0a0a]/15 disabled:opacity-40"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={handleConfirmDelete}
-                  disabled={deleting}
-                  className="rounded-full bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#a93226] disabled:opacity-40 inline-flex items-center gap-2"
-                >
-                  {deleting && (
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  )}
-                  确认删除
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Source rows */}
           {!loading && !error && sources.length > 0 && (
             <div className="divide-y divide-[#0a0a0a]/10">
@@ -308,11 +250,16 @@ export function DataSourceModal({
                 <SwipeToDeleteSourceRow
                   key={src.id}
                   isOpen={openSwipeId === src.id}
-                  onOpenChange={(open) =>
-                    setOpenSwipeId(open ? src.id : null)
+                  onOpenChange={(open) => {
+                    setOpenSwipeId(open ? src.id : null);
+                    if (!open) setConfirmingId(null);
+                  }}
+                  onRequestConfirm={() => handleRequestConfirm(src)}
+                  onDelete={handleConfirmDelete}
+                  isConfirming={confirmingId === src.id}
+                  disabled={
+                    confirmingId !== null && confirmingId !== src.id
                   }
-                  onDelete={() => handleDeleteRequest(src)}
-                  disabled={deleting || deleteTarget !== null}
                   className=""
                 >
                   <div
@@ -340,6 +287,19 @@ export function DataSourceModal({
                   </div>
                 </SwipeToDeleteSourceRow>
               ))}
+            </div>
+          )}
+
+          {/* Feedback banner */}
+          {feedback && (
+            <div
+              className={
+                feedback.type === "success"
+                  ? "mt-3 rounded-2xl bg-[#e8f5e9] px-4 py-2.5 text-sm font-medium text-[#2e7d32]"
+                  : "mt-3 rounded-2xl bg-[#fce4e4] px-4 py-2.5 text-sm font-medium text-[#c0392b]"
+              }
+            >
+              {feedback.message}
             </div>
           )}
         </div>

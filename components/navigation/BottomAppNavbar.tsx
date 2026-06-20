@@ -7,8 +7,7 @@ import { Compass, WandSparkles, User, Search, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { DataSourceModal } from "@/components/DataSourceModal";
 import { SearchOverlay } from "./SearchOverlay";
-
-type AuthUser = { id: string; email?: string };
+import type { AuthUser } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
 /*  Nav item (icon + label, active pill)                                */
@@ -81,13 +80,39 @@ export function BottomAppNavbar() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
-  // fetch user when on profile page (needed for menu)
+  const fetchUser = useCallback(() => {
+    supabase.auth.getUser().then(async ({ data: { user: u } }) => {
+      if (!u) return;
+      try {
+        const { data: row } = await supabase
+          .from("users")
+          .select("username")
+          .eq("id", u.id)
+          .single();
+        setUser({
+          id: u.id,
+          email: u.email,
+          username: row?.username ?? null,
+        });
+      } catch {
+        setUser({ id: u.id, email: u.email });
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // fetch user when on profile page
   useEffect(() => {
     if (!isProfile) return;
-    supabase.auth.getUser().then(({ data: { user: u } }) => {
-      if (u) setUser({ id: u.id, email: u.email });
-    });
-  }, [isProfile, supabase]);
+    fetchUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isProfile]);
+
+  // re-fetch username when profile menu opens (picks up DB changes)
+  useEffect(() => {
+    if (profileMenuOpen) fetchUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileMenuOpen]);
 
   // close profile menu on outside click
   useEffect(() => {
@@ -129,9 +154,14 @@ export function BottomAppNavbar() {
             ref={profileMenuRef}
             className="fixed bottom-[calc(84px+env(safe-area-inset-bottom))] left-4 right-4 z-50 mx-auto max-w-sm rounded-[24px] border border-white/50 bg-white/75 p-4 shadow-[0_8px_40px_rgba(10,10,10,0.12)] backdrop-blur-xl"
           >
-            <p className="truncate px-3 pt-1 text-[14px] font-medium text-[var(--muted)]">
-              {user.email}
+            <p className="truncate px-3 pt-1 text-[14px] font-semibold text-[var(--ink)]">
+              {user.username ? `@${user.username}` : user.email}
             </p>
+            {user.username && (
+              <p className="truncate px-3 text-[12px] text-[var(--muted)]">
+                {user.email}
+              </p>
+            )}
 
             <button
               type="button"

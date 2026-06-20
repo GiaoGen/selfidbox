@@ -138,11 +138,12 @@ export function QuizPlayer({ quiz }: Props) {
     setSelectedOptionId(null);
   }, [currentIndex]);
 
-  // Sandbox limit check
-  const sandboxReached =
-    quiz.status === "sandbox" && quiz.attempt_count >= MAX_SANDBOX_ATTEMPTS;
+  // Sandbox / submitting both capped at MAX_SANDBOX_ATTEMPTS
+  const attemptLimitReached =
+    (quiz.status === "sandbox" || quiz.status === "submitting") &&
+    quiz.attempt_count >= MAX_SANDBOX_ATTEMPTS;
 
-  if (sandboxReached) {
+  if (attemptLimitReached) {
     return (
       <div className="mx-auto w-full max-w-[560px] py-20 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--ink)]/8">

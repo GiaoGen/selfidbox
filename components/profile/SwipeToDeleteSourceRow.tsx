@@ -16,7 +16,12 @@ const DELETE_BTN_WIDTH = 72;
 
 interface SwipeToDeleteSourceRowProps {
   children: React.ReactNode;
+  /** Called on the second click (confirm) to actually delete */
   onDelete: () => void;
+  /** Called on the first click to enter confirm mode */
+  onRequestConfirm: () => void;
+  /** Whether this row is in confirm mode */
+  isConfirming: boolean;
   disabled?: boolean;
   /** Whether this row's delete button is currently revealed */
   isOpen: boolean;
@@ -29,6 +34,8 @@ interface SwipeToDeleteSourceRowProps {
 export function SwipeToDeleteSourceRow({
   children,
   onDelete,
+  onRequestConfirm,
+  isConfirming,
   disabled = false,
   isOpen,
   onOpenChange,
@@ -62,14 +69,24 @@ export function SwipeToDeleteSourceRow({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onDelete();
+            if (isConfirming) {
+              onDelete();
+            } else {
+              onRequestConfirm();
+            }
           }}
           disabled={disabled}
-          className="absolute right-0 top-0 bottom-0 flex items-center justify-center bg-[#fce8e6] text-[#c0392b] hover:bg-[#f9d4d1] active:bg-[#f5bcb7] transition-colors disabled:opacity-40 select-none"
+          className={
+            isConfirming
+              ? "absolute right-0 top-0 bottom-0 flex items-center justify-center bg-[#c0392b] text-white hover:bg-[#a93226] active:bg-[#922b21] transition-colors disabled:opacity-40 select-none"
+              : "absolute right-0 top-0 bottom-0 flex items-center justify-center bg-[#fce8e6] text-[#c0392b] hover:bg-[#f9d4d1] active:bg-[#f5bcb7] transition-colors disabled:opacity-40 select-none"
+          }
           style={{ width: DELETE_BTN_WIDTH }}
-          aria-label="删除"
+          aria-label={isConfirming ? "确认删除" : "删除"}
         >
-          <span className="text-sm font-semibold">删除</span>
+          <span className="text-sm font-semibold">
+            {isConfirming ? "确认" : "删除"}
+          </span>
         </button>
 
         {/* Draggable row — padding lives here so it moves with the content */}
@@ -92,28 +109,42 @@ export function SwipeToDeleteSourceRow({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onDelete();
+                if (isConfirming) {
+                  onDelete();
+                } else {
+                  onRequestConfirm();
+                }
               }}
               disabled={disabled}
-              className="absolute right-0 top-0 bottom-0 hidden md:flex items-center px-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gradient-to-l from-[#fffaf0] via-[#fffaf0]/90 to-transparent disabled:opacity-0"
-              aria-label="删除"
+              className={
+                isConfirming
+                  ? "absolute right-0 top-0 bottom-0 hidden md:flex items-center px-3 opacity-100 bg-gradient-to-l from-[#fffaf0] via-[#fffaf0]/90 to-transparent disabled:opacity-40"
+                  : "absolute right-0 top-0 bottom-0 hidden md:flex items-center px-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gradient-to-l from-[#fffaf0] via-[#fffaf0]/90 to-transparent disabled:opacity-0"
+              }
+              aria-label={isConfirming ? "确认删除" : "删除"}
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#c0392b"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                <path d="M10 11v6" />
-                <path d="M14 11v6" />
-                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-              </svg>
+              {isConfirming ? (
+                <span className="text-sm font-semibold text-[#c0392b]">
+                  确认
+                </span>
+              ) : (
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#c0392b"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                </svg>
+              )}
             </button>
           </div>
         </motion.div>

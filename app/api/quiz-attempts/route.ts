@@ -47,14 +47,15 @@ export async function POST(request: Request) {
 
   console.log("[QuizAttempt] finalResult", top?.result.key ?? "(none)");
 
-  /* ---- 2.5 Sandbox limit check + fetch style controls ---- */
+  /* ---- 2.5 Limited-status attempt cap (sandbox + submitting: max 20 runs) ---- */
   const { data: quizRow } = await supabase
     .from("quizzes")
     .select("status, attempt_count, abstractness, seriousness, depth, poeticness, title_relevance, goofiness")
     .eq("id", quizId)
     .single();
 
-  if (quizRow && quizRow.status === "sandbox" && (quizRow.attempt_count ?? 0) >= MAX_SANDBOX_ATTEMPTS) {
+  const isLimited = quizRow?.status === "sandbox" || quizRow?.status === "submitting";
+  if (isLimited && (quizRow.attempt_count ?? 0) >= MAX_SANDBOX_ATTEMPTS) {
     return NextResponse.json(
       { ok: false, error: "SANDBOX_LIMIT_REACHED" },
       { status: 403 },

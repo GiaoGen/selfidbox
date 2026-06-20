@@ -4,11 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { User, LogOut } from "lucide-react";
-
-type AuthUser = {
-  id: string;
-  email?: string;
-};
+import type { AuthUser } from "@/lib/types";
 
 export function UserMenu({
   actions,
@@ -23,8 +19,23 @@ export function UserMenu({
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user: u } }) => {
-      if (u) setUser({ id: u.id, email: u.email });
+    supabase.auth.getUser().then(async ({ data: { user: u } }) => {
+      if (u) {
+        try {
+          const { data: row } = await supabase
+            .from("users")
+            .select("username")
+            .eq("id", u.id)
+            .single();
+          setUser({
+            id: u.id,
+            email: u.email,
+            username: row?.username ?? null,
+          });
+        } catch {
+          setUser({ id: u.id, email: u.email });
+        }
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -63,9 +74,14 @@ export function UserMenu({
 
       {open && (
         <div className="absolute right-0 top-full mt-2 w-56 rounded-[20px] bg-white p-3 shadow-[0_12px_40px_rgba(10,10,10,0.12)] ring-1 ring-[var(--ink)]/6">
-          <p className="truncate px-3 pt-1 text-[13px] font-medium text-[var(--muted)]">
-            {user.email}
+          <p className="truncate px-3 pt-1 text-[13px] font-semibold text-[var(--ink)]">
+            {user.username ? `@${user.username}` : user.email}
           </p>
+          {user.username && (
+            <p className="truncate px-3 text-[11px] text-[var(--muted)]">
+              {user.email}
+            </p>
+          )}
 
           {actions?.map((action) => (
             <button

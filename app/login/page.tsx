@@ -4,18 +4,16 @@ import { useState, useEffect, useCallback, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-
-type AuthUser = {
-  id: string;
-  email?: string;
-};
+import type { AuthUser } from "@/lib/types";
 
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
 
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -29,6 +27,10 @@ export default function LoginPage() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* ------------------------------------------------------------------ */
+  /*  Login                                                               */
+  /* ------------------------------------------------------------------ */
 
   const handleLogin = useCallback(
     async (e: FormEvent) => {
@@ -54,32 +56,66 @@ export default function LoginPage() {
     [email, password, router, supabase],
   );
 
-  const handleSignUp = useCallback(async () => {
-    setError("");
-    setSuccess("");
-    setLoading(true);
+  /* ------------------------------------------------------------------ */
+  /*  Sign up — username is required                                     */
+  /* ------------------------------------------------------------------ */
 
-    const { error: err, data } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+  const handleSignUp = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault();
+      setError("");
+      setSuccess("");
 
-    if (err) {
-      setError(err.message);
+      const trimmed = username.trim();
+      if (!trimmed || trimmed.length < 2 || trimmed.length > 30) {
+        setError("用户名需要 2–30 个字符");
+        return;
+      }
+
+      setLoading(true);
+
+      const { error: err, data } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (err) {
+        setError(err.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data.user && data.session) {
+        // Auto-confirmed — save username before redirecting
+        const res = await fetch("/api/user", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: trimmed }),
+        });
+
+        const body = await res.json();
+
+        if (!res.ok) {
+          setError(body.error || "用户名保存失败，请重试");
+          setLoading(false);
+          return;
+        }
+
+        router.push("/profile");
+        router.refresh();
+        return;
+      }
+
+      // Email confirmation required
+      setSuccess("注册成功，请检查邮箱验证后登录。");
       setLoading(false);
-      return;
-    }
+    },
+    [email, password, username, router, supabase],
+  );
 
-    if (data.user && data.session) {
-      // auto-confirmed — redirect
-      router.push("/profile");
-      router.refresh();
-      return;
-    }
-
-    setSuccess("注册成功，请检查邮箱验证后登录。");
-    setLoading(false);
-  }, [email, password, router, supabase]);
+  /* ------------------------------------------------------------------ */
+  /*  Sign out                                                            */
+  /* ------------------------------------------------------------------ */
 
   const handleSignOut = useCallback(async () => {
     setError("");
@@ -88,8 +124,27 @@ export default function LoginPage() {
     setUser(null);
     setEmail("");
     setPassword("");
+    setUsername("");
+    setMode("login");
     router.refresh();
   }, [router, supabase]);
+
+  /* ------------------------------------------------------------------ */
+  /*  Switch mode — reset fields + errors                                */
+  /* ------------------------------------------------------------------ */
+
+  const switchMode = useCallback((next: "login" | "signup") => {
+    setMode(next);
+    setError("");
+    setSuccess("");
+    setEmail("");
+    setPassword("");
+    setUsername("");
+  }, []);
+
+  /* ------------------------------------------------------------------ */
+  /*  Render                                                              */
+  /* ------------------------------------------------------------------ */
 
   if (checking) {
     return (
@@ -140,7 +195,12 @@ export default function LoginPage() {
                 已登录
               </h1>
 
-              <p className="mt-2 text-sm text-[var(--muted)]">{user.email}</p>
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                {user.username ? `@${user.username}` : user.email}
+              </p>
+              {user.username && (
+                <p className="text-xs text-[var(--muted)]/70">{user.email}</p>
+              )}
 
               <div className="mt-6 flex flex-col gap-3">
                 <Link
@@ -158,7 +218,7 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-          ) : (
+          ) : mode === "login" ? (
             /* ---- login form ---- */
             <>
               <h1 className="text-xl font-semibold tracking-[-0.02em] text-[var(--ink)]">
@@ -228,16 +288,117 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              <div className="mt-3">
+              <p className="mt-4 text-center text-[13px] text-[var(--muted)]">
+                没有账号？{" "}
                 <button
                   type="button"
+                  onClick={() => switchMode("signup")}
+                  className="font-semibold text-[var(--ink)] hover:underline"
+                >
+                  注册
+                </button>
+              </p>
+            </>
+          ) : (
+            /* ---- sign up form ---- */
+            <>
+              <h1 className="text-xl font-semibold tracking-[-0.02em] text-[var(--ink)]">
+                创建账号
+              </h1>
+              <p className="mt-2 text-[15px] leading-relaxed text-[var(--muted)]">
+                注册后可同步你的测评报告、人格图谱和 Quiz 结果。
+              </p>
+
+              <form onSubmit={handleSignUp} className="mt-6 flex flex-col gap-4">
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="text-[13px] font-semibold text-[var(--muted)]"
+                  >
+                    邮箱
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                    className="mt-1.5 w-full rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[#9a9a9a] focus:border-[var(--ink)]/40"
+                    style={{ minHeight: 48 }}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="username"
+                    className="text-[13px] font-semibold text-[var(--muted)]"
+                  >
+                    用户名
+                  </label>
+                  <input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    autoComplete="username"
+                    placeholder="2–30 个字符，注册后可修改"
+                    className="mt-1.5 w-full rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[#9a9a9a] focus:border-[var(--ink)]/40"
+                    style={{ minHeight: 48 }}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="password"
+                    className="text-[13px] font-semibold text-[var(--muted)]"
+                  >
+                    密码
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                    className="mt-1.5 w-full rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[#9a9a9a] focus:border-[var(--ink)]/40"
+                    style={{ minHeight: 48 }}
+                  />
+                </div>
+
+                {error && (
+                  <p className="rounded-[12px] bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#dc2626]">
+                    {error}
+                  </p>
+                )}
+
+                {success && (
+                  <p className="rounded-[12px] bg-[#f0fdf4] px-4 py-3 text-[13px] font-medium text-[#16a34a]">
+                    {success}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
                   disabled={loading}
-                  onClick={handleSignUp}
-                  className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-[var(--ink)]/12 bg-white px-6 text-[15px] font-semibold text-[var(--ink)] transition-all hover:border-[var(--ink)]/25 disabled:opacity-50"
+                  className="mt-1 inline-flex min-h-12 items-center justify-center rounded-full bg-[var(--ink)] px-6 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                 >
                   {loading ? "..." : "注册"}
                 </button>
-              </div>
+              </form>
+
+              <p className="mt-4 text-center text-[13px] text-[var(--muted)]">
+                已有账号？{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("login")}
+                  className="font-semibold text-[var(--ink)] hover:underline"
+                >
+                  登录
+                </button>
+              </p>
             </>
           )}
         </div>
