@@ -159,7 +159,9 @@ export const getPublishedTestSites = listQuery(
       `)
       .eq("status", "published")
       .order("featured", { ascending: false })
-      .order("sort_order", { ascending: true });
+      .order("popularity_score", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(200);
 
     if (error) throw error;
     return (data as TestSiteRow[]) ?? [];
@@ -208,7 +210,9 @@ export const getTestSitesByCategory = keyedObjectQuery(
       .eq("category_id", (category as CategoryRow).id)
       .eq("status", "published")
       .order("featured", { ascending: false })
-      .order("sort_order", { ascending: true });
+      .order("popularity_score", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(100);
 
     if (sitesError) throw sitesError;
     return { category: category as CategoryRow, sites: (sites as TestSiteRow[]) ?? [] };

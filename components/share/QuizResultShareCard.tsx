@@ -100,38 +100,33 @@ export const QuizResultShareCard = forwardRef<HTMLDivElement, Props>(
 
           {/* Traits */}
           {traits.length > 0 && (
-            <div className={`flex flex-wrap gap-1.5 ${hasImage ? "mx-5 mt-4" : "mx-5 mt-5"}`}>
-              {traits.slice(0, 4).map((t) => (
-                <span
-                  key={t}
-                  className="rounded-full px-3 py-1 text-[11px] font-semibold tracking-wide"
-                  style={{
-                    backgroundColor: tagBg,
-                    textShadow: hasImage ? "0 1px 2px rgba(0,0,0,0.35)" : undefined,
-                  }}
-                >
-                  {t}
-                </span>
-              ))}
-            </div>
+            <>
+              <div className={`flex flex-wrap gap-1.5 ${hasImage ? "mx-5 mt-4" : "mx-5 mt-5"}`}>
+                {traits.slice(0, 4).map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-full px-3 py-1 text-[11px] font-semibold tracking-wide"
+                    style={{
+                      backgroundColor: tagBg,
+                    }}
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+              {/* Divider */}
+              <hr
+                className="mx-5 my-3"
+                style={{ border: "none", borderTop: `1px solid ${dividerColor}` }}
+              />
+            </>
           )}
-
-          {/* Label */}
-          <p
-            className="mx-5 mt-5 text-[11px] font-semibold uppercase tracking-[0.15em]"
-            style={{
-              color: mutedColor,
-              textShadow: hasImage ? "0 1px 2px rgba(0,0,0,0.35)" : undefined,
-            }}
-          >
-            你的结果
-          </p>
 
           {/* Result name */}
           <h1
             className="mx-5 mt-1 text-[28px] font-bold leading-[1.15] tracking-[-0.02em]"
             style={{
-              textShadow: hasImage ? "0 1px 4px rgba(0,0,0,0.4)" : undefined,
+
             }}
           >
             {resultName}
@@ -143,7 +138,7 @@ export const QuizResultShareCard = forwardRef<HTMLDivElement, Props>(
               className="mx-5 mt-2 text-[15px] leading-[1.6]"
               style={{
                 color: mutedColor,
-                textShadow: hasImage ? "0 1px 2px rgba(0,0,0,0.35)" : undefined,
+
               }}
             >
               {resultDescription}
@@ -159,23 +154,10 @@ export const QuizResultShareCard = forwardRef<HTMLDivElement, Props>(
               className="mx-5 text-[14px] font-medium leading-[1.5]"
               style={{
                 color: mutedColor,
-                textShadow: hasImage ? "0 1px 2px rgba(0,0,0,0.35)" : undefined,
+
               }}
             >
               {resultSubtitle}
-            </p>
-          )}
-
-          {/* Share text */}
-          {shareText && (
-            <p
-              className="mx-5 mt-1 pb-1 text-[14px] leading-[1.5] italic"
-              style={{
-                color: mutedColor,
-                textShadow: hasImage ? "0 1px 2px rgba(0,0,0,0.35)" : undefined,
-              }}
-            >
-              {shareText}
             </p>
           )}
 
@@ -188,7 +170,7 @@ export const QuizResultShareCard = forwardRef<HTMLDivElement, Props>(
               className="text-[12px] font-semibold tracking-[0.08em]"
               style={{
                 color: subtleColor,
-                textShadow: hasImage ? "0 1px 2px rgba(0,0,0,0.35)" : undefined,
+
               }}
             >
               SelfIDBox
@@ -197,7 +179,7 @@ export const QuizResultShareCard = forwardRef<HTMLDivElement, Props>(
               className="text-[11px]"
               style={{
                 color: subtleColor,
-                textShadow: hasImage ? "0 1px 2px rgba(0,0,0,0.35)" : undefined,
+
               }}
             >
               {quizTitle}

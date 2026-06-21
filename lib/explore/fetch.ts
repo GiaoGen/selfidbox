@@ -46,7 +46,11 @@ async function fetchPublishedQuizzes(): Promise<AdminQuizRow[]> {
   const { data, error } = await supabase
     .from("quizzes")
     .select("id, slug, title, hook, description, category_id, quiz_type, status, attempt_count, featured, created_at")
-    .eq("status", "published");
+    .eq("status", "published")
+    .order("featured", { ascending: false })
+    .order("attempt_count", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   if (error) {
     console.error("[explore] fetchPublishedQuizzes error:", error);
@@ -66,7 +70,8 @@ async function fetchResultImages(
     .from("quiz_results")
     .select("quiz_id, image_url")
     .in("quiz_id", quizIds)
-    .not("image_url", "is", null);
+    .not("image_url", "is", null)
+    .limit(300);
 
   if (error || !data) {
     console.error("[explore] fetchResultImages error:", error);
@@ -140,6 +145,7 @@ export async function getExploreQuizCardsByCategory(
 
   const cards = quizzes
     .filter((q) => q.category_id === cat.id)
+    .slice(0, 100)
     .map((q) => {
       const images = resultImages.get(q.id) || [];
       const pickedImage = pickFrom(images, q.slug);
