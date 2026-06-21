@@ -3,6 +3,7 @@ import type { AdminQuizRow } from "@/lib/admin-db";
 import type { ExploreCard } from "./types";
 import { accentFromId } from "./types";
 import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
+import { computeHeatScore } from "./sort";
 
 /** Map a TestSite to unified ExploreCard */
 export function testSiteToExploreCard(site: TestSite): ExploreCard {
@@ -47,7 +48,7 @@ export function quizToExploreCard(
     category_id: categorySlug ?? quiz.category?.slug ?? null, // category slug — matches tab IDs for filtering
     categoryLabel: categoryLabel ?? quiz.category?.name ?? "",
     featured: quiz.featured ?? false,
-    popularity_score: 0, // quizzes don't have popularity_score yet — use attempt_count as proxy
+    popularity_score: computeHeatScore(quiz.attempt_count ?? 0, quiz.created_at),
     created_at: quiz.created_at,
     tags: [],
     estimatedMinutes: null,

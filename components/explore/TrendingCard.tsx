@@ -88,7 +88,7 @@ export function TrendingCard({ site: card, rank }: { site: ExploreCard; rank: nu
         {/* ---- 下部：本周热门（左） / 来源（右） ---- */}
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs font-light" style={{ color: tintColor }}>
-            #{rank} · 本周热门
+            #{rank} · 近期热门
           </span>
           <span className="shrink-0 text-xs font-light" style={{ color: tintColor }}>
             {sourceLabel}

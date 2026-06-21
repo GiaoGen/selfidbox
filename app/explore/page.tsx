@@ -9,6 +9,7 @@ import {
 import { getExploreQuizCards } from "@/lib/explore/fetch";
 import { testSiteToExploreCard } from "@/lib/explore/mapper";
 import type { ExploreCard } from "@/lib/explore/types";
+import { sortExploreCards } from "@/lib/explore/sort";
 import { ExploreClient } from "@/components/explore/ExploreClient";
 import { logger } from "@/lib/logger";
 
@@ -33,21 +34,8 @@ function filterByRange(cards: ExploreCard[], range: Range): ExploreCard[] {
   });
 }
 
-function sortExploreCards(cards: ExploreCard[]): ExploreCard[] {
-  return [...cards].sort((a, b) => {
-    // featured first
-    if (a.featured !== b.featured) return b.featured ? 1 : -1;
-    // then popularity
-    if (a.popularity_score !== b.popularity_score)
-      return b.popularity_score - a.popularity_score;
-    // then created_at
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
-}
-
 function getTrending(cards: ExploreCard[]): ExploreCard[] {
-  const recent7d = filterByRange(cards, "7d");
-  return sortExploreCards(recent7d).slice(0, 5);
+  return sortExploreCards(cards).slice(0, 5);
 }
 
 /* ------------------------------------------------------------------ */

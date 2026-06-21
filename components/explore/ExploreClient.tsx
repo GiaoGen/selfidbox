@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ExploreCard } from "@/lib/explore/types";
+import { sortExploreCards } from "@/lib/explore/sort";
 import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
 import { TrendingCarousel } from "./TrendingCarousel";
 import { TrendingCard } from "./TrendingCard";
@@ -35,15 +36,6 @@ function filterByRange(cards: ExploreCard[], range: Range): ExploreCard[] {
   return cards.filter((c) => {
     if (!c.created_at) return true;
     return new Date(c.created_at).getTime() >= cutoff;
-  });
-}
-
-function sortExploreCards(cards: ExploreCard[]): ExploreCard[] {
-  return [...cards].sort((a, b) => {
-    if (a.featured !== b.featured) return b.featured ? 1 : -1;
-    if (a.popularity_score !== b.popularity_score)
-      return b.popularity_score - a.popularity_score;
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 }
 

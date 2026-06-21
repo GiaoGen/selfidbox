@@ -3,6 +3,7 @@ import { getCategories, getTestSitesByCategory, mapCategory, mapTestSite } from 
 import { getExploreQuizCardsByCategory } from "@/lib/explore/fetch";
 import { testSiteToExploreCard } from "@/lib/explore/mapper";
 import type { ExploreCard } from "@/lib/explore/types";
+import { sortExploreCards } from "@/lib/explore/sort";
 import { TestCard } from "./test-card";
 
 function EmptyState({ message }: { message: string }) {
@@ -11,15 +12,6 @@ function EmptyState({ message }: { message: string }) {
       <p className="text-base text-[var(--muted)]">{message}</p>
     </div>
   );
-}
-
-function sortExploreCards(cards: ExploreCard[]): ExploreCard[] {
-  return [...cards].sort((a, b) => {
-    if (a.featured !== b.featured) return b.featured ? 1 : -1;
-    if (a.popularity_score !== b.popularity_score)
-      return b.popularity_score - a.popularity_score;
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
 }
 
 export async function CategoryPage({ category }: { category: string }) {

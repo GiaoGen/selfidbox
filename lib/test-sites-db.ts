@@ -1,7 +1,9 @@
 import { createClient as createSSRClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TestSite, TestAccent } from "./test-sites";
 import { listQuery, keyedSingleQuery, keyedObjectQuery } from "./cache";
+import { computeHeatScore } from "@/lib/explore/sort";
 
 async function getDb(): Promise<SupabaseClient> {
   return createSSRClient();
@@ -220,9 +222,7 @@ export const getTestSitesByCategory = keyedObjectQuery(
 /* ------------------------------------------------------------------ */
 
 function computePopularityScore(clickCount: number, createdAt: string) {
-  const created = new Date(createdAt);
-  const ageDays = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24);
-  return clickCount / Math.pow(ageDays + 2, 0.8);
+  return computeHeatScore(clickCount, createdAt);
 }
 
 export async function updateTestSitePopularity(testSiteId: string) {
@@ -264,7 +264,7 @@ export async function updateTestSitePopularity(testSiteId: string) {
 }
 
 export async function recordTestSiteClick(slug: string) {
-  const { data: site, error: findError } = await (await getDb())
+  const { data: site, error: findError } = await createServiceClient()
     .from("test_sites")
     .select("id, click_count, created_at")
     .eq("slug", slug)
@@ -278,20 +278,14 @@ export async function recordTestSiteClick(slug: string) {
   const newClickCount = (site.click_count ?? 0) + 1;
   const popularityScore = computePopularityScore(newClickCount, site.created_at);
 
-  const [{ error: insertError }, { error: updateError }] = await Promise.all([
-    (await getDb()).from("test_site_clicks").insert({ test_site_id: site.id }),
-    (await getDb())
-      .from("test_sites")
-      .update({
-        click_count: newClickCount,
-        popularity_score: popularityScore,
-      })
-      .eq("id", site.id),
-  ]);
+  const { error: updateError } = await createServiceClient()
+    .from("test_sites")
+    .update({
+      click_count: newClickCount,
+      popularity_score: popularityScore,
+    })
+    .eq("id", site.id);
 
-  if (insertError) {
-    console.error("recordTestSiteClick: insert error", insertError);
-  }
   if (updateError) {
     console.error("recordTestSiteClick: update error", updateError);
     return { success: false as const, error: updateError };
