@@ -1043,7 +1043,7 @@ function CreatePageContent() {
         >
           <div className="flex items-center justify-between">
             <h1 className={`text-4xl font-semibold leading-none tracking-[-0.04em] sm:text-5xl ${invHero ? "text-white" : "text-[var(--ink)]"}`}>
-              AI Quiz Studio
+              Quiz Studio
             </h1>
             <button
               type="button"
@@ -1093,19 +1093,6 @@ function CreatePageContent() {
           stepNumber={1}
           stepLabel="测试基础信息"
         />
-
-        {/* ── Quiz Style Controls ── */}
-        <section
-          className="overflow-hidden p-5 sm:p-6 space-y-4"
-          style={{ backgroundColor: bgStyle, color: textOn(bgStyle) }}
-        >
-          <QuizStyleControls
-            style={{ abstractness: quiz.abstractness, seriousness: quiz.seriousness, depth: quiz.depth, poeticness: quiz.poeticness, title_relevance: quiz.title_relevance, goofiness: quiz.goofiness }}
-            onChange={updateStyle}
-            accentColor={undefined}
-            inverted={invStyle}
-          />
-        </section>
 
         {/* ── Step 2: Results ── */}
         <section
@@ -1312,6 +1299,19 @@ function CreatePageContent() {
               </>
             );
           })()}
+        </section>
+
+        {/* ── Quiz Style Controls ── */}
+        <section
+          className="overflow-hidden p-5 sm:p-6 space-y-4"
+          style={{ backgroundColor: bgStyle, color: textOn(bgStyle) }}
+        >
+          <QuizStyleControls
+            style={{ abstractness: quiz.abstractness, seriousness: quiz.seriousness, depth: quiz.depth, poeticness: quiz.poeticness, title_relevance: quiz.title_relevance, goofiness: quiz.goofiness }}
+            onChange={updateStyle}
+            accentColor={undefined}
+            inverted={invStyle}
+          />
         </section>
 
         {/* ── Step 5: Questions ── */}

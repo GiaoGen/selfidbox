@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import type { Metadata } from "next";
 import { getUserProfile, getProfileSources, type ProfileSourceEntry } from "@/lib/user-profile-db";
 import { ProfileRadar, type RadarPoint } from "@/components/ProfileRadar";
@@ -112,15 +113,9 @@ export default async function ProfilePage() {
             initialSources={sources}
           />
         ) : (
-          <>
-            <section className="rounded-[36px] bg-[linear-gradient(135deg,#b8a4ed_0%,#ffb084_62%,#fffaf0_100%)] p-8 text-center text-[#0a0a0a] shadow-[0_18px_50px_rgba(10,10,10,0.08)] sm:p-10">
-              <p className="text-lg font-semibold">还没有人格图谱</p>
-              <p className="mt-2 text-sm opacity-70">
-                上传一张测评截图开始生成。
-              </p>
-            </section>
-            <ScreenshotReportUploader />
-          </>
+          <p className="text-sm text-[var(--muted)]">
+            当前没有任何数据，<Link href="/explore" className="font-semibold text-[var(--ink)] hover:underline">去首页选一个喜欢的</Link>
+          </p>
         )}
 
         {/* ── Radar charts — bottom ── */}
