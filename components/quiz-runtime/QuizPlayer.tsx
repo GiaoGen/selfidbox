@@ -78,6 +78,12 @@ export function QuizPlayer({ quiz }: Props) {
         const { data: authData } = await supabase.auth.getUser();
         if (!authData.user) {
           setSyncStatus("not-authenticated");
+          sessionStorage.setItem("pendingQuizSave", JSON.stringify({
+            quizId: quiz.id,
+            userVector: vector,
+            ranking: ranked,
+            answers: finalAnswers,
+          }));
           return;
         }
 

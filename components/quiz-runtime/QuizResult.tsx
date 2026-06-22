@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toPng } from "html-to-image";
@@ -58,6 +58,9 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
       setSaving(false);
     }
   }, []);
+
+  // Auto-open share card on mount
+  useEffect(() => { setShowShare(true); }, []);
 
   if (!top) {
     return (
@@ -125,23 +128,6 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
         <div
           className={hasImage ? "rounded-[24px] bg-white/70 p-5 sm:p-6" : ""}
         >
-        {/* Similarity badge */}
-        <motion.div variants={child} className="mb-5">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ink)]/10 bg-white px-4 py-1.5 text-sm font-medium text-[var(--ink)]">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2" />
-              <path
-                d="M4.5 7.5l2 2 3-4"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            匹配度 {top.similarity}%
-          </span>
-        </motion.div>
-
         {/* Result name */}
         <motion.h1
           variants={child}
@@ -200,9 +186,6 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
                       <p className="text-sm text-[var(--muted)]">{r.result.subtitle}</p>
                     )}
                   </div>
-                  <span className="text-sm font-medium text-[var(--muted)]">
-                    {r.similarity}%
-                  </span>
                 </div>
               ))}
             </div>
@@ -297,6 +280,16 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
               >
                 {saving ? "保存中..." : "保存图片"}
               </button>
+
+              {/* Login prompt — shown when user is not authenticated */}
+              {syncStatus === "not-authenticated" && (
+                <a
+                  href={`/login?redirect=/profile`}
+                  className="mt-3 rounded-full border border-white/30 bg-transparent px-8 py-3 text-[15px] font-semibold text-white transition-all hover:bg-white/10"
+                >
+                  登录 SelfIDBox · 保存所有评测结果
+                </a>
+              )}
             </motion.div>
 
             {/* weak close button — top-right corner */}

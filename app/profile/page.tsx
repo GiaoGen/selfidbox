@@ -5,6 +5,7 @@ import { ProfileRadar, type RadarPoint } from "@/components/ProfileRadar";
 import { ProfileInteractions } from "@/components/profile/ProfileInteractions";
 import { ScreenshotReportUploader } from "@/components/profile/ScreenshotReportUploader";
 import { Greeting } from "@/components/Greeting";
+import { PendingSaveHandler } from "@/components/profile/PendingSaveHandler";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -98,6 +99,7 @@ export default async function ProfilePage() {
 
   return (
     <>
+      <PendingSaveHandler />
       <div className="fixed inset-0" style={{ backgroundColor: "#fffaf0" }} aria-hidden />
       <main className="relative min-h-screen text-[#1c1c1c]">
         <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">

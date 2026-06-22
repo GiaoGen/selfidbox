@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { AuthUser } from "@/lib/types";
@@ -10,6 +10,8 @@ type Mode = "login" | "signup" | "verify";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
   const supabase = createClient();
 
   const [mode, setMode] = useState<Mode>("login");
@@ -53,10 +55,10 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/profile");
+      router.push(redirect || "/profile");
       router.refresh();
     },
-    [email, password, router, supabase],
+    [email, password, redirect, router, supabase],
   );
 
   /* ------------------------------------------------------------------ */
@@ -104,7 +106,7 @@ export default function LoginPage() {
           return;
         }
 
-        router.push("/profile");
+        router.push(redirect || "/profile");
         router.refresh();
         return;
       }
@@ -114,7 +116,7 @@ export default function LoginPage() {
       setLoading(false);
       setMode("verify");
     },
-    [email, password, username, router, supabase],
+    [email, password, username, redirect, router, supabase],
   );
 
   /* ------------------------------------------------------------------ */
@@ -156,10 +158,10 @@ export default function LoginPage() {
         }).catch(() => {});
       }
 
-      router.push("/explore");
+      router.push(redirect || "/explore");
       router.refresh();
     },
-    [email, username, token, router, supabase],
+    [email, username, token, redirect, router, supabase],
   );
 
   /* ------------------------------------------------------------------ */
