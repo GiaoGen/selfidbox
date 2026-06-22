@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { SELFID_FACTOR_KEYS } from "@/lib/selfid-factors";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getCredits, spendCredit } from "@/lib/credits/service";
 import { trackAISuccess, trackAIError, extractTokens } from "@/lib/ai/track-ai-usage";
 import {
   QUIZ_FACTORS_SYSTEM,
@@ -28,6 +29,16 @@ export async function POST(request: NextRequest) {
 
   if (!checkRateLimit(`ai:factors:${user.id}`, 20, 60_000)) {
     return NextResponse.json({ error: "RATE_LIMITED" }, { status: 429 });
+  }
+
+  try {
+    const snapshot = await getCredits(user.id);
+    if (snapshot.balance.available <= 0) {
+      return NextResponse.json({ error: "INSUFFICIENT_CREDITS" }, { status: 402 });
+    }
+  } catch (err) {
+    console.error("[quiz-ai:factors] Credit check failed:", err);
+    return NextResponse.json({ error: "Credit check failed" }, { status: 500 });
   }
 
   let body: {
@@ -223,6 +234,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    let creditsRemaining: number | null = null;
+    try {
+      creditsRemaining = await spendCredit(user.id);
+    } catch (err) {
+      console.error("[quiz-ai:factors] spendCredit failed:", err);
+    }
+
     trackAISuccess({
         client: supabase,
         userId,
@@ -232,7 +250,10 @@ export async function POST(request: NextRequest) {
       metadata: { factor_count: parsed.factors.length },
     });
 
-    return NextResponse.json({ factors: parsed.factors });
+    return NextResponse.json({
+      factors: parsed.factors,
+      credits_remaining: creditsRemaining,
+    });
   } catch (err) {
     console.error("[quiz-ai:factors] Unexpected error", err);
     trackAIError({

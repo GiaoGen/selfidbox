@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { trackAISuccess, trackAIError, extractTokens } from "@/lib/ai/track-ai-usage";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getCredits, spendCredit } from "@/lib/credits/service";
 import {
   QUIZ_QUESTIONS_SYSTEM,
   buildQuizQuestionsPrompt,
@@ -100,6 +101,16 @@ export async function POST(request: NextRequest) {
   // Rate limit: 20 requests per minute per user
   if (!checkRateLimit(`ai:questions:${user.id}`, 20, 60_000)) {
     return NextResponse.json({ error: "RATE_LIMITED" }, { status: 429 });
+  }
+
+  try {
+    const snapshot = await getCredits(user.id);
+    if (snapshot.balance.available <= 0) {
+      return NextResponse.json({ error: "INSUFFICIENT_CREDITS" }, { status: 402 });
+    }
+  } catch (err) {
+    console.error("[quiz-ai:questions] Credit check failed:", err);
+    return NextResponse.json({ error: "Credit check failed" }, { status: 500 });
   }
 
   let body: {
@@ -478,6 +489,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    let creditsRemaining: number | null = null;
+    try {
+      creditsRemaining = await spendCredit(user.id);
+    } catch (err) {
+      console.error("[quiz-ai:questions] spendCredit failed:", err);
+    }
+
     trackAISuccess({
         client: supabase,
         userId,
@@ -487,7 +505,10 @@ export async function POST(request: NextRequest) {
       metadata: { question_count: questions.length },
     });
 
-    return NextResponse.json({ questions });
+    return NextResponse.json({
+      questions,
+      credits_remaining: creditsRemaining,
+    });
   } catch (err) {
     console.error("[quiz-ai:questions] Unexpected error", err);
     trackAIError({

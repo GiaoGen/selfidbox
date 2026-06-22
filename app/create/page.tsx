@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Library, CircleHelp, Check, AlertTriangle, AlertCircle, Minus } from "lucide-react";
+import { Library, CircleHelp, Check, AlertTriangle, AlertCircle, Minus, Sparkles } from "lucide-react";
 import { QuizMetaCard } from "@/components/quiz-engine/QuizMetaCard";
 import { QuizStyleControls } from "@/components/quiz-engine/QuizStyleControls";
 import { ResultCard } from "@/components/quiz-engine/ResultCard";
@@ -11,6 +11,7 @@ import { ResultVectorCard } from "@/components/quiz-engine/ResultVectorCard";
 import { QuestionEffectsCard } from "@/components/quiz-engine/QuestionEffectsCard";
 import { SaveQuizButton } from "@/components/quiz-engine/SaveQuizButton";
 import { MyQuizzesModal } from "@/components/quiz-runtime/MyQuizzesModal";
+import { CreditPanel } from "@/components/quiz-studio/CreditPanel";
 import { mapAIResults, DEFAULT_STYLE } from "@/lib/mock-quiz-engine";
 import { validateResultDistances, validateQuestionCoverage } from "@/lib/quiz-vector";
 import { SELFID_FACTORS } from "@/lib/selfid-factors";
@@ -435,6 +436,7 @@ function CreatePageContent() {
   const [questionIndex, setQuestionIndex] = useState(0);
   const [resultIndex, setResultIndex] = useState(0);
   const [myQuizzesOpen, setMyQuizzesOpen] = useState(false);
+  const [creditOpen, setCreditOpen] = useState(false);
   const [showFactorPicker, setShowFactorPicker] = useState(false);
   const [discriminationOpen, setDiscriminationOpen] = useState(false);
   const [coverageOpen, setCoverageOpen] = useState(false);
@@ -776,6 +778,7 @@ function CreatePageContent() {
         return;
       }
 
+
       const aiFactors = data.factors as {
         key: string;
         name: string;
@@ -862,6 +865,7 @@ function CreatePageContent() {
         return;
       }
 
+
       const newVectors = data.result_vectors as Record<string, Record<string, number>>;
 
       setQuiz((prev) => ({
@@ -947,6 +951,7 @@ function CreatePageContent() {
         setAiQuestionsError(data.error ?? "AI 生成失败，请重试");
         return;
       }
+
 
       const aiQuestions = data.questions as {
         text: string;
@@ -1042,6 +1047,16 @@ function CreatePageContent() {
             </h1>
             <button
               type="button"
+              onClick={() => setCreditOpen(true)}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all active:scale-95 ${
+                invHero ? "hover:bg-white/10 text-white" : "hover:bg-[var(--ink)]/8 text-[var(--ink)]"
+              }`}
+              title="Credits"
+            >
+              <Sparkles size={17} />
+            </button>
+            <button
+              type="button"
               onClick={() => setMyQuizzesOpen(true)}
               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all active:scale-95 ${
                 invHero ? "hover:bg-white/10 text-white" : "hover:bg-[var(--ink)]/8 text-[var(--ink)]"
@@ -1066,6 +1081,9 @@ function CreatePageContent() {
 
         {/* My Quizzes Modal */}
         <MyQuizzesModal open={myQuizzesOpen} onClose={() => setMyQuizzesOpen(false)} />
+
+        {/* Credit Panel */}
+        <CreditPanel open={creditOpen} onClose={() => setCreditOpen(false)} />
 
         {/* ── Step 1: Quiz Meta — QuizMetaCard IS the step card */}
         <QuizMetaCard
@@ -1655,6 +1673,8 @@ function CreatePageContent() {
           </div>
         );
       })()}
+
+        {/* Toast — credit remaining after AI generation */}
     </main>
   );
 }

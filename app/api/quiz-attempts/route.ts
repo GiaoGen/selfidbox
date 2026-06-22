@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { rebuildUserProfile } from "@/lib/rebuild-user-profile";
 import { MAX_SANDBOX_ATTEMPTS } from "@/lib/quiz-runtime";
+import { grantCredit } from "@/lib/credits/service";
 import type {
   AnswerRecord,
   RankedRuntimeResult,
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
   /* ---- 2.5 Limited-status attempt cap (sandbox + submitting: max 20 runs) ---- */
   const { data: quizRow } = await supabase
     .from("quizzes")
-    .select("status, attempt_count, abstractness, seriousness, depth, poeticness, title_relevance, goofiness")
+    .select("creator_user_id, status, attempt_count, abstractness, seriousness, depth, poeticness, title_relevance, goofiness")
     .eq("id", quizId)
     .single();
 
@@ -142,6 +143,23 @@ export async function POST(request: Request) {
     console.log("[QuizAttempt] attempt_count incremented to", newCount);
   } catch (err) {
     console.warn("[QuizAttempt] increment attempt_count failed", err);
+  }
+
+  /* ---- 5.5 Grant +1 credit to quiz creator (if not self-complete) ---- */
+  if (
+    quizRow?.creator_user_id &&
+    quizRow.creator_user_id !== user.id
+  ) {
+    try {
+      await grantCredit(
+        quizRow.creator_user_id,
+        "quiz_completed",
+        1,
+        `${quizId}::${user.id}`,
+      );
+    } catch (err) {
+      console.warn("[QuizAttempt] grantCredit failed:", err);
+    }
   }
 
   /* ---- 6. Update user_profile ---- */

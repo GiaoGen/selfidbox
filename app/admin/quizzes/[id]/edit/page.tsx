@@ -5,6 +5,7 @@ import {
   getAdminCategories,
   updateQuizMetadata,
 } from "@/lib/admin-db";
+import { grantCredit } from "@/lib/credits/service";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { QuizEditForm } from "./form";
@@ -32,6 +33,15 @@ export default async function EditQuizPage({
   }) {
     "use server";
     try {
+      // Grant +5 credits when quiz is first approved (status → published)
+      const oldStatus = quiz?.status;
+      const creatorId = quiz?.creator_user_id;
+      if (oldStatus !== "published" && data.status === "published" && creatorId) {
+        await grantCredit(creatorId, "quiz_approved", 5, id).catch((err) => {
+          console.warn("[AdminEdit] grantCredit failed:", err);
+        });
+      }
+
       await updateQuizMetadata(id, {
         title: data.title,
         description: data.description || null,
