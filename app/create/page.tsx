@@ -1101,7 +1101,7 @@ function CreatePageContent() {
           initial={{ opacity: 0, scale: 0.90 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          transition={{ type: "spring", stiffness: 260, damping: 22 }}
+          transition={{ type: "spring", stiffness: 160, damping: 24 }}
           style={{ backgroundColor: bgS2, color: textOn(bgS2) }}
         >
           <div className="flex items-center justify-between">
@@ -1183,7 +1183,7 @@ function CreatePageContent() {
           initial={{ opacity: 0, scale: 0.90 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          transition={{ type: "spring", stiffness: 260, damping: 22 }}
+          transition={{ type: "spring", stiffness: 160, damping: 24 }}
           style={{ backgroundColor: bgS3, color: textOn(bgS3) }}
         >
           <div className="flex items-center justify-between">
@@ -1237,7 +1237,7 @@ function CreatePageContent() {
           initial={{ opacity: 0, scale: 0.90 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          transition={{ type: "spring", stiffness: 260, damping: 22 }}
+          transition={{ type: "spring", stiffness: 160, damping: 24 }}
           style={{ backgroundColor: bgS4, color: textOn(bgS4) }}
         >
           <div className="flex items-center justify-between">
@@ -1320,7 +1320,7 @@ function CreatePageContent() {
           initial={{ opacity: 0, scale: 0.90 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          transition={{ type: "spring", stiffness: 260, damping: 22 }}
+          transition={{ type: "spring", stiffness: 160, damping: 24 }}
           style={{ backgroundColor: bgStyle, color: textOn(bgStyle) }}
         >
           <QuizStyleControls
@@ -1337,7 +1337,7 @@ function CreatePageContent() {
           initial={{ opacity: 0, scale: 0.90 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          transition={{ type: "spring", stiffness: 260, damping: 22 }}
+          transition={{ type: "spring", stiffness: 160, damping: 24 }}
           style={{ backgroundColor: bgS6, color: textOn(bgS6) }}
         >
           <div className="flex items-center justify-between">

@@ -273,7 +273,7 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
     const delays: number[] = new Array(n);
     let elapsed = 0;
     for (const idx of indices) {
-      elapsed += 0.06 + Math.random() * 0.12;
+      elapsed += 0.03 + Math.random() * 0.06;
       delays[idx] = elapsed;
     }
     return delays;
