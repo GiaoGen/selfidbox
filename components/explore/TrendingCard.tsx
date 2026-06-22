@@ -14,7 +14,7 @@ export function TrendingCard({ site: card, rank }: { site: ExploreCard; rank: nu
   return (
     <Link
       href={card.href}
-      className="group relative block h-full w-full pt-[30px] pb-[30px] px-6 shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-all duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.14)] active:scale-[0.98] flex flex-col justify-center"
+      className="group relative block h-full w-full pt-[30px] pb-[30px] px-6 shadow-[0_4px_20px_rgba(0,0,0,0.20)] transition-all duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)] active:scale-[0.98] flex flex-col justify-center"
       style={{ backgroundColor: bgColor, color: textColor }}
     >
       {/* ---- 锯齿：顶部穿孔条 ---- */}

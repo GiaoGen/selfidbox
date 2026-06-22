@@ -80,8 +80,8 @@ export function TrendingCarousel({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total]);
 
-  /* ---- transitionend: detect when smooth scroll finishes, reset if on clone ---- */
-  function handleTransitionEnd() {
+  /* ---- scrollend: detect when smooth scroll finishes, reset if on clone ---- */
+  function handleScrollEnd() {
     const el = scrollRef.current;
     if (!el) return;
 
@@ -118,7 +118,7 @@ export function TrendingCarousel({ children }: { children: React.ReactNode }) {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          onTransitionEnd={handleTransitionEnd}
+          onScrollEnd={handleScrollEnd}
           className="flex overflow-x-auto scrollbar-none snap-x snap-mandatory bg-transparent"
         >
           {slides.map((child, i) => (
@@ -134,7 +134,7 @@ export function TrendingCarousel({ children }: { children: React.ReactNode }) {
 
       {/* Dots */}
       {total > 1 && (
-        <div className="mt-4 flex items-center justify-center gap-2">
+        <div className="mt-1 flex items-center justify-center gap-2">
           {Array.from({ length: total }).map((_, i) => (
             <button
               key={i}
