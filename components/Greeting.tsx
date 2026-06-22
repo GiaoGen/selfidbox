@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 
 const TAGLINES = [
@@ -47,19 +48,27 @@ export function Greeting({ className = "" }: { className?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Don't render until we know the auth state
-  if (name === undefined) return null;
-
-  let display: string;
-  if (pick.current.type === "time") {
-    display = name ? `${timeGreeting()}，${name}` : timeGreeting();
-  } else {
-    display = pick.current.text;
+  let display: string = "";
+  if (name !== undefined) {
+    if (pick.current.type === "time") {
+      display = name ? `${timeGreeting()}，${name}` : timeGreeting();
+    } else {
+      display = pick.current.text;
+    }
   }
 
   return (
-    <p className={`text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--ink)] ${className}`}>
-      {display}
-    </p>
+    <div className={`min-h-[42px] ${className}`}>
+      {name !== undefined && (
+        <motion.p
+          initial={{ opacity: 0, x: -16 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
+          className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--ink)]"
+        >
+          {display}
+        </motion.p>
+      )}
+    </div>
   );
 }

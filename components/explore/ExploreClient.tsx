@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import type { ExploreCard } from "@/lib/explore/types";
 import { sortExploreCards } from "@/lib/explore/sort";
@@ -347,11 +348,24 @@ export function ExploreClient({
           <p className="text-sm text-[var(--muted)]">换个分类或时间范围看看。</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <motion.div
+          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+          variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
+          initial="hidden"
+          animate="visible"
+        >
           {filtered.map((card) => (
-            <TestCard key={card.id} site={card} />
+            <motion.div
+              key={card.id}
+              variants={{
+                hidden: { opacity: 0, scale: 0.90 },
+                visible: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 260, damping: 22 } }
+              }}
+            >
+              <TestCard site={card} />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </>
   );

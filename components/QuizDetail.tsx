@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { StampCard } from "@/components/StampCard";
 import { TestCard } from "@/app/explore/_components/test-card";
 import type { QuizDetailRow, QuizDetailRelatedRow } from "@/lib/quizzes-db";
@@ -32,9 +33,12 @@ export function QuizDetail({
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
         {/* ---- 小票卡片：标题 + 描述 ---- */}
-        <section
+        <motion.section
           className="p-5 shadow-[0_4px_20px_rgba(0,0,0,0.10)] sm:p-6"
           style={{ backgroundColor: bgColor, color: textColor }}
+          initial={{ opacity: 0, scale: 0.90 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
         >
           {/* 上部：标题 + 种类 */}
           <div className="flex items-start justify-between gap-3">
@@ -63,44 +67,63 @@ export function QuizDetail({
             </div>
             <span className="text-xs font-light" style={{ color: tintColor }}>SelfIDBox</span>
           </div>
-        </section>
+        </motion.section>
 
         {/* ---- 邮票：次数 + 日期 + CTA ---- */}
-        <section className={`grid grid-cols-2 gap-3 ${quiz.image_url ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+        <motion.section
+          className={`grid grid-cols-2 gap-3 ${quiz.image_url ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}
+          variants={{ visible: { transition: { staggerChildren: 0.07 } } }}
+          initial="hidden"
+          animate="visible"
+        >
           {quiz.image_url && (
-            <div className="aspect-square w-full overflow-hidden">
+            <motion.div
+              variants={{ hidden: { opacity: 0, scale: 0.90 }, visible: { opacity: 1, scale: 1 } }}
+              className="aspect-square w-full overflow-hidden"
+            >
               <img
                 src={quiz.image_url}
                 alt=""
                 className="h-full w-full object-cover"
                 loading="lazy"
               />
-            </div>
+            </motion.div>
           )}
-          <StampCard colorKey={`attempts-${quiz.id}`}>
-            <div className="text-center">
-              <p className="text-[10px] font-light uppercase tracking-[0.15em] opacity-50">已完成</p>
-              <p className="mt-1 text-xl font-semibold">{quiz.attempt_count} 次</p>
-            </div>
-          </StampCard>
+          <motion.div variants={{ hidden: { opacity: 0, scale: 0.90 }, visible: { opacity: 1, scale: 1 } }}>
+            <StampCard colorKey={`attempts-${quiz.id}`}>
+              <div className="text-center">
+                <p className="text-[10px] font-light uppercase tracking-[0.15em] opacity-50">已完成</p>
+                <p className="mt-1 text-xl font-semibold">{quiz.attempt_count} 次</p>
+              </div>
+            </StampCard>
+          </motion.div>
 
-          <StampCard colorKey={`date-${quiz.id}`}>
-            <div className="text-center">
-              <p className="text-[10px] font-light uppercase tracking-[0.15em] opacity-50">发布于</p>
-              <p className="mt-1 text-xl font-semibold">{formatDate(quiz.created_at)}</p>
-            </div>
-          </StampCard>
+          <motion.div variants={{ hidden: { opacity: 0, scale: 0.90 }, visible: { opacity: 1, scale: 1 } }}>
+            <StampCard colorKey={`date-${quiz.id}`}>
+              <div className="text-center">
+                <p className="text-[10px] font-light uppercase tracking-[0.15em] opacity-50">发布于</p>
+                <p className="mt-1 text-xl font-semibold">{formatDate(quiz.created_at)}</p>
+              </div>
+            </StampCard>
+          </motion.div>
 
-          <StampCard colorKey={`cta-${quiz.id}`} href={`/quiz/${quiz.slug}`}>
+          <motion.div variants={{ hidden: { opacity: 0, scale: 0.90 }, visible: { opacity: 1, scale: 1 } }}>
+            <StampCard colorKey={`cta-${quiz.id}`} href={`/quiz/${quiz.slug}`}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
               <path d="M8 5v14l11-7z" />
             </svg>
           </StampCard>
-        </section>
+          </motion.div>
+        </motion.section>
 
         {/* ---- 相关社区测试 ---- */}
         {relatedQuizzes.length > 0 && (
-          <section className="space-y-3">
+          <motion.section
+            className="space-y-3"
+            variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
+            initial="hidden"
+            animate="visible"
+          >
             <div>
               <h2 className="text-3xl font-semibold tracking-[-0.03em]">
                 相似测试
@@ -128,10 +151,17 @@ export function QuizDetail({
                   bg_color: bg,
                   text_color: textColorForNipponBg(bg),
                 };
-                return <TestCard key={rq.id} site={card} />;
+                return (
+                  <motion.div
+                    key={rq.id}
+                    variants={{ hidden: { opacity: 0, scale: 0.90 }, visible: { opacity: 1, scale: 1 } }}
+                  >
+                    <TestCard site={card} />
+                  </motion.div>
+                );
               })}
             </div>
-          </section>
+          </motion.section>
         )}
       </div>
     </main>

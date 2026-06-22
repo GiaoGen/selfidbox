@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
 import { RotatingCardModal } from "@/components/share/RotatingCardModal";
 import { QuizResultShareCard } from "@/components/share/QuizResultShareCard";
@@ -261,6 +262,23 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
 
   const blocks = useMemo(() => placeBlocks(entries), [entries]);
 
+  const randomDelays = useMemo(() => {
+    const n = blocks.length;
+    if (n === 0) return [] as number[];
+    const indices = Array.from({ length: n }, (_, i) => i);
+    for (let i = n - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    const delays: number[] = new Array(n);
+    let elapsed = 0;
+    for (const idx of indices) {
+      elapsed += 0.06 + Math.random() * 0.12;
+      delays[idx] = elapsed;
+    }
+    return delays;
+  }, [blocks.length]);
+
   /* -- Card modal (shared hook: cache + three-tier fetch) -- */
   const { cardOpen, cardLoading, cardData, cardType, openCard, closeCard } =
     useSourceCardOpen();
@@ -301,11 +319,11 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
         gap: GAP,
       }}
     >
-      {blocks.map((b) => {
+      {blocks.map((b, i) => {
         const vertical = isVertical(b.colSpan, b.rowSpan);
 
         return (
-          <div
+          <motion.div
             key={b.entry.id}
             onClick={() => handleBlockClick(b.entry)}
             className="flex items-center justify-center overflow-hidden select-none cursor-pointer"
@@ -320,13 +338,21 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
               letterSpacing: vertical ? "0" : "-0.01em",
               wordBreak: "break-word",
             }}
+            initial={{ opacity: 0, scale: 0.90 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{
+              type: "spring",
+              stiffness: 260,
+              damping: 22,
+              delay: randomDelays[i] ?? 0,
+            }}
           >
             {vertical ? (
               <VerticalText text={b.entry.result} col={b.col} />
             ) : (
               <span>{b.entry.result}</span>
             )}
-          </div>
+          </motion.div>
         );
       })}
     </div>

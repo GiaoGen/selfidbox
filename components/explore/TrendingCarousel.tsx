@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 
 const PAUSE_AFTER_INTERACTION_MS = 8000;
 const AUTO_PLAY_INTERVAL_MS = 5000;
@@ -115,21 +116,28 @@ export function TrendingCarousel({ children }: { children: React.ReactNode }) {
   return (
     <section className="overflow-visible bg-transparent">
       <div className="overflow-hidden py-5">
-        <div
+        <motion.div
           ref={scrollRef}
           onScroll={handleScroll}
           onScrollEnd={handleScrollEnd}
           className="flex overflow-x-auto scrollbar-none snap-x snap-mandatory bg-transparent"
+          variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
+          initial="hidden"
+          animate="visible"
         >
           {slides.map((child, i) => (
-            <div
+            <motion.div
               key={i}
               className="w-full shrink-0 snap-center bg-transparent"
+              variants={{
+                hidden: { opacity: 0, scale: 0.90 },
+                visible: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 260, damping: 22 } }
+              }}
             >
               {child}
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
 
       {/* Dots */}

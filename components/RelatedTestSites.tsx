@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { motion } from "framer-motion";
 import type { TestSite } from "@/lib/test-sites";
 import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
 
@@ -18,32 +19,41 @@ export function RelatedTestSites({ sites }: { sites: TestSite[] }) {
         </h2>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <motion.div
+        className="grid gap-3 sm:grid-cols-3"
+        variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
+        initial="hidden"
+        animate="visible"
+      >
         {sites.map((site) => {
           const bg = nipponColorForSlug(site.id);
           const fg = textColorForNipponBg(bg);
           return (
-          <Link
+          <motion.div
             key={site.id}
-            href={`/test-sites/${site.id}`}
-            className="flex min-h-44 flex-col justify-between rounded-[28px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.08)]"
-            style={{ backgroundColor: bg, color: fg }}
+            variants={{ hidden: { opacity: 0, scale: 0.90 }, visible: { opacity: 1, scale: 1 } }}
           >
-            <div>
-              <span className="rounded-full bg-white/28 px-3 py-1 text-xs font-semibold">
-                {site.estimatedMinutes} min
-              </span>
-              <h3 className="mt-4 text-xl font-semibold leading-tight tracking-[-0.02em]">
-                {site.name}
-              </h3>
-            </div>
-            <p className="mt-5 line-clamp-2 text-sm leading-6 opacity-85">
-              {site.description}
-            </p>
-          </Link>
+            <Link
+              href={`/test-sites/${site.id}`}
+              className="flex min-h-44 flex-col justify-between rounded-[28px] p-5 shadow-[0_18px_50px_rgba(10,10,10,0.08)]"
+              style={{ backgroundColor: bg, color: fg }}
+            >
+              <div>
+                <span className="rounded-full bg-white/28 px-3 py-1 text-xs font-semibold">
+                  {site.estimatedMinutes} min
+                </span>
+                <h3 className="mt-4 text-xl font-semibold leading-tight tracking-[-0.02em]">
+                  {site.name}
+                </h3>
+              </div>
+              <p className="mt-5 line-clamp-2 text-sm leading-6 opacity-85">
+                {site.description}
+              </p>
+            </Link>
+          </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     </section>
   );
 }

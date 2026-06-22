@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { RelatedTestSites } from "@/components/RelatedTestSites";
 import { StampCard } from "@/components/StampCard";
 import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
@@ -29,9 +30,12 @@ export function TestSiteDetail({
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
       <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
         {/* ---- 小票卡片：标题 + 描述 + tags ---- */}
-        <section
+        <motion.section
           className="p-5 shadow-[0_4px_20px_rgba(0,0,0,0.10)] sm:p-6"
           style={{ backgroundColor: bgColor, color: textColor }}
+          initial={{ opacity: 0, scale: 0.90 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
         >
           {/* 上部：标题 + 种类 */}
           <div className="flex items-start justify-between gap-3">
@@ -66,51 +70,70 @@ export function TestSiteDetail({
             </span>
             <span className="text-xs font-light" style={{ color: tintColor }}>站外</span>
           </div>
-        </section>
+        </motion.section>
 
         {/* ---- 详细描述（仅 longDescription 有值时） ---- */}
         {hasLongDesc && (
-          <section className="bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.10)] sm:p-6">
+          <motion.section
+            className="bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.10)] sm:p-6"
+            initial={{ opacity: 0, scale: 0.90 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 260, damping: 22 }}
+          >
             <h2 className="text-base font-semibold text-[var(--ink)]">详细描述</h2>
             <hr className="my-3 border-t-2 border-dashed border-[var(--hairline)]" />
             <p className="text-sm font-normal leading-6 text-[var(--body)]">
               {site.longDescription}
             </p>
-          </section>
+          </motion.section>
         )}
 
         {/* ---- 邮票：时间 + 难度 + CTA ---- */}
-        <section className={`grid grid-cols-2 gap-3 ${site.coverImageUrl ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+        <motion.section
+          className={`grid grid-cols-2 gap-3 ${site.coverImageUrl ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}
+          variants={{ visible: { transition: { staggerChildren: 0.07 } } }}
+          initial="hidden"
+          animate="visible"
+        >
           {site.coverImageUrl && (
-            <div className="aspect-square w-full overflow-hidden">
+            <motion.div
+              variants={{ hidden: { opacity: 0, scale: 0.90 }, visible: { opacity: 1, scale: 1 } }}
+              className="aspect-square w-full overflow-hidden"
+            >
               <img
                 src={site.coverImageUrl}
                 alt=""
                 className="h-full w-full object-cover"
                 loading="lazy"
               />
-            </div>
+            </motion.div>
           )}
-          <StampCard colorKey={`duration-${site.id}`}>
-            <div className="text-center">
-              <p className="text-[10px] font-light uppercase tracking-[0.15em] opacity-50">时长</p>
-              <p className="mt-1 text-xl font-semibold">{site.estimatedMinutes} min</p>
-            </div>
-          </StampCard>
+          <motion.div variants={{ hidden: { opacity: 0, scale: 0.90 }, visible: { opacity: 1, scale: 1 } }}>
+            <StampCard colorKey={`duration-${site.id}`}>
+              <div className="text-center">
+                <p className="text-[10px] font-light uppercase tracking-[0.15em] opacity-50">时长</p>
+                <p className="mt-1 text-xl font-semibold">{site.estimatedMinutes} min</p>
+              </div>
+            </StampCard>
+          </motion.div>
 
-          <StampCard colorKey={`difficulty-${site.id}`}>
-            <div className="text-center">
-              <p className="text-[10px] font-light uppercase tracking-[0.15em] opacity-50">难度</p>
-              <p className="mt-1 text-xl font-semibold">{site.difficulty}</p>
-            </div>
-          </StampCard>
+          <motion.div variants={{ hidden: { opacity: 0, scale: 0.90 }, visible: { opacity: 1, scale: 1 } }}>
+            <StampCard colorKey={`difficulty-${site.id}`}>
+              <div className="text-center">
+                <p className="text-[10px] font-light uppercase tracking-[0.15em] opacity-50">难度</p>
+                <p className="mt-1 text-xl font-semibold">{site.difficulty}</p>
+              </div>
+            </StampCard>
+          </motion.div>
 
-          <StampCard colorKey={`cta-${site.id}`} onClick={handleCTAClick}>
+          <motion.div variants={{ hidden: { opacity: 0, scale: 0.90 }, visible: { opacity: 1, scale: 1 } }}>
+            <StampCard colorKey={`cta-${site.id}`} onClick={handleCTAClick}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
               <path d="M8 5v14l11-7z" />
             </svg>
           </StampCard>
-        </section>
+          </motion.div>
+        </motion.section>
 
         <RelatedTestSites sites={relatedSites} />
       </div>

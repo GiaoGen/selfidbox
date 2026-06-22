@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { Library, CircleHelp, Check, AlertTriangle, AlertCircle, Minus, Sparkles } from "lucide-react";
 import { QuizMetaCard } from "@/components/quiz-engine/QuizMetaCard";
 import { QuizStyleControls } from "@/components/quiz-engine/QuizStyleControls";
@@ -1095,8 +1096,12 @@ function CreatePageContent() {
         />
 
         {/* ── Step 2: Results ── */}
-        <section
+        <motion.section
           className="overflow-hidden p-5 sm:p-6 space-y-4"
+          initial={{ opacity: 0, scale: 0.90 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
           style={{ backgroundColor: bgS2, color: textOn(bgS2) }}
         >
           <div className="flex items-center justify-between">
@@ -1170,11 +1175,15 @@ function CreatePageContent() {
               })()}
             </>
           )}
-        </section>
+        </motion.section>
 
         {/* ── Step 3: Factors ── */}
-        <section
+        <motion.section
           className="overflow-hidden p-5 sm:p-6 space-y-4"
+          initial={{ opacity: 0, scale: 0.90 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
           style={{ backgroundColor: bgS3, color: textOn(bgS3) }}
         >
           <div className="flex items-center justify-between">
@@ -1220,11 +1229,15 @@ function CreatePageContent() {
               </div>
             );
           })()}
-        </section>
+        </motion.section>
 
         {/* ── Step 4: Result Vectors ── */}
-        <section
+        <motion.section
           className="overflow-hidden p-5 sm:p-6 space-y-4"
+          initial={{ opacity: 0, scale: 0.90 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
           style={{ backgroundColor: bgS4, color: textOn(bgS4) }}
         >
           <div className="flex items-center justify-between">
@@ -1299,11 +1312,15 @@ function CreatePageContent() {
               </>
             );
           })()}
-        </section>
+        </motion.section>
 
         {/* ── Quiz Style Controls ── */}
-        <section
+        <motion.section
           className="overflow-hidden p-5 sm:p-6 space-y-4"
+          initial={{ opacity: 0, scale: 0.90 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
           style={{ backgroundColor: bgStyle, color: textOn(bgStyle) }}
         >
           <QuizStyleControls
@@ -1312,11 +1329,15 @@ function CreatePageContent() {
             accentColor={undefined}
             inverted={invStyle}
           />
-        </section>
+        </motion.section>
 
         {/* ── Step 5: Questions ── */}
-        <section
+        <motion.section
           className="overflow-hidden p-5 sm:p-6 space-y-4"
+          initial={{ opacity: 0, scale: 0.90 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
           style={{ backgroundColor: bgS6, color: textOn(bgS6) }}
         >
           <div className="flex items-center justify-between">
@@ -1408,7 +1429,7 @@ function CreatePageContent() {
               />
             </>
           )}
-        </section>
+        </motion.section>
 
         {/* ── Save ── */}
         <section className="flex flex-col items-center gap-4 pb-16 pt-8">
