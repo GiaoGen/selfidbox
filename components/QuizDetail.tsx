@@ -1,3 +1,5 @@
+"use client";
+
 import { motion } from "framer-motion";
 import { StampCard } from "@/components/StampCard";
 import { TestCard } from "@/app/explore/_components/test-card";
