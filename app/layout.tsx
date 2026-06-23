@@ -1,14 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_SC } from "next/font/google";
 import { NavbarLayout } from "@/components/navigation/NavbarLayout";
 import "./globals.css";
-
-const notoSansSC = Noto_Sans_SC({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  display: "swap",
-  variable: "--font-noto-sans-sc",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://selfidbox.com"),
@@ -64,7 +56,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className={`h-full antialiased ${notoSansSC.variable}`}>
+    <html lang="zh-CN" className="h-full antialiased">
       <body className="min-h-full flex flex-col font-sans">
         <NavbarLayout>{children}</NavbarLayout>
       </body>
