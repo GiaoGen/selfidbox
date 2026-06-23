@@ -39,7 +39,7 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin, car
   const colorInputRef = useRef<HTMLInputElement>(null);
   const [uploadState, setUploadState] = useState<"idle" | "loading" | "error">("idle");
 
-  const btnBase = "flex h-7 w-7 items-center justify-center rounded-full transition-all";
+  const btnBase = "flex h-7 w-7 items-center justify-center rounded-full transition-colors";
   const btnVisible = darkText
     ? "bg-black/10 text-[var(--ink)]/70 hover:bg-black/20 hover:text-[var(--ink)]"
     : "bg-white/20 text-current/80 hover:bg-white/35 hover:text-current";

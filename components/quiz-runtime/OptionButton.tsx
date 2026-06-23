@@ -19,7 +19,7 @@ export function OptionButton({ option, state, onClick }: Props) {
       onClick={onClick}
       disabled={isDimmed}
       whileTap={{ scale: isDimmed ? 1 : 0.985 }}
-      className={`w-full rounded-2xl px-5 py-4 text-left transition-all duration-150 ${
+      className={`w-full rounded-2xl px-5 py-4 text-left transition-colors transition-shadow duration-150 ${
         isSelected
           ? "bg-[var(--ink)]/6 text-[var(--ink)] shadow-md"
           : "bg-white text-[var(--ink)] shadow-sm hover:bg-[var(--ink)]/3 hover:shadow-md"

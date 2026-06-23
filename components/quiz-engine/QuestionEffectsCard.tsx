@@ -16,7 +16,7 @@ type Props = {
   accentColors?: string[];
 };
 
-const btnBase = "flex h-7 w-7 items-center justify-center rounded-full transition-all";
+const btnBase = "flex h-7 w-7 items-center justify-center rounded-full transition-colors";
 const btnVisible = "bg-black/8 text-[var(--ink)]/60 hover:bg-black/16 hover:text-[var(--ink)]";
 
 export function QuestionEffectsCard({
@@ -157,7 +157,7 @@ export function QuestionEffectsCard({
               <button
                 type="button"
                 onClick={() => deleteOption(oIndex)}
-                className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-black/8 text-[var(--ink)]/60 hover:bg-black/16 hover:text-[var(--ink)] transition-all"
+                className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-black/8 text-[var(--ink)]/60 hover:bg-black/16 hover:text-[var(--ink)] transition-colors"
                 title="删除选项"
               >
                 ×
@@ -168,7 +168,7 @@ export function QuestionEffectsCard({
               <button
                 type="button"
                 onClick={() => onOptionVectorClick(oIndex)}
-                className="absolute right-2 bottom-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--ink)]/6 text-[var(--ink)]/45 hover:text-[var(--ink)] hover:bg-[var(--ink)]/12 transition-all"
+                className="absolute right-2 bottom-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--ink)]/6 text-[var(--ink)]/45 hover:text-[var(--ink)] hover:bg-[var(--ink)]/12 transition-colors"
                 title="编辑选项向量"
               >
                 <SlidersHorizontal size={12} />
@@ -182,7 +182,7 @@ export function QuestionEffectsCard({
         <button
           type="button"
           onClick={addOption}
-          className="mt-3 inline-flex items-center gap-1 rounded-full bg-[var(--ink)]/6 px-4 py-2 text-sm font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12"
+          className="mt-3 inline-flex items-center gap-1 rounded-full bg-[var(--ink)]/6 px-4 py-2 text-sm font-semibold text-[var(--ink)] transition-colors hover:bg-[var(--ink)]/12"
         >
           + 添加选项
         </button>

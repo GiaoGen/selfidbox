@@ -203,7 +203,7 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
           <button
             type="button"
             onClick={() => setShowShare(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--ink)]/12 bg-white px-8 py-3.5 text-[15px] font-semibold text-[var(--ink)] transition-all hover:border-[var(--ink)]/25"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--ink)]/12 bg-white px-8 py-3.5 text-[15px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--ink)]/25"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path
@@ -285,7 +285,7 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
               {syncStatus === "not-authenticated" && (
                 <a
                   href={`/login?redirect=/profile`}
-                  className="mt-3 rounded-full border border-white/30 bg-transparent px-8 py-3 text-[15px] font-semibold text-white transition-all hover:bg-white/10"
+                  className="mt-3 rounded-full border border-white/30 bg-transparent px-8 py-3 text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
                 >
                   登录 SelfIDBox · 保存所有评测结果
                 </a>
@@ -296,7 +296,7 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
             <button
               type="button"
               onClick={() => setShowShare(false)}
-              className="absolute top-4 right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/60 transition-all hover:bg-white/20 hover:text-white"
+              className="absolute top-4 right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white"
             >
               <X size={18} />
             </button>

@@ -236,7 +236,7 @@ export function QuizPlayer({ quiz }: Props) {
           type="button"
           onClick={handleBack}
           disabled={currentIndex === 0}
-          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium text-[var(--muted)] transition-all hover:text-[var(--ink)] disabled:opacity-30 disabled:hover:text-[var(--muted)]"
+          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium text-[var(--muted)] transition-colors hover:text-[var(--ink)] disabled:opacity-30 disabled:hover:text-[var(--muted)]"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path

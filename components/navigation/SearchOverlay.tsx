@@ -199,7 +199,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                         key={card.id}
                         type="button"
                         onClick={() => handleResultClick(card.href)}
-                        className="flex items-center gap-3 rounded-[20px] bg-white/80 p-4 text-left shadow-[0_1px_4px_rgba(10,10,10,0.04)] backdrop-blur-lg transition-all active:scale-[0.98] hover:bg-white"
+                        className="flex items-center gap-3 rounded-[20px] bg-white/80 p-4 text-left shadow-[0_1px_4px_rgba(10,10,10,0.04)] backdrop-blur-lg transition-colors transition-transform active:scale-[0.98] hover:bg-white"
                       >
                         {/* thumbnail */}
                         {card.image ? (

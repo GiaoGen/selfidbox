@@ -283,7 +283,7 @@ function RangeSelector({
             type="button"
             disabled={disabled}
             onClick={() => onChange(n)}
-            className="shrink-0 rounded-full px-1.5 py-0 font-semibold transition-all disabled:cursor-not-allowed"
+            className="shrink-0 rounded-full px-1.5 py-0 font-semibold transition-colors transition-shadow disabled:cursor-not-allowed"
             style={
               value === n
                 ? { backgroundColor: "var(--ink)", color: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
@@ -352,7 +352,7 @@ function AddBtn({ onClick, label, inverted }: { onClick: () => void; label: stri
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-all active:scale-95 ${
+      className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors transition-transform active:scale-95 ${
         inverted ? "bg-white/20 text-white hover:bg-white/30" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
       }`}
       title={label}
@@ -1049,7 +1049,7 @@ function CreatePageContent() {
             <button
               type="button"
               onClick={() => setCreditOpen(true)}
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all active:scale-95 ${
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors transition-transform active:scale-95 ${
                 invHero ? "hover:bg-white/10 text-white" : "hover:bg-[var(--ink)]/8 text-[var(--ink)]"
               }`}
               title="Credits"
@@ -1059,7 +1059,7 @@ function CreatePageContent() {
             <button
               type="button"
               onClick={() => setMyQuizzesOpen(true)}
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all active:scale-95 ${
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors transition-transform active:scale-95 ${
                 invHero ? "hover:bg-white/10 text-white" : "hover:bg-[var(--ink)]/8 text-[var(--ink)]"
               }`}
               title="创建过的 Quiz"
@@ -1124,7 +1124,7 @@ function CreatePageContent() {
                 <button type="button"
                   onClick={() => setResultIndex((i) => Math.max(0, i - 1))}
                   disabled={resultIndex === 0}
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all disabled:opacity-20 ${
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors disabled:opacity-20 ${
                     inv2 ? "bg-white/15 text-white hover:bg-white/25" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
                   }`}
                 >
@@ -1134,7 +1134,7 @@ function CreatePageContent() {
                 <div className="flex-1 flex items-center gap-1.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
                   {results.map((_, i) => (
                     <button key={i} type="button" onClick={() => setResultIndex(i)}
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold leading-none transition-all"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold leading-none transition-colors"
                       style={
                         i === resultIndex
                           ? { backgroundColor: "var(--ink)", color: "#fff" }
@@ -1151,7 +1151,7 @@ function CreatePageContent() {
                 <button type="button"
                   onClick={() => setResultIndex((i) => Math.min(results.length - 1, i + 1))}
                   disabled={resultIndex >= results.length - 1}
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all disabled:opacity-20 ${
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors disabled:opacity-20 ${
                     inv2 ? "bg-white/15 text-white hover:bg-white/25" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
                   }`}
                 >
@@ -1246,7 +1246,7 @@ function CreatePageContent() {
               <button
                 type="button"
                 onClick={() => setDiscriminationOpen(true)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all hover:scale-105 active:scale-95"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors transition-transform hover:scale-105 active:scale-95"
                 style={{ backgroundColor: `${discColor}20`, color: discColor }}
                 title={discLabel}
               >
@@ -1277,7 +1277,7 @@ function CreatePageContent() {
                   <button type="button"
                     onClick={() => setResultIndex((idx) => Math.max(0, idx - 1))}
                     disabled={resultIndex === 0}
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all disabled:opacity-20 ${
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors disabled:opacity-20 ${
                       inv4 ? "bg-white/15 text-white hover:bg-white/25" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
                     }`}
                   >
@@ -1291,7 +1291,7 @@ function CreatePageContent() {
                   <button type="button"
                     onClick={() => setResultIndex((idx) => Math.min(aligned.length - 1, idx + 1))}
                     disabled={resultIndex >= aligned.length - 1}
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all disabled:opacity-20 ${
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors disabled:opacity-20 ${
                       inv4 ? "bg-white/15 text-white hover:bg-white/25" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
                     }`}
                   >
@@ -1346,7 +1346,7 @@ function CreatePageContent() {
               <button
                 type="button"
                 onClick={() => setCoverageOpen(true)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all hover:scale-105 active:scale-95"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors transition-transform hover:scale-105 active:scale-95"
                 style={{ backgroundColor: `${covColor}20`, color: covColor }}
                 title={covLabel}
               >
@@ -1376,7 +1376,7 @@ function CreatePageContent() {
                 <button type="button"
                   onClick={() => setQuestionIndex((i) => Math.max(0, i - 1))}
                   disabled={questionIndex === 0}
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all disabled:opacity-20 ${
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors disabled:opacity-20 ${
                     inv6 ? "bg-white/15 text-white hover:bg-white/25" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
                   }`}
                 >
@@ -1386,7 +1386,7 @@ function CreatePageContent() {
                 <div className="flex-1 flex items-center gap-1.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
                   {questions.map((_, i) => (
                     <button key={i} type="button" onClick={() => setQuestionIndex(i)}
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold leading-none transition-all"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold leading-none transition-colors"
                       style={
                         i === questionIndex
                           ? { backgroundColor: "var(--ink)", color: "#fff" }
@@ -1403,7 +1403,7 @@ function CreatePageContent() {
                 <button type="button"
                   onClick={() => setQuestionIndex((i) => Math.min(questions.length - 1, i + 1))}
                   disabled={questionIndex >= questions.length - 1}
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all disabled:opacity-20 ${
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors disabled:opacity-20 ${
                     inv6 ? "bg-white/15 text-white hover:bg-white/25" : "bg-[var(--ink)]/6 text-[var(--ink)] hover:bg-[var(--ink)]/12"
                   }`}
                 >
@@ -1435,7 +1435,7 @@ function CreatePageContent() {
         <section className="flex flex-col items-center gap-4 pb-16 pt-8">
           {isEditMode && (
             <button type="button" onClick={() => router.push("/create")}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ink)]/12 bg-white px-5 py-2.5 text-sm font-semibold text-[var(--muted)] transition-all hover:text-[var(--ink)] hover:border-[var(--ink)]/25"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ink)]/12 bg-white px-5 py-2.5 text-sm font-semibold text-[var(--muted)] transition-colors hover:text-[var(--ink)] hover:border-[var(--ink)]/25"
             >
               ← 返回创建模式
             </button>

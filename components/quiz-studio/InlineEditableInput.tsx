@@ -40,7 +40,7 @@ export function InlineEditableInput({
   }, [value]);
 
   const base =
-    "bg-transparent border-b border-current/10 hover:border-current/25 focus:border-current/30 focus:outline-none rounded-sm px-1 py-0.5 transition-all duration-150 placeholder:text-current/20";
+    "bg-transparent border-b border-current/10 hover:border-current/25 focus:border-current/30 focus:outline-none rounded-sm px-1 py-0.5 transition-colors duration-150 placeholder:text-current/20";
 
   const wrapperClass = block
     ? "relative flex w-full"

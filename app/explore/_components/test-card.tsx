@@ -15,7 +15,7 @@ export function TestCard({ site: card }: { site: ExploreCard }) {
   return (
     <Link
       href={card.href}
-      className="group block p-5 shadow-[0_4px_20px_rgba(0,0,0,0.20)] transition-all duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)] active:scale-[0.98]"
+      className="group block p-5 shadow-[0_4px_20px_rgba(0,0,0,0.20)] transition-shadow transition-transform duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)] active:scale-[0.98]"
       style={{ backgroundColor: bgColor, color: textColor }}
     >
       {/* ---- 上部：标题 + 种类 ---- */}

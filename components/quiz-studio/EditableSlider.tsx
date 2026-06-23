@@ -67,11 +67,11 @@ export function EditableSlider({
         style={{ backgroundColor: trackBg, opacity: trackBgOpacity }}
       >
         <div
-          className="absolute inset-y-0 left-0 rounded-full transition-all"
+          className="absolute inset-y-0 left-0 rounded-full transition-[width]"
           style={{ width: `${pct}%`, backgroundColor: fillColor, opacity: fillOpacity }}
         />
         <div
-          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 rounded-full shadow-sm ring-1 ring-white/40 transition-all hover:scale-110 active:scale-95"
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 rounded-full shadow-sm ring-1 ring-white/40 transition-transform hover:scale-110 active:scale-95"
           style={{ left: `${pct}%`, backgroundColor: thumbColor }}
         />
       </div>

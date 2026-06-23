@@ -82,7 +82,7 @@ function renderVector(
             </span>
             <div className="flex-1 h-2 rounded-full bg-[var(--ink)]/8 overflow-hidden">
               <div
-                className="h-full rounded-full bg-[var(--ink)]/50 transition-all"
+                className="h-full rounded-full bg-[var(--ink)]/50 transition-[width]"
                 style={{ width: `${e.value}%` }}
               />
             </div>

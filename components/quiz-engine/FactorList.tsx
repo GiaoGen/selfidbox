@@ -14,7 +14,7 @@ type Props = {
   noCard?: boolean;
 };
 
-const btnBase = "flex h-5 w-5 items-center justify-center rounded-full transition-all";
+const btnBase = "flex h-5 w-5 items-center justify-center rounded-full transition-colors";
 const btnVisible = "bg-black/8 text-[var(--ink)]/60 hover:bg-black/16 hover:text-[var(--ink)]";
 
 export function FactorList({ factors, onChange, onAdd, onDelete, onTogglePin, bgColor, noCard }: Props) {
@@ -81,7 +81,7 @@ export function FactorList({ factors, onChange, onAdd, onDelete, onTogglePin, bg
           <button
             type="button"
             onClick={onAdd}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ink)]/6 text-sm font-semibold text-[var(--ink)] transition-all hover:bg-[var(--ink)]/12 active:scale-95"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ink)]/6 text-sm font-semibold text-[var(--ink)] transition-colors transition-transform hover:bg-[var(--ink)]/12 active:scale-95"
             title="添加因子"
           >
             +

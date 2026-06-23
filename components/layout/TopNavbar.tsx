@@ -23,7 +23,7 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition-all ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition-colors ${
         active
           ? "bg-white text-[var(--ink)] shadow-[0_1px_4px_rgba(10,10,10,0.06)]"
           : "text-[var(--muted)] hover:bg-white/60 hover:text-[var(--ink)]"

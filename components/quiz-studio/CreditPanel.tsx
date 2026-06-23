@@ -92,7 +92,7 @@ export function CreditPanel({ open, onClose }: Props) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ink)]/6 text-[var(--muted)] transition-all hover:bg-[var(--ink)]/12 hover:text-[var(--ink)]"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ink)]/6 text-[var(--muted)] transition-colors hover:bg-[var(--ink)]/12 hover:text-[var(--ink)]"
               >
                 <X size={16} />
               </button>

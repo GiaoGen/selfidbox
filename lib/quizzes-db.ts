@@ -76,20 +76,27 @@ export const getQuizBySlug = cache(async (slug: string): Promise<QuizRuntimeData
 
   const questions: QuizQuestionData[] = [];
 
-  if (questionRows) {
-    const optionResults = await Promise.all(
-      questionRows.map(async (q) =>
-        (await getDb())
-          .from("quiz_options")
-          .select("id, label, text, factor_effects")
-          .eq("question_id", q.id)
-          .order("option_order"),
-      ),
-    );
+  if (questionRows && questionRows.length > 0) {
+    const questionIds = questionRows.map((q) => q.id);
+    const { data: allOptionRows } = await (await getDb())
+      .from("quiz_options")
+      .select("id, label, text, factor_effects, question_id")
+      .in("question_id", questionIds)
+      .order("option_order");
 
-    for (let i = 0; i < questionRows.length; i++) {
-      const q = questionRows[i];
-      const opts: QuizOptionData[] = (optionResults[i]?.data ?? []).map(
+    const byQuestion = new Map<string, Record<string, unknown>[]>();
+    for (const opt of allOptionRows ?? []) {
+      const qid = opt.question_id as string;
+      const list = byQuestion.get(qid);
+      if (list) {
+        list.push(opt as unknown as Record<string, unknown>);
+      } else {
+        byQuestion.set(qid, [opt as unknown as Record<string, unknown>]);
+      }
+    }
+
+    for (const q of questionRows) {
+      const opts: QuizOptionData[] = (byQuestion.get(q.id) ?? []).map(
         (o: Record<string, unknown>) => ({
           id: o.id as string,
           label: o.label as string,
@@ -492,19 +499,31 @@ export async function getQuizForEdit(
 
   const questions: Question[] = [];
 
-  if (questionRows) {
-    for (const q of questionRows) {
-      const { data: optionRows } = await db
-        .from("quiz_options")
-        .select("label, text, factor_effects")
-        .eq("question_id", q.id)
-        .order("option_order");
+  if (questionRows && questionRows.length > 0) {
+    const questionIds = questionRows.map((q) => q.id);
+    const { data: allOptionRows } = await db
+      .from("quiz_options")
+      .select("label, text, factor_effects, question_id")
+      .in("question_id", questionIds)
+      .order("option_order");
 
+    const byQuestion = new Map<string, Record<string, unknown>[]>();
+    for (const opt of allOptionRows ?? []) {
+      const qid = opt.question_id as string;
+      const list = byQuestion.get(qid);
+      if (list) {
+        list.push(opt as unknown as Record<string, unknown>);
+      } else {
+        byQuestion.set(qid, [opt as unknown as Record<string, unknown>]);
+      }
+    }
+
+    for (const q of questionRows) {
       questions.push({
         id: q.id,
         text: q.text,
         isPinned: false,
-        options: (optionRows ?? []).map((o: Record<string, unknown>) => ({
+        options: (byQuestion.get(q.id) ?? []).map((o: Record<string, unknown>) => ({
           label: o.label as string,
           text: o.text as string,
           effects: (o.factor_effects as Record<string, number>) ?? {},

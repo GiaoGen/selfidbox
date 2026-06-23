@@ -26,7 +26,7 @@ function NavItem({
   label: string;
   onClick?: () => void;
 }) {
-  const classes = `flex items-center gap-2 rounded-full px-5 py-3 text-[14px] font-semibold transition-all duration-200 ${
+  const classes = `flex items-center gap-2 rounded-full px-5 py-3 text-[14px] font-semibold transition-colors duration-200 ${
     active
       ? "bg-[var(--ink)] text-white shadow-[0_2px_8px_rgba(10,10,10,0.15)]"
       : "text-[var(--muted)] hover:text-[var(--ink)]"
@@ -230,7 +230,7 @@ export function BottomAppNavbar() {
           <button
             type="button"
             onClick={openSearch}
-            className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/70 text-[var(--muted)] shadow-[0_4px_24px_rgba(10,10,10,0.08),0_1px_3px_rgba(10,10,10,0.04)] backdrop-blur-xl transition-all hover:text-[var(--ink)] active:scale-95"
+            className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/70 text-[var(--muted)] shadow-[0_4px_24px_rgba(10,10,10,0.08),0_1px_3px_rgba(10,10,10,0.04)] backdrop-blur-xl transition-colors transition-transform hover:text-[var(--ink)] active:scale-95"
             aria-label="搜索"
           >
             <Search size={22} />

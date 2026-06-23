@@ -59,7 +59,7 @@ export function SimilarityRanking({
               </span>
               <div className="flex-1 h-5 rounded-full bg-[var(--surface-strong)] overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${barColor}`}
+                  className={`h-full rounded-full transition-[width] ${barColor}`}
                   style={{ width: `${item.similarity}%` }}
                 />
               </div>

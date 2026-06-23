@@ -222,7 +222,7 @@ export function MyQuizzesModal({ open, onClose }: Props) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ink)]/6 text-[var(--muted)] transition-all hover:bg-[var(--ink)]/12 hover:text-[var(--ink)]"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ink)]/6 text-[var(--muted)] transition-colors hover:bg-[var(--ink)]/12 hover:text-[var(--ink)]"
               >
                 <X size={16} />
               </button>
@@ -278,7 +278,7 @@ export function MyQuizzesModal({ open, onClose }: Props) {
                     <button
                       type="button"
                       onClick={() => handleNavigate(quiz)}
-                      className="w-full rounded-2xl border border-[var(--ink)]/8 bg-white px-5 py-4 text-left transition-all hover:border-[var(--ink)]/20 hover:shadow-[0_4px_16px_rgba(10,10,10,0.04)] active:scale-[0.99]"
+                      className="w-full rounded-2xl border border-[var(--ink)]/8 bg-white px-5 py-4 text-left transition-shadow transition-transform hover:border-[var(--ink)]/20 hover:shadow-[0_4px_16px_rgba(10,10,10,0.04)] active:scale-[0.99]"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">

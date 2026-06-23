@@ -76,7 +76,7 @@ export function ResultVectorCard({
     : "var(--surface-strong)";
 
   // Buttons
-  const btnBase = "flex h-7 w-7 items-center justify-center rounded-full transition-all";
+  const btnBase = "flex h-7 w-7 items-center justify-center rounded-full transition-colors";
   const btnVisible = hasColor
     ? isDarkText
       ? "bg-black/10 text-[var(--ink)]/60 hover:bg-black/20 hover:text-[var(--ink)]"
@@ -153,7 +153,7 @@ export function ResultVectorCard({
                     style={{ backgroundColor: sliderTrackBg }}
                   >
                     <div
-                      className="h-full rounded-full transition-all"
+                      className="h-full rounded-full transition-[width]"
                       style={{ width: `${value}%`, backgroundColor: "var(--ink)" }}
                     />
                   </div>

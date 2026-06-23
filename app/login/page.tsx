@@ -285,7 +285,7 @@ function LoginPageContent() {
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="inline-flex min-h-12 items-center justify-center rounded-full border border-[var(--ink)]/12 bg-white px-6 text-[15px] font-semibold text-[var(--ink)] transition-all hover:border-[var(--ink)]/25"
+                  className="inline-flex min-h-12 items-center justify-center rounded-full border border-[var(--ink)]/12 bg-white px-6 text-[15px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--ink)]/25"
                 >
                   退出登录
                 </button>
