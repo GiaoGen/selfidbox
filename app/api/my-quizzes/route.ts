@@ -27,7 +27,7 @@ export async function GET() {
 
   if (error) {
     console.error("[MyQuizzes] query error:", error);
-    return NextResponse.json({ ok: false, error: error.message, quizzes: [] }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "查询失败", quizzes: [] }, { status: 500 });
   }
 
   console.log("[MyQuizzes] count", data?.length ?? 0);

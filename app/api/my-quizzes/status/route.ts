@@ -94,7 +94,7 @@ export async function POST(request: Request) {
 
   if (updateError) {
     return NextResponse.json(
-      { ok: false, error: updateError.message },
+      { ok: false, error: "状态更新失败" },
       { status: 500 },
     );
   }

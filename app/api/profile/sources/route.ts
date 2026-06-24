@@ -17,10 +17,9 @@ export async function GET() {
     const sources = await getProfileSources(user.id, supabase);
     return NextResponse.json({ ok: true, sources });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[ProfileSources] error:", message);
+    console.error("[ProfileSources] error:", err);
     return NextResponse.json(
-      { ok: false, error: message, sources: [] },
+      { ok: false, error: "获取数据来源失败", sources: [] },
       { status: 500 },
     );
   }

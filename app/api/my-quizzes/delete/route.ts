@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error: err instanceof Error ? err.message : "删除失败",
+        error: "删除失败",
       },
       { status: 500 },
     );

@@ -22,7 +22,7 @@ export async function GET() {
     if (error) {
       console.error("[WordCloud] query error:", error.message);
       return NextResponse.json(
-        { ok: false, error: error.message, words: [] },
+        { ok: false, error: "获取词云数据失败", words: [] },
         { status: 500 },
       );
     }
@@ -46,10 +46,9 @@ export async function GET() {
 
     return NextResponse.json({ ok: true, words });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[WordCloud] error:", message);
+    console.error("[WordCloud] error:", err);
     return NextResponse.json(
-      { ok: false, error: message, words: [] },
+      { ok: false, error: "获取词云数据失败", words: [] },
       { status: 500 },
     );
   }

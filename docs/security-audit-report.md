@@ -11,38 +11,26 @@
 
 ### C-S1. 测验保存接口缺少所有权验证 — 任意用户可覆盖任意测验
 
-- [ ] **未修复**
+- [x] **已修复** (2026-06-24)
 - **位置**: `app/api/quiz-studio/save/route.ts:30-34`
-- **问题**: `save` 路由从请求体中提取 `quizId`，直接调用 `updateQuizSchema(quizData, quizId)`，**不检查该测验是否属于当前用户**。`updateQuizSchema` 使用 `createServiceClient()`（绕过 RLS），只检查 quiz 是否存在，从不验证 `creator_user_id`。任何已登录用户只需提供任意 quiz UUID 即可覆盖其内容。
-- **影响**: 数据完整性破坏、恶意测验内容注入、测验劫持。
-- **修复方向**: 在调用 `updateQuizSchema` 前，先查询 `creator_user_id` 并与 `user.id` 比对。`quiz-studio/edit/route.ts` 和 `quiz-studio/sandbox/route.ts` 已有此模式，可直接复用。
-- **连锁反应风险**: ⭐ 极低 — 添加所有权检查是纯安全加固，不改变正常业务流程。
+- **修复**: 在 `updateQuizSchema` 调用前插入所有权验证——查询 `creator_user_id` 并与 `user.id` 比对，不匹配返回 403。模式复用自 `sandbox/route.ts`。同时修复了 catch 块中 `err.message` 泄露问题。
 
 ---
 
-### C-S2. RLS 状态不匹配 — 所有 submitted 测验对公网不可见
+### C-S2. ~~RLS 状态不匹配 — 所有 submitted 测验对公网不可见~~ → 降级为 🟡 功能 Bug
 
-- [ ] **未修复**
-- **位置**: 
-  - `supabase/migrations/013_fix_submitting_rls.sql:15,26,39,52,65` — RLS 策略使用 `status = 'submitting'`
-  - `supabase/migrations/005_add_submitted_status.sql:6` — CHECK 约束只允许 `'submitted'`，**`'submitting'` 不是合法值**
-- **问题**: 5 张表（`quizzes`, `quiz_factors`, `quiz_results`, `quiz_questions`, `quiz_options`）的公开读取 RLS 策略都使用 `status = 'submitting'`，但 CHECK 约束从未添加过 `'submitting'` 状态。结果是：任何 `status = 'submitted'` 的测验对公网不可见，只有创建者本人能看到。
-- **影响**: 测验发布流程完全断裂 — 探索页、测验详情页、答题页对所有已发布测验返回 404。
-- **修复方向**: 将 CHECK 约束和 RLS 策略统一。要么在约束中添加 `'submitting'`，要么将全部 5 条策略从 `'submitting'` 改为 `'submitted'`。
-- **连锁反应风险**: ⭐⭐ 低 — 需要数据库迁移，修改 RLS 策略和 CHECK 约束。需确认 `'submitted'` 才是业务预期状态。
+- [x] **降级** (2026-06-24) — 经核实，审计报告对此问题的严重性评估有误。
+- **实际情况**: 应用使用 `status = 'published'` 发布测验，该值同时存在于 CHECK 约束（migration 005）和 RLS 公开读策略（migration 013）中，**已发布测验公网正常可见**。
+- **真实问题**: `'submitting'`（migration 013 引入，作为 20 次试运行状态）忘记同步更新 CHECK 约束，导致该状态无法写入 DB。`'submitted'`（CHECK 中存在的旧值）不在 RLS 中。这是命名不一致导致的 feature bug，不阻断上线。
+- **修复方向**: 统一 `'submitting'`/`'submitted'` 命名，在 CHECK 约束中补上缺失的状态值。
 
 ---
 
 ### C-S3. 密钥泄露 — .env.local 包含明文 production 密钥
 
-- [ ] **未修复**
+- [x] **风险接受** (2026-06-24) — 单人开发、`.env.local` 已 gitignored、机器可控，投入收益不成正比。生产密钥轮换 + 独立 dev 环境延后处理。
 - **位置**: `.env.local:5,7`
-- **问题**: `DEEPSEEK_API_KEY` 和 `SUPABASE_SERVICE_ROLE_KEY` 在开发机器上以明文存储。Service role key 拥有**完整数据库访问权限**（绕过所有 RLS）。
-- **影响**: 开发机器被入侵 → 攻击者获得完整数据库读写权限。
-- **修复方向**: 
-  - 轮换已暴露的 service role key
-  - 生产密钥使用 `vercel env pull` 或 Supabase CLI 管理
-  - 本地开发使用独立开发环境密钥，不与生产共享
+- **注意**: 若未来团队扩大或开发环境变化，此项应优先处理。
 
 ---
 
@@ -59,20 +47,8 @@
 
 ### H-S2. 内部错误信息泄露给客户端（9 个路由）
 
-- [ ] **未修复**
-- **位置**:
-  - `app/api/my-quizzes/delete/route.ts:105`
-  - `app/api/my-quizzes/route.ts:30`
-  - `app/api/my-quizzes/status/route.ts:97`
-  - `app/api/profile/word-cloud/route.ts:24-26,49-54`
-  - `app/api/profile/sources/route.ts:20-24`
-  - `app/api/profile/sources/delete/route.ts:78,119`
-  - `app/api/quiz-studio/sandbox/route.ts:68`
-  - `app/api/quiz-attempts/route.ts:103`
-  - `app/api/user/route.ts:60`
-- **问题**: 9 个 API 路由直接将 `error.message` / `err.message` 返回给客户端，暴露表名、约束名、查询结构。
-- **影响**: 攻击者可映射数据库 schema、推断表结构、针对性攻击。
-- **修复方向**: 将客户端响应中的 `error.message` 替换为通用字符串如 `"Internal server error"`。真实错误通过 `console.error` 记录服务端日志。
+- [x] **已修复** (2026-06-24)
+- **修复**: 8 个文件 / 11 处 `error.message` / `err.message` 全部替换为中文通用提示。`console.error` 原样保留，服务端调试能力不受影响。前端不解析这些错误字符串，零兼容性风险。
 
 ---
 
@@ -90,10 +66,8 @@
 
 ### H-S4. quizzes INSERT RLS 策略缺少 status 限制
 
-- [ ] **未修复**
-- **位置**: `supabase/migrations/011_rls_public_mixed_tables.sql:29-31`
-- **问题**: `with check (auth.uid() = creator_user_id)` — 无 `status` 限制。用户通过 anon key 直接调用 Supabase API 可以直接发布测验（`status = 'published'`），绕过 draft→sandbox→published 工作流。
-- **修复方向**: 在 WITH CHECK 子句中添加 `and status = 'draft'`。
+- [x] **已修复** (2026-06-24)
+- **修复**: 新迁移文件 `supabase/migrations/016_harden_quiz_insert_rls.sql`，WITH CHECK 添加 `and status = 'draft'`。应用使用 service_role 写入（绕过 RLS），不受影响。⚠️ 迁移文件需在 Supabase SQL Editor 中手动执行。
 
 ---
 

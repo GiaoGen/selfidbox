@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
   if (updateError) {
     return NextResponse.json(
-      { ok: false, error: updateError.message },
+      { ok: false, error: "发布沙盒失败" },
       { status: 500 },
     );
   }

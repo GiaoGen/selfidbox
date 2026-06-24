@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
     if (deleteError) {
       console.error(`[ProfileSourcesDelete] delete from ${table} failed: ${deleteError.message}`);
       return NextResponse.json(
-        { ok: false, error: `删除失败：${deleteError.message}` },
+        { ok: false, error: "删除失败" },
         { status: 500 },
       );
     }
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          error: `数据来源已删除，但用户档案重建失败：${rebuildErr instanceof Error ? rebuildErr.message : "未知错误"}`,
+          error: "数据来源已删除，但用户档案重建失败",
         },
         { status: 500 },
       );
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[ProfileSourcesDelete] unexpected error:", err);
     return NextResponse.json(
-      { ok: false, error: err instanceof Error ? err.message : "服务器内部错误" },
+      { ok: false, error: "服务器内部错误" },
       { status: 500 },
     );
   }

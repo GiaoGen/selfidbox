@@ -100,7 +100,7 @@ export async function POST(request: Request) {
   if (attemptError) {
     console.error("[QuizAttempt] attempt insert failed", attemptError.message);
     return NextResponse.json(
-      { ok: false, error: `保存答题记录失败：${attemptError.message}` },
+      { ok: false, error: "保存答题记录失败" },
       { status: 500 },
     );
   }

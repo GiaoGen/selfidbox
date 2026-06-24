@@ -57,7 +57,7 @@ export async function PATCH(request: Request) {
 
   if (updateError) {
     return NextResponse.json(
-      { error: updateError.message },
+      { error: "更新用户名失败" },
       { status: 500 },
     );
   }
