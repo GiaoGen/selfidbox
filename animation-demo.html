@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>卡片弹出动画 Demo</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f3ed; /* var(--canvas) */
+    color: #1c1c1c;
+    padding: 24px 16px 60px;
+    max-width: 840px;
+    margin: 0 auto;
+  }
+  h2 {
+    margin: 32px 0 16px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #6a6a6a;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  h2:first-child { margin-top: 8px; }
+
+  /* ---- Card base ---- */
+  .card {
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+    /* Animation: hidden initially, revealed by JS class */
+    opacity: 0;
+    transform: scale(0.92);
+    transition: none; /* JS spring overrides */
+  }
+  .card.animate {
+    animation: popIn 520ms cubic-bezier(0.21, 1.02, 0.46, 1.16) forwards;
+  }
+
+  @keyframes popIn {
+    0%   { opacity: 0; transform: scale(0.90); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* ---- Grid (mimics TestCard grid) ---- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .grid .card {
+    padding: 20px;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .grid .card .title { height: 18px; width: 70%; border-radius: 999px; background: #e8e6e0; }
+  .grid .card .dash { border-top: 2px dashed #e8e6e0; }
+  .grid .card .body { height: 10px; width: 100%; border-radius: 999px; background: #f0eee8; }
+  .grid .card .body.short { width: 60%; }
+  .grid .card .foot { height: 10px; width: 40%; border-radius: 999px; background: #f0eee8; margin-top: auto; }
+
+  /* ---- Carousel row (mimics TrendingCarousel) ---- */
+  .carousel {
+    display: flex;
+    gap: 12px;
+    overflow: hidden;
+  }
+  .carousel .card {
+    min-width: min(72vw, 260px);
+    height: 190px;
+    padding: 28px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+  }
+  /* Colored backgrounds for carousel cards */
+  .carousel .card:nth-child(1) { background: #b8a4ed; }
+  .carousel .card:nth-child(2) { background: #ffb084; }
+  .carousel .card:nth-child(3) { background: #8FB339; }
+  .carousel .card:nth-child(1) .title,
+  .carousel .card:nth-child(1) .dash,
+  .carousel .card:nth-child(1) .body,
+  .carousel .card:nth-child(1) .foot { background: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.25); }
+  .carousel .card:nth-child(2) .title,
+  .carousel .card:nth-child(2) .dash,
+  .carousel .card:nth-child(2) .body,
+  .carousel .card:nth-child(2) .foot { background: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.25); }
+  .carousel .card:nth-child(3) .title,
+  .carousel .card:nth-child(3) .dash,
+  .carousel .card:nth-child(3) .body,
+  .carousel .card:nth-child(3) .foot { background: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.25); }
+
+  .carousel .card .title { height: 22px; width: 60%; }
+  .carousel .card .body { height: 10px; width: 90%; }
+
+  /* ---- Blocks row (mimics SourceBlocks) ---- */
+  .blocks {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .blocks .card {
+    width: calc(25% - 9px);
+    min-width: 120px;
+    height: 100px;
+    border-radius: 20px;
+  }
+
+  /* ---- Button ---- */
+  .btn-row { margin-top: 40px; text-align: center; }
+  .btn-row button {
+    padding: 12px 32px;
+    border-radius: 999px;
+    border: none;
+    background: #1c1c1c;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-row button:hover { opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<h2>Trending Carousel 卡片</h2>
+<div class="carousel" id="carousel">
+  <div class="card"><div class="title"></div><div class="dash"></div><div class="body"></div><div class="dash"></div><div class="foot"></div></div>
+  <div class="card"><div class="title"></div><div class="dash"></div><div class="body"></div><div class="dash"></div><div class="foot"></div></div>
+  <div class="card"><div class="title"></div><div class="dash"></div><div class="body"></div><div class="dash"></div><div class="foot"></div></div>
+</div>
+
+<h2>Explore 网格卡片</h2>
+<div class="grid" id="grid">
+  <div class="card"><div class="title"></div><div class="dash"></div><div class="body"></div><div class="body short"></div><div class="dash"></div><div class="foot"></div></div>
+  <div class="card"><div class="title"></div><div class="dash"></div><div class="body"></div><div class="body short"></div><div class="dash"></div><div class="foot"></div></div>
+  <div class="card"><div class="title"></div><div class="dash"></div><div class="body"></div><div class="body short"></div><div class="dash"></div><div class="foot"></div></div>
+  <div class="card"><div class="title"></div><div class="dash"></div><div class="body"></div><div class="body short"></div><div class="dash"></div><div class="foot"></div></div>
+  <div class="card"><div class="title"></div><div class="dash"></div><div class="body"></div><div class="body short"></div><div class="dash"></div><div class="foot"></div></div>
+  <div class="card"><div class="title"></div><div class="dash"></div><div class="body"></div><div class="body short"></div><div class="dash"></div><div class="foot"></div></div>
+</div>
+
+<h2>Profile 小方块（依次弹出）</h2>
+<div class="blocks" id="blocks">
+  <div class="card"></div>
+  <div class="card"></div>
+  <div class="card"></div>
+  <div class="card"></div>
+  <div class="card"></div>
+  <div class="card"></div>
+  <div class="card"></div>
+  <div class="card"></div>
+</div>
+
+<div class="btn-row"><button id="replay">🔁 重播动画</button></div>
+
+<script>
+  function triggerAnimation(container, staggerMs) {
+    const cards = container.querySelectorAll('.card');
+    cards.forEach((card, i) => {
+      // Reset
+      card.classList.remove('animate');
+      card.style.animation = 'none';
+      card.offsetHeight; // force reflow
+      card.style.animation = '';
+      // Stagger
+      setTimeout(() => {
+        card.classList.add('animate');
+      }, i * staggerMs);
+    });
+  }
+
+  function animateAll() {
+    triggerAnimation(document.getElementById('carousel'), 120);
+    triggerAnimation(document.getElementById('grid'), 80);
+    // blocks handled separately by animateBlocksRandomly
+  }
+
+  // Profile blocks: random stagger, each 60–180ms apart
+  function animateBlocksRandomly() {
+    const container = document.getElementById('blocks');
+    const cards = Array.from(container.querySelectorAll('.card'));
+    // Shuffle
+    for (let i = cards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [cards[i], cards[j]] = [cards[j], cards[i]];
+    }
+    let elapsed = 0;
+    cards.forEach((card) => {
+      elapsed += 60 + Math.random() * 120; // 60–180ms gap
+      const cardRef = card;
+      cardRef.classList.remove('animate');
+      cardRef.style.animation = 'none';
+      cardRef.offsetHeight;
+      cardRef.style.animation = '';
+      setTimeout(() => {
+        cardRef.classList.add('animate');
+      }, elapsed);
+    });
+  }
+
+  // Initial mount
+  animateAll();
+  animateBlocksRandomly();
+
+  // Replay button
+  document.getElementById('replay').addEventListener('click', () => {
+    document.querySelectorAll('.card').forEach(c => {
+      c.classList.remove('animate');
+      c.style.opacity = '0';
+      c.style.transform = 'scale(0.90)';
+    });
+    setTimeout(() => {
+      animateAll();
+      animateBlocksRandomly();
+    }, 60);
+  });
+</script>
+
+</body>
+</html>

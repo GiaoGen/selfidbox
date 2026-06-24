@@ -35,7 +35,7 @@ export function QuizStyleControls({ style, onChange, accentColor, inverted }: Pr
       <div className="flex items-center gap-2 mb-1">
         <Sliders size={18} className={mutedClass} />
         <p className={`text-sm font-semibold ${mutedClass}`}>
-          Quiz Style Controls
+          题目风格偏好
         </p>
       </div>
 

@@ -343,7 +343,7 @@ function LoginPageContent() {
                     onChange={(e) => setToken(e.target.value)}
                     required
                     autoComplete="one-time-code"
-                    placeholder="输入 6 位验证码"
+                    placeholder="输入验证码"
                     className="mt-1.5 w-full rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-3 text-center text-[24px] tracking-[0.3em] text-[var(--ink)] outline-none transition-colors placeholder:text-[13px] placeholder:tracking-normal placeholder:text-[#9a9a9a] focus:border-[var(--ink)]/40"
                     style={{ minHeight: 56 }}
                   />
