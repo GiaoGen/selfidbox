@@ -154,6 +154,7 @@ export interface QuizDetailRow {
   attempt_count: number;
   featured: boolean;
   created_at: string;
+  creator_user_id: string;
   category: AdminCategoryRow | null;
 }
 

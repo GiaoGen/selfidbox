@@ -115,21 +115,21 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
             aria-label="关闭搜索"
           />
 
-          {/* content */}
-          <div className="relative z-10 flex flex-col h-full">
+          {/* content — pointer-events-none lets backdrop clicks through on empty areas */}
+          <div className="relative z-10 flex flex-col h-full pointer-events-none">
             {/* ── Search header ── */}
             <div
-              className="shrink-0 flex items-center gap-3 px-4 pt-[calc(16px+env(safe-area-inset-top))] pb-3"
+              className="shrink-0 pointer-events-auto flex items-center gap-2 px-3 pt-[calc(12px+env(safe-area-inset-top))] pb-2"
             >
-              <div className="flex flex-1 items-center gap-2 rounded-full border border-white/50 bg-white/80 px-4 py-3 shadow-[0_4px_24px_rgba(10,10,10,0.06)] backdrop-blur-xl">
-                <Search size={18} className="shrink-0 text-[var(--muted)]" />
+              <div className="flex flex-1 items-center gap-2 rounded-full border border-white/50 bg-white/80 pl-3 pr-2 py-2.5 shadow-[0_4px_24px_rgba(10,10,10,0.06)] backdrop-blur-xl">
+                <Search size={16} className="shrink-0 text-[var(--muted)]" />
                 <input
                   ref={inputRef}
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="搜索测评、标签、分类..."
-                  className="min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--muted)]"
+                  className="min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-[var(--muted)]"
                 />
                 {query && (
                   <button
@@ -138,23 +138,26 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                       setQuery("");
                       inputRef.current?.focus();
                     }}
-                    className="shrink-0 rounded-full p-1 text-[var(--muted)] hover:text-[var(--ink)]"
+                    className="shrink-0 rounded-full p-0.5 text-[var(--muted)] hover:text-[var(--ink)]"
                   >
-                    <X size={16} />
+                    <X size={14} />
                   </button>
                 )}
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="shrink-0 text-[14px] font-semibold text-[var(--ink)]/70 hover:text-[var(--ink)]"
+                className="shrink-0 text-[13px] font-semibold text-[var(--ink)]/70 hover:text-[var(--ink)]"
               >
-                取消
+                关闭
               </button>
             </div>
 
             {/* ── Results area ── */}
-            <div className="flex-1 overflow-y-auto px-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+            <div
+              onClick={onClose}
+              className="flex-1 min-h-0 overflow-y-auto pointer-events-auto px-4 pb-[calc(16px+env(safe-area-inset-bottom))]"
+            >
               {/* Loading */}
               {loading && (
                 <div className="flex items-center justify-center py-12">
@@ -194,45 +197,40 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                     {results.length} 个结果
                   </p>
                   <div className="flex flex-col gap-2">
-                    {results.map((card) => (
+                    {results.map((card) => {
+                      const isDark = card.text_color === "#FCFAF2";
+                      const tint = isDark ? "rgba(255,255,255,0.55)" : "rgba(10,10,10,0.45)";
+                      return (
                       <button
                         key={card.id}
                         type="button"
                         onClick={() => handleResultClick(card.href)}
-                        className="flex items-center gap-3 rounded-[20px] bg-white/80 p-4 text-left shadow-[0_1px_4px_rgba(10,10,10,0.04)] backdrop-blur-lg transition-colors transition-transform active:scale-[0.98] hover:bg-white"
+                        className="flex items-center gap-3 p-4 text-left shadow-[0_1px_4px_rgba(10,10,10,0.04)] transition-shadow transition-transform active:scale-[0.98] hover:shadow-[0_4px_12px_rgba(10,10,10,0.08)]"
+                        style={{ backgroundColor: card.bg_color, color: card.text_color }}
                       >
                         {/* thumbnail */}
-                        {card.image ? (
+                        {card.image && (
                           <img
                             src={card.image}
                             alt=""
-                            className="h-11 w-11 shrink-0 rounded-xl object-cover"
+                            className="h-11 w-11 shrink-0 object-cover"
                           />
-                        ) : (
-                          <div
-                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[11px] font-semibold"
-                            style={{
-                              backgroundColor: card.bg_color,
-                              color: card.text_color,
-                            }}
-                          >
-                            {card.title.slice(0, 2)}
-                          </div>
                         )}
 
                         {/* text */}
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[15px] font-semibold text-[var(--ink)]">
+                          <p className="truncate text-[15px] font-semibold">
                             {card.title}
                           </p>
-                          <p className="mt-0.5 truncate text-[13px] text-[var(--muted)]">
+                          <p className="mt-0.5 truncate text-[13px]" style={{ color: tint }}>
                             {card.description}
                           </p>
                           <div className="mt-1 flex items-center gap-1.5">
-                            <span className="inline-block rounded-full bg-[var(--ink)]/6 px-2 py-0.5 text-[10px] font-medium text-[var(--muted)]">
+                            <span className="inline-block px-2 py-0.5 text-[10px] font-medium"
+                                  style={{ backgroundColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)", color: tint }}>
                               {card.categoryLabel}
                             </span>
-                            <span className="text-[10px] text-[var(--muted)]/70">
+                            <span className="text-[10px]" style={{ color: tint }}>
                               {card.source_type === "official"
                                 ? "官方测评"
                                 : "社区 Quiz"}
@@ -246,7 +244,8 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                           height="16"
                           viewBox="0 0 16 16"
                           fill="none"
-                          className="shrink-0 text-[var(--muted)]/40"
+                          className="shrink-0"
+                          style={{ color: tint }}
                         >
                           <path
                             d="M6 4l4 4-4 4"
@@ -257,7 +256,8 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                           />
                         </svg>
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 </>
               )}

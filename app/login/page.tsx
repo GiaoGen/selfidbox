@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { AuthUser } from "@/lib/types";
+import { LegalModal, TAB_LABELS, type LegalTab } from "@/components/legal/LegalModal";
 
 type Mode = "login" | "signup" | "verify";
 
@@ -24,6 +25,7 @@ function LoginPageContent() {
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [legalTab, setLegalTab] = useState<LegalTab | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
@@ -559,11 +561,34 @@ function LoginPageContent() {
           )}
         </div>
 
+        {/* legal links */}
+        <div className="mt-5 flex items-center justify-center gap-1.5 select-none">
+          {(Object.keys(TAB_LABELS) as LegalTab[]).map((t, i) => (
+            <span key={t} className="flex items-center gap-1.5">
+              {i > 0 && <span className="text-[11px] text-[var(--muted)]/25">·</span>}
+              <button
+                type="button"
+                onClick={() => setLegalTab(t)}
+                className="text-[11px] text-[var(--muted)]/35 transition-colors hover:text-[var(--muted)]/60"
+              >
+                {TAB_LABELS[t]}
+              </button>
+            </span>
+          ))}
+        </div>
+
         {/* footer */}
-        <p className="mt-6 text-center text-[13px] text-[#9a9a9a]">
+        <p className="mt-3 text-center text-[13px] text-[#9a9a9a]">
           你的数据只用于生成个人图谱。
         </p>
       </div>
+
+      <LegalModal
+        open={legalTab !== null}
+        onClose={() => setLegalTab(null)}
+        initialTab={legalTab ?? "terms"}
+      />
+
     </main>
   );
 }

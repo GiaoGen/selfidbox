@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { QuizDetail } from "@/components/QuizDetail";
 import { getQuizDetail, getRelatedQuizzes } from "@/lib/quizzes-db";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export async function generateMetadata({
   params,
@@ -33,10 +34,23 @@ export default async function QuizDetailPage({
     ? await getRelatedQuizzes(quiz.category_id, slug)
     : [];
 
+  // Look up creator username via service role (bypasses RLS, server-only)
+  let creatorUsername: string | undefined;
+  if (quiz.creator_user_id) {
+    const serviceDb = createServiceClient();
+    const { data: userRow } = await serviceDb
+      .from("users")
+      .select("username")
+      .eq("id", quiz.creator_user_id)
+      .single();
+    creatorUsername = userRow?.username ?? undefined;
+  }
+
   return (
     <QuizDetail
       quiz={quiz}
       relatedQuizzes={relatedQuizzes}
+      creatorUsername={creatorUsername}
     />
   );
 }

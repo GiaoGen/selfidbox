@@ -84,20 +84,29 @@ export function SaveQuizButton({
     }
   }
 
+  async function handleCopyLink() {
+    try {
+      await navigator.clipboard.writeText(`https://selfidbox.com/quiz/${savedSlug}`);
+      setMessage("链接已复制");
+    } catch {
+      setMessage("复制失败，请手动复制");
+    }
+  }
+
   return (
     <div className="space-y-4">
       {status === "idle" && (
         <button
           type="button"
           onClick={handleSave}
-          className="inline-flex h-12 items-center gap-2 rounded-full bg-[var(--ink)] px-8 text-sm font-semibold text-white transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.18)]"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-8 text-sm font-semibold text-white transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.18)]"
         >
           {editMode ? "确认编辑" : "保存这个测试"}
         </button>
       )}
 
       {status === "loading" && (
-        <div className="inline-flex h-12 items-center gap-2 rounded-full bg-[var(--ink)] px-8 text-sm font-semibold text-white opacity-70">
+        <div className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-8 text-sm font-semibold text-white opacity-70">
           <svg
             className="h-4 w-4 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
@@ -124,7 +133,7 @@ export function SaveQuizButton({
 
       {status === "success" && (
         <div className="space-y-3">
-          <div className="inline-flex h-12 items-center gap-2 rounded-full bg-[var(--ink)] px-8 text-sm font-semibold text-white opacity-70">
+          <div className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-8 text-sm font-semibold text-white opacity-70">
             <svg
               className="h-4 w-4"
               xmlns="http://www.w3.org/2000/svg"
@@ -138,29 +147,21 @@ export function SaveQuizButton({
             {editMode ? "编辑已保存" : "测试已保存"}
           </div>
           {!editMode && (
-            <>
-              <p className="text-sm text-[var(--body)]">
-                Slug:{" "}
-                <code className="rounded-md bg-[var(--surface2)] px-2 py-0.5 text-xs font-medium">
-                  {savedSlug}
-                </code>
-              </p>
-              <button
-                type="button"
-                onClick={handlePublishSandbox}
-                className="inline-flex h-12 items-center gap-2 rounded-full px-8 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)]"
-                style={{ backgroundColor: accentColor || "#0a0a0a" }}
-              >
-                发布试玩版
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={handlePublishSandbox}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-full px-8 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)]"
+              style={{ backgroundColor: accentColor || "#0a0a0a" }}
+            >
+              发布试玩版
+            </button>
           )}
         </div>
       )}
 
       {status === "publishing" && (
         <div
-          className="inline-flex h-12 items-center gap-2 rounded-full px-8 text-sm font-semibold text-white opacity-70"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-full px-8 text-sm font-semibold text-white opacity-70"
           style={{ backgroundColor: accentColor || "#0a0a0a" }}
         >
           <svg
@@ -189,7 +190,7 @@ export function SaveQuizButton({
 
       {status === "published" && (
         <div className="space-y-3">
-          <div className="inline-flex h-12 items-center gap-2 rounded-full bg-green-600 px-8 text-sm font-semibold text-white">
+          <div className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-green-600 px-8 text-sm font-semibold text-white">
             <svg
               className="h-4 w-4"
               xmlns="http://www.w3.org/2000/svg"
@@ -202,12 +203,19 @@ export function SaveQuizButton({
             </svg>
             试玩版已发布
           </div>
-          <p className="text-sm text-[var(--body)]">
-            分享链接：{" "}
-            <code className="rounded-md bg-[var(--surface2)] px-2 py-0.5 text-xs font-medium">
-              /quiz/{savedSlug}
-            </code>
-          </p>
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full px-8 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(10,10,10,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.15)]"
+            style={{ backgroundColor: accentColor || "#0a0a0a" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            复制链接
+          </button>
+          {message && <p className="text-sm text-[var(--muted)] text-center">{message}</p>}
         </div>
       )}
 
@@ -216,7 +224,7 @@ export function SaveQuizButton({
           <button
             type="button"
             onClick={handleSave}
-            className="inline-flex h-12 items-center gap-2 rounded-full bg-[var(--ink)] px-8 text-sm font-semibold text-white transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.18)]"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-8 text-sm font-semibold text-white transition-shadow hover:shadow-[0_8px_24px_rgba(10,10,10,0.18)]"
           >
             {editMode ? "重试编辑" : "重试保存"}
           </button>

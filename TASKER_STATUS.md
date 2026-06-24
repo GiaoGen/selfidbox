@@ -6,11 +6,11 @@ Last updated: 2026-06-24
 
 ## Current State
 
-SelfIDBox 处于**静态 MVP 完成、生产加固阶段**。核心用户流程（探索 → 测验详情 → 答题 → 结果 → 画像）全链路通。Quiz Studio（创建 → AI 生成 → 编辑 → 发布）功能完整。数据库 17 张表全部启用 RLS，15 个迁移文件。
+SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。3 个原安全关键问题已处理（C-S1 已修复、C-S2 降级为功能 bug、C-S3 风险接受）。2 个高风险安全问题已修复（H-S2 错误泄露、H-S4 INSERT RLS）。新增法律文档弹窗（服务条款/隐私政策/内容声明）、SearchOverlay 滚动修复。
 
-**当前阻塞**：3 个安全关键问题待修复（C-S1 测验保存无所有权验证、C-S2 RLS 状态名不匹配、C-S3 密钥泄露）。34 个未提交文件（性能修复 Batch 1–2 + 字体替换 + 文档）等待提交。
+**当前阻塞**：无。
 
-**下一步**：修复 3 个安全关键 → 提交性能修复 → 生产上线评估。
+**下一步**：法律页面路由 → lint 清理 → 生产上线。
 
 ---
 
@@ -57,6 +57,17 @@ SelfIDBox 处于**静态 MVP 完成、生产加固阶段**。核心用户流程�
 
 ## Recent Progress (Last 30 Days)
 
+### 2026-06-24 — 安全修复 + 法律文档 + 上线准备
+
+- **C-S1 修复**：`app/api/quiz-studio/save/route.ts` 添加所有权验证（复用 sandbox 路由模式）
+- **H-S2 修复**：8 个 API 路由 / 11 处 `error.message` 泄露替换为通用错误
+- **H-S4 修复**：新增 migration 016，quizzes INSERT RLS 限制 `status = 'draft'`
+- **法律文档**：`docs/terms-of-service.md`、`docs/privacy-policy.md`、`docs/content-disclaimer.md`
+- **LegalModal**：`components/legal/LegalModal.tsx`，小票风格弹窗，集成到 `/login`
+- **SearchOverlay 修复**：搜索框移动端适配 + 结果区滚动 + 空白区点击关闭 + 结果卡片直角纯色
+- **robots.txt 清理**：删除 `public/robots.txt`（与 `app/robots.ts` 冲突）
+- **TASKER_STATUS 同步**：C-S1/C-S2/C-S3 状态更新
+
 ### 2026-06-22 — 积分系统 + 游客保存 + Sentry + RLS 完成
 
 - **积分系统**：`user_credits` 表 + 3 个 SECURITY DEFINER RPC + CreditPanel。AI 生成消耗积分（Results 3cr / Factors 1cr / Vectors 3cr / Questions 5cr）
@@ -101,55 +112,54 @@ SelfIDBox 处于**静态 MVP 完成、生产加固阶段**。核心用户流程�
 
 ## Active Risks & Blockers
 
-### 🔴 上线阻断（安全关键）
+### 🟢 已处理（原上线阻断）
 
-| ID | 问题 | 位置 | 影响 |
+| ID | 问题 | 处理 | 日期 |
 |----|------|------|------|
-| C-S1 | 测验保存无所有权验证 | `app/api/quiz-studio/save/route.ts` | 任意用户可覆盖任意测验 |
-| C-S2 | RLS submitting/submitted 状态名不匹配 | 5 张表的 CHECK 约束 + RLS 策略 | 所有已发布测验公网不可见 |
-| C-S3 | 密钥泄露 | `.env.local` | Service role key 需轮换 |
+| C-S1 | 测验保存无所有权验证 | ✅ 已修复 | 2026-06-24 |
+| C-S2 | RLS 状态名不匹配 | 降级为功能 bug（publish 正常） | 2026-06-24 |
+| C-S3 | 密钥泄露 | 风险接受 | 2026-06-24 |
 
 ### 🟠 已知异常
 
 - **限流器**：仅内存版，Vercel 多实例不可靠。生产需 Upstash Redis
-- **词云组件**：`WordSphereModal.tsx` 保留在代码库但未接入任何页面
-- **`animation-demo.html`**：根目录未跟踪，用途不明
 - **CSP**：`unsafe-inline` + `unsafe-eval` 实际禁用 XSS 防护
+- **Migration 016**：`harden_quiz_insert_rls.sql` 需在 Supabase SQL Editor 手动执行
+- **6 高风险安全问题待修**：H-S1/H-S3/H-S5/H-S6/H-S7/H-S8（详见 `docs/security-audit-report.md`）
 
 ---
 
 ## Unfinished Tasks
 
-### 🔴 上线前必须（3 项）
+### 🔴 上线前（3 项）
 
-1. C-S1 — 测验保存添加所有权验证（参考 `edit/route.ts` 已有模式）
-2. C-S2 — 统一 CHECK 约束和 RLS 策略状态名
-3. C-S3 — 轮换密钥 + 清理 `.env.local`
+1. 创建 `/privacy` `/terms` `/disclaimer` 法律页面路由
+2. Migration 016 手动执行（Supabase SQL Editor）
+3. Lint 错误清理（29 个，仅限非 `create/page.tsx` 文件）
 
-### 🟠 高优先级（5 项）
+### 🟠 高优先级（4 项）
 
-4. 9 个 API 路由替换 `error.message` → 通用错误消息
-5. 截图上传添加 MIME 类型/大小验证
-6. 存储桶上传添加按用户文件夹隔离 + DELETE 策略
-7. 移除 CSP `unsafe-inline` / `unsafe-eval`
-8. 提交 34 个未提交文件变更
+4. 截图上传添加 MIME 类型/大小验证（H-S3）
+5. 存储桶上传添加按用户文件夹隔离 + DELETE 策略（H-S7）
+6. 移除 CSP `unsafe-inline` / `unsafe-eval`（H-S8）
+7. 提交未提交文件变更
 
-### 🟡 中优先级（6 项）
+### 🟡 中优先级（5 项）
 
-9. 限流器迁移到 Upstash Redis
-10. CSRF 保护（Origin/Referer 头验证）
-11. 16/20 路由添加限流
-12. 生产环境日志脱敏（79 处 console 审计）
-13. `ensure_user_credits` RPC search_path 修正
-14. 评估 `animation-demo.html` 用途
+8. 限流器迁移到 Upstash Redis
+9. CSRF 保护（Origin/Referer 头验证）
+10. 16/20 路由添加限流
+11. 生产环境日志脱敏（79 处 console 审计）
+12. `ensure_user_credits` RPC search_path 修正
 
-### 🟢 低优先级（5 项）
+### 🟢 低优先级（6 项）
 
-15. 删除未使用的 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-16. 添加 `check_username_available` RPC
-17. `user_profile` 软删除（GDPR）
-18. Vercel Analytics / Speed Insights
-19. 首页添加视觉内容（当前纯文字）
+13. 删除未使用的 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+14. 添加 `check_username_available` RPC
+15. `user_profile` 软删除（GDPR）
+16. Vercel Analytics / Speed Insights
+17. 首页添加视觉内容（当前纯文字）
+18. 评估 `animation-demo.html` 用途
 
 ---
 

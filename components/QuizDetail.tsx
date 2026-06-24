@@ -17,9 +17,11 @@ const quizTypeLabels: Record<string, string> = {
 export function QuizDetail({
   quiz,
   relatedQuizzes,
+  creatorUsername,
 }: {
   quiz: QuizDetailRow;
   relatedQuizzes: QuizDetailRelatedRow[];
+  creatorUsername?: string;
 }) {
   const bgColor = nipponColorForSlug(quiz.slug);
   const textColor = textColorForNipponBg(bgColor);
@@ -67,7 +69,7 @@ export function QuizDetail({
               {categoryLabel && <span>{categoryLabel}</span>}
               {quiz.featured && <span>· 精选</span>}
             </div>
-            <span className="text-xs font-light" style={{ color: tintColor }}>SelfIDBox</span>
+            <span className="text-xs font-light" style={{ color: tintColor }}>{creatorUsername ?? "SelfIDBox"}</span>
           </div>
         </motion.section>
 
