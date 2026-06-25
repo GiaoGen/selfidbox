@@ -29,7 +29,6 @@ export function CoverageValidator({
   const light = bgColor && !isLight(bgColor);
   const titleClass = light ? "text-white" : "text-[var(--ink)]";
   const bodyClass = light ? "text-white/70" : "text-[var(--body)]";
-  const mutedClass = light ? "text-white/50" : "text-[var(--muted)]";
 
   // Solid Nippon color — one unified bg for all items in this step
   const itemBg = accentColors?.[2] ?? "#b8a4ed";

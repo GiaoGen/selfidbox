@@ -135,8 +135,6 @@ export function calculateUserVector(
 /*  Result ranking                                                     */
 /* ------------------------------------------------------------------ */
 
-const MAX_DISTANCE_5 = Math.sqrt(5 * 100 * 100);
-
 export function rankRuntimeResults(
   userVector: Record<string, number>,
   results: QuizResultData[],

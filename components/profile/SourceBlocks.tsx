@@ -262,6 +262,7 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
 
   const blocks = useMemo(() => placeBlocks(entries), [entries]);
 
+  /* eslint-disable react-hooks/purity */
   const randomDelays = useMemo(() => {
     const n = blocks.length;
     if (n === 0) return [] as number[];
@@ -278,6 +279,7 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
     }
     return delays;
   }, [blocks.length]);
+  /* eslint-enable react-hooks/purity */
 
   /* -- Card modal (shared hook: cache + three-tier fetch) -- */
   const { cardOpen, cardLoading, cardData, cardType, openCard, closeCard } =
@@ -373,10 +375,6 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
             resultDescription={(cardData as QuizDetailData).result_description ?? ""}
             resultImageUrl={(cardData as QuizDetailData).result_image_url ?? undefined}
             traits={(cardData as QuizDetailData).result_traits}
-            shareText={
-              (cardData as QuizDetailData).result_share_text ??
-              "这是我的测试结果，你也来试试。"
-            }
             cardColor={(cardData as QuizDetailData).result_color || "#DAC9A6"}
           />
         )}
@@ -392,6 +390,7 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
           </div>
         )}
         {!cardLoading && cardData && (cardData as ReportDetailData).image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={(cardData as ReportDetailData).image_url!}
             alt="OCR 截图"

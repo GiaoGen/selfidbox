@@ -10,7 +10,6 @@ interface Props {
   resultDescription?: string;
   resultImageUrl?: string;
   traits?: string[];
-  shareText?: string;
   cardColor: string;
 }
 
@@ -23,7 +22,6 @@ export const QuizResultShareCard = forwardRef<HTMLDivElement, Props>(
       resultDescription = "",
       resultImageUrl,
       traits = [],
-      shareText = "",
       cardColor,
     },
     ref,
@@ -70,6 +68,7 @@ export const QuizResultShareCard = forwardRef<HTMLDivElement, Props>(
       >
         {/* ── Blurred image as the card background ── */}
         {hasImage && (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={resultImageUrl!}
             alt=""
@@ -88,6 +87,7 @@ export const QuizResultShareCard = forwardRef<HTMLDivElement, Props>(
           {/* Foreground image (no crop, no rounded corners) */}
           {hasImage && (
             <div className="flex justify-center px-5 pt-5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={resultImageUrl!}
                 alt=""

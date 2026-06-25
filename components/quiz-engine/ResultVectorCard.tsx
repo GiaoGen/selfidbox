@@ -4,14 +4,6 @@ import { Pin, PinOff } from "lucide-react";
 import type { Result, Factor, ResultVector } from "@/lib/mock-quiz-engine";
 import { EditableSlider } from "@/components/quiz-studio/EditableSlider";
 
-const BAR_COLORS = [
-  "bg-[#ffb084]",
-  "bg-[#ff4d8b]",
-  "bg-[#b8a4ed]",
-  "bg-[#e8b94a]",
-  "bg-[#1a3a3a]",
-];
-
 const CARD_ACCENTS = [
   "border-l-[#ffb084]",
   "border-l-[#ff4d8b]",
@@ -68,9 +60,6 @@ export function ResultVectorCard({
   const bodyColor = hasColor
     ? isDarkText ? "rgba(10,10,10,0.7)" : "rgba(255,255,255,0.8)"
     : "var(--body)";
-  const surfaceStrongBg = hasColor
-    ? isDarkText ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.15)"
-    : "var(--surface-strong)";
   const sliderTrackBg = hasColor
     ? isDarkText ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.2)"
     : "var(--surface-strong)";

@@ -546,7 +546,6 @@ export async function rebuildUserProfile(
       topSocial,
       recentResults,
       newReportCount,
-      userId,
     );
 
     if (aiResult.text) {
@@ -839,7 +838,6 @@ export async function rebuildUserProfileFromAllSources(
       topSocial,
       recentResults,
       newReportCount,
-      userId,
     );
 
     if (aiResult.text) {

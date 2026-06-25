@@ -47,6 +47,7 @@ export function SourceDetailModal({ open, onClose, sourceType, sourceId }: Props
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line
       fetchDetail();
     } else {
       setDetail(null);

@@ -1,16 +1,16 @@
 # TASKER STATUS
 
-Last updated: 2026-06-24
+Last updated: 2026-06-25
 
 ---
 
 ## Current State
 
-SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。3 个原安全关键问题已处理（C-S1 已修复、C-S2 降级为功能 bug、C-S3 风险接受）。2 个高风险安全问题已修复（H-S2 错误泄露、H-S4 INSERT RLS）。新增法律文档弹窗（服务条款/隐私政策/内容声明）、SearchOverlay 滚动修复。
+SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。3 个原安全关键问题已处理（C-S1 已修复、C-S2 降级为功能 bug、C-S3 风险接受）。2 个高风险安全问题已修复（H-S2 错误泄露、H-S4 INSERT RLS）。法律文档（弹窗 + 独立路由）已完成。站外测试录入系统已梳理并产出数据规范文档。
 
 **当前阻塞**：无。
 
-**下一步**：法律页面路由 → lint 清理 → 生产上线。
+**下一步**：lint 错误评估 & 清理 → 提交未提交变更 → 生产上线。
 
 ---
 
@@ -56,6 +56,14 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。3 �
 ---
 
 ## Recent Progress (Last 30 Days)
+
+### 2026-06-25 — 站外测试录入梳理 + 封面图修复 + 上线任务收尾
+
+- **站外测试录入系统梳理**：产出 `docs/external-test-site-data-spec.md`，完整记录 test_sites / test_categories 29 个字段的类型、必填、用途、展示影响、数据流。发现 7 个已知问题（1 已修复、6 待处理）。
+- **封面图修复**：`lib/explore/mapper.ts` — `testSiteToExploreCard()` 的 `image` 从硬编码 `""` 改为 `site.coverImageUrl ?? ""`，站外测试卡片现在显示封面图。
+- **法律页面路由**：`app/privacy/page.tsx`、`app/terms/page.tsx`、`app/disclaimer/page.tsx` 确认已存在，标记完成。
+- **Migration 016**：标记已手动执行。
+- **Lint 现状**：65 problems（20 errors / 45 warnings），34 文件。Errors 全部来自 React Compiler 插件。待评估修复优先级。
 
 ### 2026-06-24 — 安全修复 + 法律文档 + 上线准备
 
@@ -131,11 +139,11 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。3 �
 
 ## Unfinished Tasks
 
-### 🔴 上线前（3 项）
+### 🔴 上线前（1 项）
 
-1. 创建 `/privacy` `/terms` `/disclaimer` 法律页面路由
-2. Migration 016 手动执行（Supabase SQL Editor）
-3. Lint 错误清理（29 个，仅限非 `create/page.tsx` 文件）
+1. ~~创建 `/privacy` `/terms` `/disclaimer` 法律页面路由~~ ✅ 已完成（2026-06-25）
+2. ~~Migration 016 手动执行（Supabase SQL Editor）~~ ✅ 已完成（2026-06-25）
+3. Lint 错误清理（65 problems: 20 errors + 45 warnings，34 个文件，含 `create/page.tsx`）
 
 ### 🟠 高优先级（4 项）
 

@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getUserProfile, getProfileSources, type ProfileSourceEntry } from "@/lib/user-profile-db";
+import { getUserProfile, getProfileSources } from "@/lib/user-profile-db";
 import { ProfileRadar, type RadarPoint } from "@/components/ProfileRadar";
 import { ProfileInteractions } from "@/components/profile/ProfileInteractions";
-import { ScreenshotReportUploader } from "@/components/profile/ScreenshotReportUploader";
+
 import { Greeting } from "@/components/Greeting";
 import { PendingSaveHandler } from "@/components/profile/PendingSaveHandler";
 import { createClient } from "@/lib/supabase/server";
@@ -124,7 +124,6 @@ export default async function ProfilePage() {
             <div className="snap-center shrink-0 w-[72vw] max-w-[360px]">
               <ProfileRadar
                 title="核心人格"
-                subtitle=""
                 data={toRadarPoints(coreVector)}
                 color="#ff4d8b"
               />
@@ -133,7 +132,6 @@ export default async function ProfilePage() {
               <div className="snap-center shrink-0 w-[72vw] max-w-[360px]">
                 <ProfileRadar
                   title="社会表达"
-                  subtitle=""
                   data={toRadarPoints(socialVector)}
                   color="#1a3a3a"
                 />

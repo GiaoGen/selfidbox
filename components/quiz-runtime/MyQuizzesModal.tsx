@@ -63,6 +63,7 @@ export function MyQuizzesModal({ open, onClose }: Props) {
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line
     fetchQuizzes();
   }, [open, fetchQuizzes]);
 

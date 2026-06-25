@@ -24,16 +24,6 @@ function parseRange(raw: string | undefined): Range {
   return "all";
 }
 
-function filterByRange(cards: ExploreCard[], range: Range): ExploreCard[] {
-  if (range === "all") return cards;
-  const days = range === "7d" ? 7 : 30;
-  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-  return cards.filter((c) => {
-    if (!c.created_at) return true;
-    return new Date(c.created_at).getTime() >= cutoff;
-  });
-}
-
 function getTrending(cards: ExploreCard[]): ExploreCard[] {
   return sortExploreCards(cards).slice(0, 5);
 }

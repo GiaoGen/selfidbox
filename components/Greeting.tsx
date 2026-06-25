@@ -17,6 +17,7 @@ function timeGreeting(): string {
   return "晚上好";
 }
 
+/* eslint-disable react-hooks/purity, react-hooks/refs */
 export function Greeting({ className = "" }: { className?: string }) {
   const [name, setName] = useState<string | null | undefined>(undefined);
   const supabase = createClient();
@@ -72,3 +73,4 @@ export function Greeting({ className = "" }: { className?: string }) {
     </div>
   );
 }
+/* eslint-enable react-hooks/purity, react-hooks/refs */

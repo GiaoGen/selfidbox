@@ -83,13 +83,6 @@ export async function POST(request: NextRequest) {
   const toneStr = tone?.length ? tone.join("、") : "中性";
   const hookStr = hook || "";
 
-  const resultsSummary = results
-    .map(
-      (r) =>
-        `- ${r.name}（${r.key}）：${r.description} 特质：[${(r.traits ?? []).join("、")}]`,
-    )
-    .join("\n");
-
   const userMessage = buildQuizFactorsPrompt({
     title,
     hook: hookStr,

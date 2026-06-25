@@ -7,7 +7,6 @@ import { EditableSlider } from "@/components/quiz-studio/EditableSlider";
 type Props = {
   style: QuizStyleControls;
   onChange: (patch: Partial<QuizStyleControls>) => void;
-  accentColor?: string;
   inverted?: boolean;
 };
 
@@ -25,7 +24,7 @@ const SLIDERS: {
   { key: "title_relevance", label: "主题相关度", left: "泛化", right: "紧扣" },
 ];
 
-export function QuizStyleControls({ style, onChange, accentColor, inverted }: Props) {
+export function QuizStyleControls({ style, onChange, inverted }: Props) {
   const mutedClass = inverted ? "text-white/55" : "text-[var(--muted)]";
   const bodyClass = inverted ? "text-white/80" : "text-[var(--body)]";
   const subtleClass = inverted ? "text-white/35" : "text-[var(--muted)]/60";
@@ -53,7 +52,6 @@ export function QuizStyleControls({ style, onChange, accentColor, inverted }: Pr
             <EditableSlider
               value={style[s.key]}
               onChange={(v) => onChange({ [s.key]: v })}
-              accentColor={accentColor}
               inverted={inverted}
             />
             <div className="flex items-center justify-between mt-0.5">

@@ -14,7 +14,6 @@ interface Props {
   ranking: RankedRuntimeResult[];
   quizTitle: string;
   quizSlug: string;
-  userVector: Record<string, number>;
   syncStatus?: SyncStatus;
   syncError?: string;
   accentColor: string;
@@ -32,7 +31,7 @@ const child = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0, 0, 0.2, 1] as const } },
 };
 
-export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatus, syncError, accentColor }: Props) {
+export function QuizResult({ ranking, quizTitle, quizSlug, syncStatus, syncError, accentColor }: Props) {
   const top = ranking[0];
   const secondary = ranking.slice(1, 3).filter((r) => r.similarity > 0);
 
@@ -60,6 +59,7 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
   }, []);
 
   // Auto-open share card on mount
+  // eslint-disable-next-line
   useEffect(() => { setShowShare(true); }, []);
 
   if (!top) {
@@ -81,7 +81,6 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
   const resultDescription = top.result.description ?? "";
   const resultImageUrl = top.result.image_url ?? undefined;
   const traits = top.result.traits ?? [];
-  const shareText = top.result.share_text ?? "这是我的测试结果，你也来试试。";
   const hasImage = !!resultImageUrl;
 
   return (
@@ -89,6 +88,7 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
       {/* ── Blurred image background ── */}
       {hasImage && (
         <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={resultImageUrl!}
             alt=""
@@ -115,6 +115,7 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
         {/* Result image — full proportion, no crop, no radius */}
         {top.result.image_url && (
           <motion.div variants={child} className="mb-8 flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={top.result.image_url}
               alt=""
@@ -267,7 +268,6 @@ export function QuizResult({ ranking, quizTitle, quizSlug, userVector, syncStatu
                 resultDescription={resultDescription}
                 resultImageUrl={resultImageUrl}
                 traits={traits}
-                shareText={shareText}
                 cardColor={accentColor}
               />
 

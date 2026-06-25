@@ -213,7 +213,6 @@ export function CoverFlowSources({
                     resultDescription={src.description ?? ""}
                     resultImageUrl={src.image_url ?? undefined}
                     traits={src.traits ?? []}
-                    shareText={src.share_text ?? ""}
                     cardColor={src.card_color || "#DAC9A6"}
                   />
                 </div>
@@ -239,10 +238,6 @@ export function CoverFlowSources({
               resultDescription={(cardData as QuizDetailData).result_description ?? ""}
               resultImageUrl={(cardData as QuizDetailData).result_image_url ?? undefined}
               traits={(cardData as QuizDetailData).result_traits}
-              shareText={
-                (cardData as QuizDetailData).result_share_text ??
-                "这是我的测试结果，你也来试试。"
-              }
               cardColor={(cardData as QuizDetailData).result_color || "#DAC9A6"}
             />
           )}

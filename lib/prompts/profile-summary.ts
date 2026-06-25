@@ -132,7 +132,6 @@ export async function generateAISelfidProfile(
   socialTraits: { label: string; value: number }[],
   recentResults: string[],
   reportCount: number,
-  userId?: string,
 ): Promise<GenerateAISelfidProfileResult> {
   const userMessage = buildProfileSummaryPrompt({
     coreTraits,

@@ -14,7 +14,7 @@ export function testSiteToExploreCard(site: TestSite): ExploreCard {
     href: `/test-sites/${site.id}`,
     title: site.name,
     description: site.description,
-    image: "",
+    image: site.coverImageUrl ?? "",
     category_id: site.category, // category slug — matches tab IDs for filtering
     categoryLabel: site.categoryLabel,
     featured: site.featured ?? false,

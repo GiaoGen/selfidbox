@@ -121,12 +121,12 @@ export function ExploreClient({
   const [searching, setSearching] = useState(!!initialSearch);
   const [query, setQuery] = useState(initialSearch || "");
   const [timeOpen, setTimeOpen] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
   const filterRowRef = useRef<HTMLDivElement>(null);
 
   // When navigated to via navbar search, auto-open dropdown
   useEffect(() => {
     if (initialSearch) {
+      // eslint-disable-next-line
       setSearching(true);
       setQuery(initialSearch);
     }

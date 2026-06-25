@@ -9,7 +9,6 @@ export type RadarPoint = {
 
 type ProfileRadarProps = {
   title: string;
-  subtitle: string;
   data: RadarPoint[];
   color?: string;
   /** 最大值，默认 100 */
@@ -81,7 +80,6 @@ const GRID_LEVELS = 5; // 0, 25, 50, 75, 100 → 4 圈可见环
 
 export function ProfileRadar({
   title,
-  subtitle: _subtitle,
   data,
   color = "#ff4d8b",
   maxValue = 100,

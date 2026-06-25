@@ -74,6 +74,7 @@ export function QuizDetail({ data }: Props) {
             结果图片
           </h3>
           <div className="overflow-hidden rounded-2xl border border-[var(--ink)]/8">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={data.result_image_url}
               alt={data.final_result_name || "结果图片"}

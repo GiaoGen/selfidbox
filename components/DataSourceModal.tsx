@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { ScreenshotReportUploader } from "@/components/profile/ScreenshotReportUploader";
 import { SwipeToDeleteSourceRow } from "@/components/profile/SwipeToDeleteSourceRow";
 import { RotatingCardModal } from "@/components/share/RotatingCardModal";
@@ -28,7 +27,6 @@ export function DataSourceModal({
   onClose: () => void;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
   const [showUpload, setShowUpload] = useState(false);
   const [sources, setSources] = useState<ProfileSourceEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -72,6 +70,7 @@ export function DataSourceModal({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line
       fetchSources();
       setOpenSwipeId(null);
       setConfirmingId(null);
@@ -321,9 +320,6 @@ export function DataSourceModal({
               resultDescription={(cardData as QuizDetailData).result_description ?? ""}
               resultImageUrl={(cardData as QuizDetailData).result_image_url ?? undefined}
               traits={(cardData as QuizDetailData).result_traits}
-              shareText={
-                (cardData as QuizDetailData).result_share_text ?? "这是我的测试结果，你也来试试。"
-              }
               cardColor={(cardData as QuizDetailData).result_color || "#DAC9A6"}
             />
           )}
@@ -339,6 +335,7 @@ export function DataSourceModal({
             </div>
           )}
           {!cardLoading && cardData && (cardData as ReportDetailData).image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={(cardData as ReportDetailData).image_url!}
               alt="OCR 截图"

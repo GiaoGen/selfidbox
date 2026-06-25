@@ -133,6 +133,7 @@ export function ReportDetail({ data }: Props) {
             OCR 原图
           </h3>
           <div className="overflow-hidden rounded-2xl border border-[var(--ink)]/8">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={data.image_url}
               alt="原始截图"

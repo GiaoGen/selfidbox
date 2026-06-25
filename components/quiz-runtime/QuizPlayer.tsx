@@ -184,7 +184,6 @@ export function QuizPlayer({ quiz }: Props) {
         ranking={ranking}
         quizTitle={quiz.title}
         quizSlug={quiz.slug}
-        userVector={userVector}
         syncStatus={syncStatus}
         syncError={syncError}
         accentColor={ranking[0]?.result.color || theme.accent}

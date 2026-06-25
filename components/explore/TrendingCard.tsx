@@ -65,6 +65,7 @@ export function TrendingCard({ site: card, rank }: { site: ExploreCard; rank: nu
         {card.image ? (
           <div className="flex gap-3">
             <div className="w-1/3 shrink-0 min-w-0 aspect-square overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={card.image}
                 alt=""

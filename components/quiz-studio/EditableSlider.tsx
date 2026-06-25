@@ -8,7 +8,6 @@ type Props = {
   min?: number;
   max?: number;
   className?: string;
-  accentColor?: string;
   inverted?: boolean;
 };
 
@@ -18,7 +17,6 @@ export function EditableSlider({
   min = 0,
   max = 100,
   className = "",
-  accentColor,
   inverted,
 }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);

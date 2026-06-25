@@ -17,8 +17,6 @@ import type {
   QuizResultData,
   QuizQuestionData,
   QuizOptionData,
-  AnswerRecord,
-  RankedRuntimeResult,
 } from "./quiz-runtime";
 import type { AdminCategoryRow } from "./admin-db";
 

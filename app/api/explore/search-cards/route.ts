@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  getCategories,
   getPublishedTestSites,
-  mapCategory,
   mapTestSite,
 } from "@/lib/test-sites-db";
 import { getExploreQuizCards } from "@/lib/explore/fetch";
@@ -13,8 +11,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const [categoryRows, siteRows, quizCards] = await Promise.all([
-      getCategories(),
+    const [siteRows, quizCards] = await Promise.all([
       getPublishedTestSites(),
       getExploreQuizCards(),
     ]);

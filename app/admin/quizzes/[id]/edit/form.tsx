@@ -95,6 +95,7 @@ export function QuizEditForm({ initial, categories, onSubmit }: Props) {
             className={inputClass}
           />
           {initial.cover_image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={initial.cover_image_url}
               alt=""

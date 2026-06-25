@@ -100,6 +100,7 @@ export function TestSiteDetail({
               variants={{ hidden: { opacity: 0, scale: 0.90 }, visible: { opacity: 1, scale: 1 } }}
               className="aspect-square w-full overflow-hidden"
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={site.coverImageUrl}
                 alt=""

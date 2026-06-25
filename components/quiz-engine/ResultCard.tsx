@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Pin, PinOff, Image, Loader, Palette } from "lucide-react";
+import { Pin, PinOff, Image as ImageIcon, Loader, Palette } from "lucide-react";
 import type { Result } from "@/lib/mock-quiz-engine";
 import { uploadResultImage } from "@/lib/image-upload";
 import { InlineEditableInput } from "@/components/quiz-studio/InlineEditableInput";
@@ -12,7 +12,6 @@ const DEFAULT_CREAM = "#FFF5E6";
 
 type Props = {
   result: Result;
-  index: number;
   onChange?: (result: Result) => void;
   onDelete?: () => void;
   onTogglePin?: () => void;
@@ -26,7 +25,7 @@ function isLight(hex: string): boolean {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55;
 }
 
-export function ResultCard({ result, index, onChange, onDelete, onTogglePin, cardColor }: Props) {
+export function ResultCard({ result, onChange, onDelete, onTogglePin, cardColor }: Props) {
   const bgColor = cardColor || result.color || DEFAULT_CREAM;
   const darkText = isLight(bgColor);
   const cardStyle = { backgroundColor: bgColor, color: darkText ? "var(--ink)" : "#ffffff" } as React.CSSProperties;
@@ -125,9 +124,9 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin, car
               {uploadState === "loading" ? (
                 <Loader size={13} className="animate-spin" />
               ) : uploadState === "error" ? (
-                <Image size={13} className="opacity-50" />
+                <ImageIcon size={13} className="opacity-50" />
               ) : (
-                <Image size={13} />
+                <ImageIcon size={13} />
               )}
             </button>
           </>
@@ -159,6 +158,7 @@ export function ResultCard({ result, index, onChange, onDelete, onTogglePin, car
       {/* image preview */}
       {result.image_url && (
         <div className="mb-4 overflow-hidden rounded-2xl">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={result.image_url}
             alt=""

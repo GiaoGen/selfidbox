@@ -31,6 +31,7 @@ export function HydrationDebug() {
 
   useEffect(() => {
     try {
+      // eslint-disable-next-line
       setHydrated(true);
       setUa(navigator.userAgent);
       setVw(window.innerWidth);

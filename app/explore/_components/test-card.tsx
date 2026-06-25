@@ -35,6 +35,7 @@ export function TestCard({ site: card }: { site: ExploreCard }) {
       {card.image ? (
         <div className="flex gap-3">
           <div className="w-1/3 shrink-0 aspect-square overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={card.image}
               alt=""

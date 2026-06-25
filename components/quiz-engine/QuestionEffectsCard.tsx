@@ -13,7 +13,6 @@ type Props = {
   onDelete?: () => void;
   onTogglePin?: () => void;
   onOptionVectorClick?: (optionIndex: number) => void;
-  accentColors?: string[];
 };
 
 const btnBase = "flex h-7 w-7 items-center justify-center rounded-full transition-colors";
@@ -27,7 +26,6 @@ export function QuestionEffectsCard({
   onDelete,
   onTogglePin,
   onOptionVectorClick,
-  accentColors,
 }: Props) {
   const isEditing = !!onChange;
   const update = onChange ?? (() => {});

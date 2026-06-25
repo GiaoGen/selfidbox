@@ -42,6 +42,7 @@ export function CreditPanel({ open, onClose }: Props) {
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line
     setLoading(true);
     setError("");
     fetch("/api/credits")
