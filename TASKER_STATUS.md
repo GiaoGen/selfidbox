@@ -1,16 +1,16 @@
 # TASKER STATUS
 
-Last updated: 2026-06-25
+Last updated: 2026-06-26
 
 ---
 
 ## Current State
 
-SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。3 个原安全关键问题已处理（C-S1 已修复、C-S2 降级为功能 bug、C-S3 风险接受）。2 个高风险安全问题已修复（H-S2 错误泄露、H-S4 INSERT RLS）。法律文档（弹窗 + 独立路由）已完成。站外测试录入系统已梳理并产出数据规范文档。
+SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡片颜色系统已完成全链路统一：/explore、/test-sites/[id]、/quizzes/[slug] 全部通过 mapper 统一取色，支持 DB 自定义颜色覆盖。Quiz Studio 支持图片主色调自动提取（HSL 调优）。quiz 做题过程背景模糊已移除。
 
-**当前阻塞**：无。
+**当前阻塞**：无。test-sites/[id] 顶部卡片 hydration 颜色误差待修复（己确认根因：Framer Motion SSR 与 RelatedTestSites 组件树冲突，暂缓）。
 
-**下一步**：lint 错误评估 & 清理 → 提交未提交变更 → 生产上线。
+**下一步**：lint 错误清理 → 生产上线。
 
 ---
 
@@ -56,6 +56,15 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。3 �
 ---
 
 ## Recent Progress (Last 30 Days)
+
+### 2026-06-26 — 卡片颜色全链路统一 + 自定义颜色 + 图片主色调提取 + 背景模糊移除
+
+- **颜色链路统一**：`TestSiteDetail`、`QuizDetail` 顶部卡片颜色计算从 Client Component 上提到 Server Page，统一走 `testSiteToExploreCard` / `quizToExploreCard` mapper。`RelatedTestSites` 重写为 mapper + `TestCard` 组件，不再自算颜色。详情页与 /explore 颜色完全同步。
+- **DB 自定义颜色**：`test_sites`、`quizzes` 表 `color` 列已接入全链路 —— 类型定义、SELECT 查询、mapper 优先逻辑（`color || nipponColorForSlug()`）。Admin 编辑表单新增颜色字段：hex 输入 + 原生取色器 + ↺恢复按钮 + 实时预览。两种表单（TestSiteForm、QuizEditForm）均已支持。
+- **取色优先级（三级）**：① Admin 手动设置颜色 > ② quiz result 图片自带的颜色 > ③ hash 兜底（nipponColorForSlug）。`quizToExploreCard` 新增第 5 参数 `resultColor`，`fetchResultImages` / `getQuizDetail` / `getRelatedQuizzes` 同步取图+取色，保证同 index。
+- **图片主色调提取**：新建 `lib/image-color.ts`，Canvas API 纯前端提取，过滤白/黑/灰/透明像素，取主色调后 HSL 调优（饱和度 -30%、明度 -15%）。`ResultCard` 上传图片后自动设置卡片颜色。
+- **移除动态背景模糊**：删除 `ResultBackgroundManager` 组件，`QuizPlayer` 移除 `intermediateRanking` useMemo 及关联导入。做题过程不再有背景模糊。
+- **Commits**: `6a4e4db` `43cfa9b` `ba0081e` `359ad4e` `a6db968` `fe441c1` `6df6531` `5e1cd8d`
 
 ### 2026-06-25 — 站外测试录入梳理 + 封面图修复 + 上线任务收尾
 
@@ -134,6 +143,7 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。3 �
 - **CSP**：`unsafe-inline` + `unsafe-eval` 实际禁用 XSS 防护
 - **Migration 016**：`harden_quiz_insert_rls.sql` 需在 Supabase SQL Editor 手动执行
 - **6 高风险安全问题待修**：H-S1/H-S3/H-S5/H-S6/H-S7/H-S8（详见 `docs/security-audit-report.md`）
+- **test-sites/[id] 顶部卡片 hydration 颜色误差**：设置自定义颜色后 SSR/客户端渲染不一致（Framer Motion 与 RelatedTestSites 组件树冲突），待修复
 
 ---
 
