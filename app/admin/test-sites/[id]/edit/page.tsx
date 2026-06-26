@@ -54,6 +54,7 @@ export default async function EditTestSitePage({
     status: site.status,
     featured: site.featured,
     sort_order: site.sort_order,
+    color: site.color ?? "",
   };
 
   return (

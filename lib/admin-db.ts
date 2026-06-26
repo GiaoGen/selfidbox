@@ -44,6 +44,7 @@ export interface AdminTestSiteRow {
   sort_order: number;
   created_at: string;
   updated_at?: string;
+  color: string | null;
   category: AdminCategoryRow | null;
 }
 
@@ -281,6 +282,7 @@ export interface AdminQuizRow {
   category_id: string | null;
   featured: boolean;
   created_at: string;
+  color: string | null;
   category: AdminCategoryRow | null;
 }
 
@@ -367,6 +369,7 @@ export interface UpdateQuizMetadataInput {
   category_id?: string | null;
   featured?: boolean;
   status?: string;
+  color?: string | null;
 }
 
 /** Lightweight metadata update — does NOT touch questions/results/factors */

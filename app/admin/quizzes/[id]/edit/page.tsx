@@ -30,6 +30,7 @@ export default async function EditQuizPage({
     category_id: string;
     featured: boolean;
     status: string;
+    color: string;
   }) {
     "use server";
     try {
@@ -49,6 +50,7 @@ export default async function EditQuizPage({
         category_id: data.category_id || null,
         featured: data.featured,
         status: data.status,
+        color: data.color || null,
       });
       revalidatePath("/admin/quizzes");
       redirect("/admin/quizzes");
@@ -84,6 +86,7 @@ export default async function EditQuizPage({
           category_id: quiz.category_id ?? "",
           featured: quiz.featured,
           status: quiz.status,
+          color: quiz.color ?? "",
         }}
         categories={categories.map((c) => ({ id: c.id, name: c.name }))}
         onSubmit={handleUpdate}

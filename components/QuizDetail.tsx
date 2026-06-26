@@ -3,10 +3,8 @@
 import { motion } from "framer-motion";
 import { StampCard } from "@/components/StampCard";
 import { TestCard } from "@/app/explore/_components/test-card";
-import type { QuizDetailRow, QuizDetailRelatedRow } from "@/lib/quizzes-db";
-import { accentFromId } from "@/lib/explore/types";
+import type { QuizDetailRow } from "@/lib/quizzes-db";
 import type { ExploreCard } from "@/lib/explore/types";
-import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
 
 const quizTypeLabels: Record<string, string> = {
   personality: "人格测试",
@@ -16,15 +14,18 @@ const quizTypeLabels: Record<string, string> = {
 
 export function QuizDetail({
   quiz,
-  relatedQuizzes,
+  relatedCards,
   creatorUsername,
+  bgColor,
+  textColor,
 }: {
   quiz: QuizDetailRow;
-  relatedQuizzes: QuizDetailRelatedRow[];
+  relatedCards: ExploreCard[];
   creatorUsername?: string;
+  /** 由 Server Page 传入，与 /explore 共用同一取色逻辑（quizToExploreCard 内部也是 nipponColorForSlug(quiz.slug)） */
+  bgColor: string;
+  textColor: string;
 }) {
-  const bgColor = nipponColorForSlug(quiz.slug);
-  const textColor = textColorForNipponBg(bgColor);
   const isDark = textColor === "#FCFAF2";
   const tintColor = isDark ? "rgba(255,255,255,0.55)" : "rgba(10,10,10,0.45)";
   const borderColor = isDark ? "rgba(255,255,255,0.25)" : "rgba(10,10,10,0.15)";
@@ -122,7 +123,7 @@ export function QuizDetail({
         </motion.section>
 
         {/* ---- 相关社区测试 ---- */}
-        {relatedQuizzes.length > 0 && (
+        {relatedCards.length > 0 && (
           <motion.section
             className="space-y-3"
             variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
@@ -136,35 +137,14 @@ export function QuizDetail({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
-              {relatedQuizzes.map((rq) => {
-                const bg = nipponColorForSlug(rq.slug);
-                const card: ExploreCard = {
-                  id: rq.id,
-                  source_type: "community",
-                  href: `/quizzes/${rq.slug}`,
-                  title: rq.title,
-                  description: rq.description ?? rq.hook ?? "",
-                  image: rq.image_url ?? "",
-                  category_id: null,
-                  categoryLabel: "",
-                  featured: false,
-                  popularity_score: 0,
-                  created_at: rq.created_at ?? "",
-                  tags: [],
-                  estimatedMinutes: null,
-                  accent: accentFromId(rq.id),
-                  bg_color: bg,
-                  text_color: textColorForNipponBg(bg),
-                };
-                return (
-                  <motion.div
-                    key={rq.id}
-                    variants={{ hidden: { opacity: 0, scale: 0.90 }, visible: { opacity: 1, scale: 1 } }}
-                  >
-                    <TestCard site={card} />
-                  </motion.div>
-                );
-              })}
+              {relatedCards.map((card) => (
+                <motion.div
+                  key={card.id}
+                  variants={{ hidden: { opacity: 0, scale: 0.90 }, visible: { opacity: 1, scale: 1 } }}
+                >
+                  <TestCard site={card} />
+                </motion.div>
+              ))}
             </div>
           </motion.section>
         )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { textColorForNipponBg } from "@/lib/nippon-colors";
 
 interface QuizEditData {
   title: string;
@@ -9,6 +10,7 @@ interface QuizEditData {
   category_id: string;
   featured: boolean;
   status: string;
+  color: string;
 }
 
 interface Props {
@@ -38,6 +40,7 @@ export function QuizEditForm({ initial, categories, onSubmit }: Props) {
       category_id: (formData.get("category_id") as string) ?? "",
       featured: formData.get("featured") === "on",
       status: (formData.get("status") as string) ?? "draft",
+      color: (formData.get("color") as string) ?? "",
     };
 
     try {
@@ -139,6 +142,15 @@ export function QuizEditForm({ initial, categories, onSubmit }: Props) {
         </Field>
       </fieldset>
 
+      {/* ── 卡片颜色 ── */}
+      <fieldset className="space-y-4 rounded-[24px] bg-white/60 p-5 sm:p-6">
+        <legend className="text-sm font-semibold text-[var(--muted)]">
+          卡片颜色
+        </legend>
+
+        <ColorInput name="color" defaultValue={initial.color} />
+      </fieldset>
+
       {/* ── Status ── */}
       <fieldset className="space-y-4 rounded-[24px] bg-white/60 p-5 sm:p-6">
         <legend className="text-sm font-semibold text-[var(--muted)]">
@@ -197,5 +209,88 @@ function Field({
       </span>
       {children}
     </label>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Color input with hex field + native picker + reset + live preview  */
+/* ------------------------------------------------------------------ */
+
+function ColorInput({ name, defaultValue }: { name: string; defaultValue: string }) {
+  const [value, setValue] = useState(defaultValue || "");
+
+  // Derive readable text color for preview
+  const previewBg = value || "#CCCCCC";
+  const previewText = value ? textColorForNipponBg(value) : "#999";
+
+  function handleReset() {
+    setValue("");
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        {/* Hex text input */}
+        <input
+          name={name}
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="#A96369（留空 = 自动取色）"
+          pattern="^#[0-9a-fA-F]{6}$"
+          className="w-full rounded-[14px] border border-[var(--hairline)] bg-white px-4 py-2.5 text-sm font-mono outline-none focus:border-[#b8a4ed]"
+        />
+
+        {/* Native color picker */}
+        <input
+          type="color"
+          value={value || "#CCCCCC"}
+          onChange={(e) => setValue(e.target.value)}
+          className="h-10 w-10 shrink-0 cursor-pointer rounded-[10px] border border-[var(--hairline)] bg-white p-0.5"
+          title="取色器"
+        />
+
+        {/* Reset button */}
+        <button
+          type="button"
+          onClick={handleReset}
+          disabled={!value}
+          className="shrink-0 rounded-[14px] border border-[var(--hairline)] bg-white px-4 py-2.5 text-sm font-semibold text-[var(--muted)] transition-colors hover:text-[var(--ink)] disabled:opacity-30"
+          title="恢复默认颜色"
+        >
+          ↺
+        </button>
+      </div>
+
+      {/* Live preview */}
+      <div
+        className="rounded-[18px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-colors"
+        style={{ backgroundColor: previewBg, color: previewText }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-base font-semibold">卡片预览</span>
+          <span className="shrink-0 pt-0.5 text-xs font-light opacity-50">分类</span>
+        </div>
+        <hr
+          className="my-3 border-t-2 border-dashed"
+          style={{ borderColor: previewText === "#FCFAF2" ? "rgba(255,255,255,0.25)" : "rgba(10,10,10,0.15)" }}
+        />
+        <p className="text-sm font-normal leading-6 opacity-60">
+          这是卡片的描述文字预览效果。
+        </p>
+        <hr
+          className="my-3 border-t-2 border-dashed"
+          style={{ borderColor: previewText === "#FCFAF2" ? "rgba(255,255,255,0.25)" : "rgba(10,10,10,0.15)" }}
+        />
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-light opacity-50">标签 · 来源</span>
+          <span className="text-xs font-light opacity-50">SelfIDBox</span>
+        </div>
+      </div>
+
+      <p className="text-xs text-[var(--muted)]">
+        留空则使用自动取色。输入 hex 颜色代码（如 #FF6B6B）覆盖默认颜色。
+      </p>
+    </div>
   );
 }

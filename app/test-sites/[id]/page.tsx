@@ -6,6 +6,7 @@ import {
   getTestSitesByCategory,
   mapTestSite,
 } from "@/lib/test-sites-db";
+import { testSiteToExploreCard } from "@/lib/explore/mapper";
 
 export async function generateMetadata({
   params,
@@ -42,10 +43,17 @@ export default async function TestSitePage({
     .slice(0, 3)
     .map(mapTestSite);
 
+  // 👇 直接走 /explore 的 testSiteToExploreCard mapper，颜色与 /explore 卡片一致
+  const siteCard = testSiteToExploreCard(site);
+  const bgColor = siteCard.bg_color;
+  const textColor = siteCard.text_color;
+
   return (
     <TestSiteDetail
       site={site}
       relatedSites={relatedSites}
+      bgColor={bgColor}
+      textColor={textColor}
     />
   );
 }

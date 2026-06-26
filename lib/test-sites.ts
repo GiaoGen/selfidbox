@@ -26,6 +26,8 @@ export type TestSite = {
   created_at?: string;
   popularity_score?: number;
   coverImageUrl?: string;
+  /** 自定义卡片背景色（hex），NULL 时用 nipponColorForSlug 自动取色 */
+  color?: string | null;
 };
 
 export const importEmail = "demo@selfidbox.com";

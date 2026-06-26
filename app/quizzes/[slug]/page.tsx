@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import { QuizDetail } from "@/components/QuizDetail";
 import { getQuizDetail, getRelatedQuizzes } from "@/lib/quizzes-db";
 import { createServiceClient } from "@/lib/supabase/service";
+import { quizToExploreCard } from "@/lib/explore/mapper";
+import type { ExploreCard } from "@/lib/explore/types";
+import type { AdminQuizRow } from "@/lib/admin-db";
 
 export async function generateMetadata({
   params,
@@ -46,11 +49,35 @@ export default async function QuizDetailPage({
     creatorUsername = userRow?.username ?? undefined;
   }
 
+  // 👇 顶部卡片 + 相似测试都走 /explore 的 quizToExploreCard mapper
+  const categoryLabel = quiz.category?.name;
+  const categorySlug = quiz.category?.slug;
+
+  const mainCard = quizToExploreCard(
+    quiz as unknown as AdminQuizRow,
+    categoryLabel,
+    categorySlug,
+    quiz.image_url ?? undefined,
+  );
+  const bgColor = mainCard.bg_color;
+  const textColor = mainCard.text_color;
+
+  const relatedCards: ExploreCard[] = relatedQuizzes.map((rq) =>
+    quizToExploreCard(
+      rq as unknown as AdminQuizRow,
+      categoryLabel,
+      categorySlug,
+      rq.image_url ?? undefined,
+    ),
+  );
+
   return (
     <QuizDetail
       quiz={quiz}
-      relatedQuizzes={relatedQuizzes}
+      relatedCards={relatedCards}
       creatorUsername={creatorUsername}
+      bgColor={bgColor}
+      textColor={textColor}
     />
   );
 }

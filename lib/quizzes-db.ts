@@ -153,6 +153,7 @@ export interface QuizDetailRow {
   featured: boolean;
   created_at: string;
   creator_user_id: string;
+  color: string | null;
   category: AdminCategoryRow | null;
 }
 
@@ -206,6 +207,8 @@ export interface QuizDetailRelatedRow {
   cover_image_url: string | null;
   image_url: string | null;
   attempt_count: number;
+  featured: boolean;
+  color: string | null;
   created_at: string;
 }
 
@@ -215,7 +218,7 @@ export async function getRelatedQuizzes(
 ): Promise<QuizDetailRelatedRow[]> {
   const { data, error } = await (await getDb())
     .from("quizzes")
-    .select("id, slug, title, hook, description, cover_image_url, attempt_count, created_at")
+    .select("id, slug, title, hook, description, cover_image_url, attempt_count, featured, color, created_at")
     .eq("category_id", categoryId)
     .eq("status", "published")
     .neq("slug", excludeSlug)

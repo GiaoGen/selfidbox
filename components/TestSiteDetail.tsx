@@ -3,18 +3,20 @@
 import { motion } from "framer-motion";
 import { RelatedTestSites } from "@/components/RelatedTestSites";
 import { StampCard } from "@/components/StampCard";
-import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
 import type { TestSite } from "@/lib/test-sites";
 
 export function TestSiteDetail({
   site,
   relatedSites,
+  bgColor,
+  textColor,
 }: {
   site: TestSite;
   relatedSites: TestSite[];
+  /** 由 Server Page 传入，与 /explore 共用同一取色逻辑 */
+  bgColor: string;
+  textColor: string;
 }) {
-  const bgColor = nipponColorForSlug(site.id);
-  const textColor = textColorForNipponBg(bgColor);
   const isDark = textColor === "#FCFAF2";
   const tintColor = isDark ? "rgba(255,255,255,0.55)" : "rgba(10,10,10,0.45)";
   const borderColor = isDark ? "rgba(255,255,255,0.25)" : "rgba(10,10,10,0.15)";

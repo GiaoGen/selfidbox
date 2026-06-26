@@ -45,6 +45,7 @@ export interface TestSiteRow {
   created_at: string;
   popularity_score: number | null;
   cover_image_url: string | null;
+  color: string | null;
   category: CategoryRow | null;
 }
 
@@ -106,6 +107,7 @@ export function mapTestSite(row: TestSiteRow): TestSite {
     created_at: row.created_at,
     popularity_score: row.popularity_score ?? undefined,
     coverImageUrl: row.cover_image_url ?? undefined,
+    color: row.color ?? undefined,
   };
 }
 

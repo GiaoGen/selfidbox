@@ -45,7 +45,7 @@ async function fetchCategories(): Promise<AdminCategoryRow[]> {
 async function fetchPublishedQuizzes(): Promise<AdminQuizRow[]> {
   const { data, error } = await supabase
     .from("quizzes")
-    .select("id, slug, title, hook, description, category_id, quiz_type, status, attempt_count, featured, created_at")
+    .select("id, slug, title, hook, description, category_id, quiz_type, status, attempt_count, featured, color, created_at")
     .eq("status", "published")
     .order("featured", { ascending: false })
     .order("attempt_count", { ascending: false })

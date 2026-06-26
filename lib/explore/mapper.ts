@@ -7,7 +7,7 @@ import { computeHeatScore } from "./sort";
 
 /** Map a TestSite to unified ExploreCard */
 export function testSiteToExploreCard(site: TestSite): ExploreCard {
-  const bg = nipponColorForSlug(site.id);
+  const bg = site.color || nipponColorForSlug(site.id);
   return {
     id: site.id,
     source_type: "official",
@@ -35,7 +35,7 @@ export function quizToExploreCard(
   categorySlug?: string,
   resultImageUrl?: string,
 ): ExploreCard {
-  const bg = nipponColorForSlug(quiz.slug);
+  const bg = quiz.color || nipponColorForSlug(quiz.slug);
   // Use result image (from quiz_results) if available, otherwise empty
   const image = resultImageUrl ?? "";
   return {
