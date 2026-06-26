@@ -6,20 +6,37 @@
  * Returns the most frequent color as a hex string, or null on failure.
  */
 
-/** Quantization step per channel — groups similar shades together. */
-const QUANT = 32;
-
 /** Thresholds for filtering unwanted pixels */
 const WHITE_THRESHOLD = 240; // R,G,B all above this → skip (near white)
 const BLACK_THRESHOLD = 20;  // R,G,B all below this → skip (near black)
 const GRAY_SATURATION = 30;  // max-min below this → skip (near gray)
 const ALPHA_THRESHOLD = 128; // alpha below this → skip (transparent)
+const LOW_SATURATION = 0.15; // HSL saturation below this → skip (near-gray, unreliable hue)
 
 /** Sample size — image is resized to this width before sampling. */
 const SAMPLE_WIDTH = 50;
 
-function channelKey(v: number): number {
-  return Math.round(v / QUANT) * QUANT;
+/** 8 hue families, each 45° wide, centered on recognizable hues */
+const HUE_FAMILIES = [
+  { name: "red",     lo: 337.5, hi: 360, center:   0 },  // also covers 0–22.5 via wrap
+  { name: "orange",  lo:  22.5, hi:  67.5, center:  45 },
+  { name: "yellow",  lo:  67.5, hi: 112.5, center:  90 },
+  { name: "green",   lo: 112.5, hi: 157.5, center: 135 },
+  { name: "cyan",    lo: 157.5, hi: 202.5, center: 180 },
+  { name: "blue",    lo: 202.5, hi: 247.5, center: 225 },
+  { name: "purple",  lo: 247.5, hi: 292.5, center: 270 },
+  { name: "magenta", lo: 292.5, hi: 337.5, center: 315 },
+] as const;
+
+function getHueFamily(h: number): number {
+  // h is in [0, 1], convert to degrees
+  const deg = h * 360;
+  // Red wraps around: 337.5–360 and 0–22.5 both map to family 0
+  if (deg >= 337.5 || deg < 22.5) return 0;
+  for (let i = 1; i < HUE_FAMILIES.length; i++) {
+    if (deg >= HUE_FAMILIES[i].lo && deg < HUE_FAMILIES[i].hi) return i;
+  }
+  return 0; // fallback (should never reach)
 }
 
 export async function extractDominantColor(imageUrl: string): Promise<string | null> {
@@ -41,8 +58,13 @@ export async function extractDominantColor(imageUrl: string): Promise<string | n
     const imageData = ctx.getImageData(0, 0, SAMPLE_WIDTH, sampleHeight);
     const { data } = imageData;
 
-    // 4. Count quantized colors (key → count)
-    const buckets = new Map<string, number>();
+    // 4. Group pixels into hue families — count + store S/L for representative pick
+    const families: { count: number; saturations: number[]; lightnesses: number[] }[] =
+      Array.from({ length: HUE_FAMILIES.length }, () => ({
+        count: 0,
+        saturations: [] as number[],
+        lightnesses: [] as number[],
+      }));
 
     for (let i = 0; i < data.length; i += 4) {
       const r = data[i];
@@ -59,35 +81,46 @@ export async function extractDominantColor(imageUrl: string): Promise<string | n
       // Skip near-black
       if (r < BLACK_THRESHOLD && g < BLACK_THRESHOLD && b < BLACK_THRESHOLD) continue;
 
-      // Skip near-gray (low saturation)
+      // Skip near-gray (low RGB saturation)
       const maxC = Math.max(r, g, b);
       const minC = Math.min(r, g, b);
       if (maxC - minC < GRAY_SATURATION) continue;
 
-      // Quantize and count
-      const key = `${channelKey(r)},${channelKey(g)},${channelKey(b)}`;
-      buckets.set(key, (buckets.get(key) ?? 0) + 1);
+      // Convert to HSL to get perceptually meaningful hue
+      const { h, s, l } = rgbToHsl(r, g, b);
+
+      // Skip very low saturation (gray-ish, hue is unreliable)
+      if (s < LOW_SATURATION) continue;
+
+      const family = getHueFamily(h);
+      families[family].count++;
+      families[family].saturations.push(s);
+      families[family].lightnesses.push(l);
     }
 
-    // 5. Find most frequent color
-    if (buckets.size === 0) return null;
-
-    let bestKey = "";
+    // 5. Find the hue family with the most pixels
+    let bestFamily = -1;
     let bestCount = 0;
-    for (const [key, count] of buckets) {
-      if (count > bestCount) {
-        bestCount = count;
-        bestKey = key;
+    for (let i = 0; i < families.length; i++) {
+      if (families[i].count > bestCount) {
+        bestCount = families[i].count;
+        bestFamily = i;
       }
     }
 
-    // 6. Convert quantized key back to hex → adjust saturation & lightness
-    const parts = bestKey.split(",").map(Number);
-    const rawHex = "#" + parts.map((c) => Math.min(255, c).toString(16).padStart(2, "0")).join("");
+    if (bestFamily === -1) return null;
+
+    // 6. Pick a representative color from the winning family:
+    //    median saturation + median lightness + the family's center hue
+    const winner = families[bestFamily];
+    const sortedS = winner.saturations.slice().sort((a, b) => a - b);
+    const sortedL = winner.lightnesses.slice().sort((a, b) => a - b);
+    const medianS = sortedS[Math.floor(sortedS.length / 2)];
+    const medianL = sortedL[Math.floor(sortedL.length / 2)];
+    const centerH = HUE_FAMILIES[bestFamily].center / 360;
 
     // 7. Tone down: saturation -30%, lightness -15%
-    const hsl = hexToHsl(rawHex);
-    const adjusted = hslToHex(hsl.h, hsl.s * 0.7, hsl.l * 0.85);
+    const adjusted = hslToHex(centerH, medianS * 0.7, Math.max(0.05, medianL * 0.85));
 
     return adjusted;
   } catch {
@@ -118,13 +151,13 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 /*  HSL conversion (zero-dependency, pure math)                         */
 /* ------------------------------------------------------------------ */
 
-function hexToHsl(hex: string): { h: number; s: number; l: number } {
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
+function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
 
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
   const l = (max + min) / 2;
 
   if (max === min) return { h: 0, s: 0, l };
@@ -133,9 +166,9 @@ function hexToHsl(hex: string): { h: number; s: number; l: number } {
   const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
 
   let h = 0;
-  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-  else if (max === g) h = ((b - r) / d + 2) / 6;
-  else h = ((r - g) / d + 4) / 6;
+  if (max === rn) h = ((gn - bn) / d + (gn < bn ? 6 : 0)) / 6;
+  else if (max === gn) h = ((bn - rn) / d + 2) / 6;
+  else h = ((rn - gn) / d + 4) / 6;
 
   return { h, s, l };
 }
