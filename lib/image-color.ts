@@ -83,7 +83,7 @@ export async function extractDominantColor(imageUrl: string): Promise<string | n
 
     // 6. Convert quantized key back to hex → adjust saturation & lightness
     const parts = bestKey.split(",").map(Number);
-    const rawHex = "#" + parts.map((c) => c.toString(16).padStart(2, "0")).join("");
+    const rawHex = "#" + parts.map((c) => Math.min(255, c).toString(16).padStart(2, "0")).join("");
 
     // 7. Tone down: saturation -30%, lightness -15%
     const hsl = hexToHsl(rawHex);
@@ -99,6 +99,10 @@ export async function extractDominantColor(imageUrl: string): Promise<string | n
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                             */
 /* ------------------------------------------------------------------ */
+
+function clamp(v: number): number {
+  return Math.min(255, Math.max(0, v));
+}
 
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -152,9 +156,9 @@ function hslToHex(h: number, s: number, l: number): string {
   const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
   const p = 2 * l - q;
 
-  const r = Math.round(hue2rgb(p, q, h + 1 / 3) * 255);
-  const g = Math.round(hue2rgb(p, q, h) * 255);
-  const b = Math.round(hue2rgb(p, q, h - 1 / 3) * 255);
+  const r = clamp(Math.round(hue2rgb(p, q, h + 1 / 3) * 255));
+  const g = clamp(Math.round(hue2rgb(p, q, h) * 255));
+  const b = clamp(Math.round(hue2rgb(p, q, h - 1 / 3) * 255));
 
   return "#" + [r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("");
 }
