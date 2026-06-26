@@ -34,8 +34,10 @@ export function quizToExploreCard(
   categoryLabel?: string,
   categorySlug?: string,
   resultImageUrl?: string,
+  resultColor?: string | null,
 ): ExploreCard {
-  const bg = quiz.color || nipponColorForSlug(quiz.slug);
+  // ① admin 手动设置 > ② 匹配的 result 颜色 > ③ hash 兜底
+  const bg = quiz.color || resultColor || nipponColorForSlug(quiz.slug);
   // Use result image (from quiz_results) if available, otherwise empty
   const image = resultImageUrl ?? "";
   return {

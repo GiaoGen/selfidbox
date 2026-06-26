@@ -60,15 +60,15 @@ async function fetchPublishedQuizzes(): Promise<AdminQuizRow[]> {
   return (data ?? []) as AdminQuizRow[];
 }
 
-/** Fetch non-null result image_urls grouped by quiz_id */
+/** Fetch non-null result image_urls + color grouped by quiz_id */
 async function fetchResultImages(
   quizIds: string[],
-): Promise<Map<string, string[]>> {
+): Promise<Map<string, { image_url: string; color: string | null }[]>> {
   if (quizIds.length === 0) return new Map();
 
   const { data, error } = await supabase
     .from("quiz_results")
-    .select("quiz_id, image_url")
+    .select("quiz_id, image_url, color")
     .in("quiz_id", quizIds)
     .not("image_url", "is", null)
     .limit(300);
@@ -78,11 +78,11 @@ async function fetchResultImages(
     return new Map();
   }
 
-  const map = new Map<string, string[]>();
-  for (const row of data as { quiz_id: string; image_url: string }[]) {
-    const urls = map.get(row.quiz_id) || [];
-    urls.push(row.image_url);
-    map.set(row.quiz_id, urls);
+  const map = new Map<string, { image_url: string; color: string | null }[]>();
+  for (const row of data as { quiz_id: string; image_url: string; color: string | null }[]) {
+    const entries = map.get(row.quiz_id) || [];
+    entries.push({ image_url: row.image_url, color: row.color });
+    map.set(row.quiz_id, entries);
   }
   return map;
 }
@@ -109,13 +109,14 @@ export const getExploreQuizCards = listQuery(
     const catMap = new Map(categories.map((c) => [c.id, c]));
 
     const cards = quizzes.map((q) => {
-      const images = resultImages.get(q.id) || [];
-      const pickedImage = pickFrom(images, q.slug); // deterministic, stable per quiz
+      const results = resultImages.get(q.id) || [];
+      const picked = pickFrom(results, q.slug); // deterministic, stable per quiz
       return quizToExploreCard(
         q,
         q.category_id ? catMap.get(q.category_id)?.name : undefined,
         q.category_id ? catMap.get(q.category_id)?.slug : undefined,
-        pickedImage,
+        picked?.image_url,
+        picked?.color,
       );
     });
 
@@ -147,13 +148,14 @@ export async function getExploreQuizCardsByCategory(
     .filter((q) => q.category_id === cat.id)
     .slice(0, 100)
     .map((q) => {
-      const images = resultImages.get(q.id) || [];
-      const pickedImage = pickFrom(images, q.slug);
+      const results = resultImages.get(q.id) || [];
+      const picked = pickFrom(results, q.slug);
       return quizToExploreCard(
         q,
         catMap.get(q.category_id!)?.name,
         catMap.get(q.category_id!)?.slug,
-        pickedImage,
+        picked?.image_url,
+        picked?.color,
       );
     });
 

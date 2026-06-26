@@ -154,6 +154,7 @@ export interface QuizDetailRow {
   created_at: string;
   creator_user_id: string;
   color: string | null;
+  result_color: string | null;
   category: AdminCategoryRow | null;
 }
 
@@ -182,15 +183,22 @@ export const getQuizDetail = keyedSingleQuery(
     quiz.category = null;
   }
 
-  // fetch result image from quiz_results (deterministic pick)
+  // fetch result image + color from quiz_results (deterministic pick)
   {
     const { data: results } = await (await getDb())
       .from("quiz_results")
-      .select("image_url")
+      .select("image_url, color")
       .eq("quiz_id", quiz.id)
       .not("image_url", "is", null);
-    const images = (results ?? []).map((r: Record<string, unknown>) => r.image_url as string).filter(Boolean);
-    quiz.image_url = images.length > 0 ? images[hashSlug(quiz.slug) % images.length] : null;
+    const entries = (results ?? []) as { image_url: string; color: string | null }[];
+    if (entries.length > 0) {
+      const idx = hashSlug(quiz.slug) % entries.length;
+      quiz.image_url = entries[idx].image_url;
+      quiz.result_color = entries[idx].color ?? null;
+    } else {
+      quiz.image_url = null;
+      quiz.result_color = null;
+    }
   }
 
   return quiz;
@@ -209,6 +217,7 @@ export interface QuizDetailRelatedRow {
   attempt_count: number;
   featured: boolean;
   color: string | null;
+  result_color: string | null;
   created_at: string;
 }
 
@@ -232,25 +241,32 @@ export async function getRelatedQuizzes(
 
   const quizzes = (data ?? []) as QuizDetailRelatedRow[];
 
-  // fetch result images from quiz_results (deterministic pick per quiz)
+  // fetch result images + colors from quiz_results (deterministic pick per quiz)
   if (quizzes.length > 0) {
     const quizIds = quizzes.map((q) => q.id);
     const { data: results } = await (await getDb())
       .from("quiz_results")
-      .select("quiz_id, image_url")
+      .select("quiz_id, image_url, color")
       .in("quiz_id", quizIds)
       .not("image_url", "is", null);
 
-    const imageMap = new Map<string, string[]>();
-    for (const row of (results ?? []) as { quiz_id: string; image_url: string }[]) {
-      const urls = imageMap.get(row.quiz_id) || [];
-      urls.push(row.image_url);
-      imageMap.set(row.quiz_id, urls);
+    const resultMap = new Map<string, { image_url: string; color: string | null }[]>();
+    for (const row of (results ?? []) as { quiz_id: string; image_url: string; color: string | null }[]) {
+      const entries = resultMap.get(row.quiz_id) || [];
+      entries.push({ image_url: row.image_url, color: row.color });
+      resultMap.set(row.quiz_id, entries);
     }
 
     for (const q of quizzes) {
-      const images = imageMap.get(q.id) || [];
-      q.image_url = images.length > 0 ? images[hashSlug(q.slug) % images.length] : null;
+      const entries = resultMap.get(q.id) || [];
+      if (entries.length > 0) {
+        const idx = hashSlug(q.slug) % entries.length;
+        q.image_url = entries[idx].image_url;
+        q.result_color = entries[idx].color ?? null;
+      } else {
+        q.image_url = null;
+        q.result_color = null;
+      }
     }
   }
 

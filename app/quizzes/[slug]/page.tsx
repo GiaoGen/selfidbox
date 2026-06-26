@@ -58,6 +58,7 @@ export default async function QuizDetailPage({
     categoryLabel,
     categorySlug,
     quiz.image_url ?? undefined,
+    quiz.result_color,
   );
   const bgColor = mainCard.bg_color;
   const textColor = mainCard.text_color;
@@ -68,6 +69,7 @@ export default async function QuizDetailPage({
       categoryLabel,
       categorySlug,
       rq.image_url ?? undefined,
+      rq.result_color,
     ),
   );
 
