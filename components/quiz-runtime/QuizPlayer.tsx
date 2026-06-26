@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { QuizRuntimeData, AnswerRecord, RankedRuntimeResult, RankedRuntimeResultV2 } from "@/lib/quiz-runtime";
-import { calculateUserVector, rankRuntimeResults, rankRuntimeResultsV2, MAX_SANDBOX_ATTEMPTS } from "@/lib/quiz-runtime";
+import { calculateUserVector, rankRuntimeResultsV2, MAX_SANDBOX_ATTEMPTS } from "@/lib/quiz-runtime";
 import { createClient } from "@/lib/supabase/client";
 import { useNipponTheme } from "./useNipponTheme";
-import { ResultBackgroundManager } from "./ResultBackgroundManager";
 import { QuizProgress } from "./QuizProgress";
 import { QuestionCard } from "./QuestionCard";
 import { QuizResult } from "./QuizResult";
@@ -35,26 +34,6 @@ export function QuizPlayer({ quiz }: Props) {
   const total = questions.length;
   const factorKeys = quiz.factors.map((f) => f.key);
   const isLastQuestion = currentIndex === total - 1;
-
-  // Intermediate ranking — recomputed after each answer, drives the dynamic background
-  const intermediateRanking = useMemo(() => {
-    const answeredSoFar = answers
-      .slice(0, currentIndex)
-      .filter((a): a is AnswerRecord => !!a);
-    if (answeredSoFar.length === 0) {
-      const defaultVector: Record<string, number> = {};
-      for (const key of factorKeys) defaultVector[key] = 50;
-      return rankRuntimeResults(defaultVector, quiz.results);
-    }
-    const vector = calculateUserVector(factorKeys, answeredSoFar);
-    const { ranked } = rankRuntimeResultsV2(
-      vector,
-      quiz.results,
-      quiz.questions,
-      factorKeys,
-    );
-    return ranked;
-  }, [answers, currentIndex, factorKeys, quiz.results, quiz.questions]);
 
   const finishQuiz = useCallback(
     async (finalAnswers: AnswerRecord[]) => {
@@ -196,9 +175,6 @@ export function QuizPlayer({ quiz }: Props) {
 
   return (
     <>
-      {/* ── Dynamic personality reveal background ── */}
-      <ResultBackgroundManager ranking={intermediateRanking} />
-
       <div className="relative z-10 mx-auto w-full max-w-[560px]">
       {/* Header */}
       <div className="mb-10">

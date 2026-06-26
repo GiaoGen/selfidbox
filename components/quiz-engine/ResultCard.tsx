@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Pin, PinOff, Image as ImageIcon, Loader, Palette } from "lucide-react";
 import type { Result } from "@/lib/mock-quiz-engine";
 import { uploadResultImage } from "@/lib/image-upload";
+import { extractDominantColor } from "@/lib/image-color";
 import { InlineEditableInput } from "@/components/quiz-studio/InlineEditableInput";
 import { InlineEditableTextarea } from "@/components/quiz-studio/InlineEditableTextarea";
 import { EditableChipList } from "@/components/quiz-studio/EditableChipList";
@@ -68,7 +69,13 @@ export function ResultCard({ result, onChange, onDelete, onTogglePin, cardColor 
     setUploadState("loading");
     try {
       const { image_url } = await uploadResultImage(file, result.id);
-      update({ ...result, image_url });
+      // Extract dominant color from the uploaded image
+      const extractedColor = await extractDominantColor(image_url);
+      update({
+        ...result,
+        image_url,
+        ...(extractedColor ? { color: extractedColor } : {}),
+      });
       setUploadState("idle");
     } catch {
       setUploadState("error");
