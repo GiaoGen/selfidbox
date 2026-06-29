@@ -52,6 +52,23 @@ function searchCards(cards: ExploreCard[], query: string): ExploreCard[] {
   });
 }
 
+function filterBySource(
+  cards: ExploreCard[],
+  source: "community" | "official",
+): ExploreCard[] {
+  return cards.filter((c) => c.source_type === source);
+}
+
+/** Pick up to `count` random items using Fisher-Yates shuffle */
+function pickRandom(cards: ExploreCard[], count: number): ExploreCard[] {
+  const shuffled = [...cards];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
 /* ------------------------------------------------------------------ */
 /*  Tab color helpers                                                   */
 /* ------------------------------------------------------------------ */
@@ -99,6 +116,7 @@ type ExploreClientProps = {
   initialTab: string;
   initialRange: Range;
   initialSearch?: string;
+  initialInternalOnly?: boolean;
 };
 
 /* ------------------------------------------------------------------ */
@@ -113,6 +131,7 @@ export function ExploreClient({
   initialTab,
   initialRange,
   initialSearch,
+  initialInternalOnly,
 }: ExploreClientProps) {
   const router = useRouter();
 
@@ -121,6 +140,8 @@ export function ExploreClient({
   const [searching, setSearching] = useState(!!initialSearch);
   const [query, setQuery] = useState(initialSearch || "");
   const [timeOpen, setTimeOpen] = useState(false);
+  const [showInternalOnly, setShowInternalOnly] = useState(initialInternalOnly ?? false);
+  const [randomSeed, setRandomSeed] = useState(0);
   const filterRowRef = useRef<HTMLDivElement>(null);
 
   // When navigated to via navbar search, auto-open dropdown
@@ -146,24 +167,33 @@ export function ExploreClient({
 
   /* ---- filtered data (instant, no network) ---- */
   const filtered = useMemo(() => {
+    // Random mode — bypass tab/range/source, pick 5 internal quizzes
+    if (activeTab === "random") {
+      const pool = sites.filter((c) => c.source_type === "community");
+      return pickRandom(pool, 5);
+    }
     let result = filterByTab(sites, activeTab);
+    if (showInternalOnly) result = filterBySource(result, "community");
     result = filterByRange(result, activeRange);
     return sortExploreCards(result);
-  }, [sites, activeTab, activeRange]);
+  }, [sites, activeTab, activeRange, showInternalOnly, randomSeed]);
 
-  const searchResults = useMemo(
-    () => (searching ? searchCards(sites, query) : []),
-    [sites, searching, query],
-  );
+  const searchResults = useMemo(() => {
+    if (!searching) return [];
+    let results = searchCards(sites, query);
+    if (showInternalOnly) results = filterBySource(results, "community");
+    return results;
+  }, [sites, searching, query, showInternalOnly]);
 
   const showDropdown = searching && query.trim().length > 0;
 
   /* ---- URL sync (no reload) ---- */
   const syncURL = useCallback(
-    (tab: string, range: Range) => {
+    (tab: string, range: Range, internalOnly: boolean) => {
       const params = new URLSearchParams();
       if (tab !== "hot") params.set("tab", tab);
       if (range !== "all") params.set("range", range);
+      if (internalOnly) params.set("internal", "1");
       const qs = params.toString();
       router.replace(`/explore${qs ? `?${qs}` : ""}`, { scroll: false });
     },
@@ -172,13 +202,19 @@ export function ExploreClient({
 
   function selectTab(tab: string) {
     setActiveTab(tab);
-    syncURL(tab, activeRange);
+    syncURL(tab, activeRange, showInternalOnly);
   }
 
   function selectRange(range: Range) {
     setActiveRange(range);
     setTimeOpen(false);
-    syncURL(activeTab, range);
+    syncURL(activeTab, range, showInternalOnly);
+  }
+
+  function toggleInternalOnly() {
+    const next = !showInternalOnly;
+    setShowInternalOnly(next);
+    syncURL(activeTab, activeRange, next);
   }
 
   function exitSearch() {
@@ -333,6 +369,29 @@ export function ExploreClient({
                   </button>
                 );
               })}
+
+              {/* ---- Divider ---- */}
+              <span className="w-px h-4 bg-[var(--hairline)] mx-1" />
+
+              {/* ---- 站内精选 toggle ---- */}
+              <button
+                type="button"
+                onClick={toggleInternalOnly}
+                className="shrink-0 px-3 py-1 text-[13px] font-semibold transition-colors"
+                style={
+                  showInternalOnly
+                    ? { color: "var(--ink)" }
+                    : { color: "var(--muted)" }
+                }
+                onMouseEnter={(e) => {
+                  if (!showInternalOnly) (e.target as HTMLElement).style.color = "var(--ink)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!showInternalOnly) (e.target as HTMLElement).style.color = "var(--muted)";
+                }}
+              >
+                站内精选
+              </button>
             </div>
           </div>
         )}
@@ -366,6 +425,24 @@ export function ExploreClient({
             </motion.div>
           ))}
         </motion.div>
+      )}
+
+      {/* ---- Random mode: refresh button ---- */}
+      {activeTab === "random" && filtered.length > 0 && (
+        <div className="flex justify-center mt-6">
+          <button
+            type="button"
+            onClick={() => setRandomSeed((s) => s + 1)}
+            className="px-8 py-2.5 text-sm font-semibold
+                       bg-[#f5f0e8] text-[var(--ink)]
+                       shadow-[0_4px_20px_rgba(0,0,0,0.20)]
+                       transition-shadow transition-transform duration-200
+                       hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)]
+                       active:scale-[0.98]"
+          >
+            换一批
+          </button>
+        </div>
       )}
     </>
   );

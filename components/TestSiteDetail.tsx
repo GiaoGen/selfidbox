@@ -51,26 +51,27 @@ export function TestSiteDetail({
 
           <hr className="my-3 border-t-2 border-dashed" style={{ borderColor }} />
 
-          {/* 中部：描述 + tags */}
+          {/* 中部：描述 */}
           <p className="text-sm font-normal leading-6" style={{ color: tintColor }}>
             {site.description}
           </p>
-          {site.tags.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5 text-xs font-light" style={{ color: tintColor }}>
-              {site.tags.map((tag) => (
-                <span key={tag}>#{tag}</span>
-              ))}
-            </div>
-          )}
 
           <hr className="my-3 border-t-2 border-dashed" style={{ borderColor }} />
 
-          {/* 下部：来源 */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-light" style={{ color: tintColor }}>
-              {site.sourceName}
-            </span>
-            <span className="text-xs font-light" style={{ color: tintColor }}>站外</span>
+          {/* 下部：tags + 来源 */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 text-xs font-light" style={{ color: tintColor }}>
+              {site.tags.map((tag) => (
+                <span key={tag} className="shrink-0">#{tag}</span>
+              ))}
+              {site.tags.length > 0 && site.sourceName && (
+                <span className="opacity-40">·</span>
+              )}
+              {site.sourceName && (
+                <span className="shrink-0">{site.sourceName}</span>
+              )}
+            </div>
+            <span className="shrink-0 text-xs font-light" style={{ color: tintColor }}>站外</span>
           </div>
         </motion.section>
 

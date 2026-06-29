@@ -5,6 +5,10 @@ import { accentFromId } from "./types";
 import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
 import { computeHeatScore } from "./sort";
 
+/** Multiplier applied to internal quiz heat scores to counterbalance the
+ *  engagement-scale gap between click_count (official) and attempt_count (community). */
+const QUIZ_HEAT_BOOST = 1.5;
+
 /** Map a TestSite to unified ExploreCard */
 export function testSiteToExploreCard(site: TestSite): ExploreCard {
   const bg = site.color || nipponColorForSlug(site.id);
@@ -50,7 +54,7 @@ export function quizToExploreCard(
     category_id: categorySlug ?? quiz.category?.slug ?? null, // category slug — matches tab IDs for filtering
     categoryLabel: categoryLabel ?? quiz.category?.name ?? "",
     featured: quiz.featured ?? false,
-    popularity_score: computeHeatScore(quiz.attempt_count ?? 0, quiz.created_at),
+    popularity_score: computeHeatScore(quiz.attempt_count ?? 0, quiz.created_at) * QUIZ_HEAT_BOOST,
     created_at: quiz.created_at,
     tags: [],
     estimatedMinutes: null,

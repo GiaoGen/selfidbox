@@ -25,7 +25,15 @@ function parseRange(raw: string | undefined): Range {
 }
 
 function getTrending(cards: ExploreCard[]): ExploreCard[] {
-  return sortExploreCards(cards).slice(0, 5);
+  const sorted = sortExploreCards(cards);
+  // Reserve at least 2 community (internal quiz) slots
+  const top3 = sorted.slice(0, 3);
+  const top3Ids = new Set(top3.map((c) => c.id));
+  const communityCards = sorted.filter((c) => c.source_type === "community");
+  const extraCommunity = communityCards
+    .filter((c) => !top3Ids.has(c.id))
+    .slice(0, 2);
+  return sortExploreCards([...top3, ...extraCommunity]).slice(0, 5);
 }
 
 /* ------------------------------------------------------------------ */
@@ -45,7 +53,7 @@ export const metadata: Metadata = {
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; range?: string; search?: string }>;
+  searchParams: Promise<{ tab?: string; range?: string; search?: string; internal?: string }>;
 }) {
   const sp = await searchParams;
 
@@ -54,6 +62,8 @@ export default async function ExplorePage({
     getPublishedTestSites(),
     getExploreQuizCards(),
   ]);
+
+  const showInternalOnly = sp.internal === "1";
 
   const categories: ExploreCategory[] = categoryRows.map(mapCategory);
   const siteCards: ExploreCard[] = siteRows
@@ -78,6 +88,7 @@ export default async function ExplorePage({
 
   const tabs = [
     { id: "hot", label: "热门" },
+    { id: "random", label: "随机测评" },
     ...categories.map((c) => ({ id: c.id, label: c.label })),
   ];
 
@@ -98,6 +109,7 @@ export default async function ExplorePage({
           initialTab={sp.tab || "hot"}
           initialRange={parseRange(sp.range)}
           initialSearch={sp.search || ""}
+          initialInternalOnly={showInternalOnly}
         />
       </section>
     </main>
