@@ -344,54 +344,56 @@ export function ExploreClient({
         {/* ---- Time dropdown ---- */}
         {timeOpen && (
           <div className="absolute left-0 top-full z-20 border-b border-[var(--hairline)] bg-[var(--canvas)]">
-            <div className="flex items-center gap-2 px-4 py-2">
-              {rangePills.map((pill) => {
-                const active = pill.id === activeRange;
-                return (
-                  <button
-                    key={pill.id}
-                    type="button"
-                    onClick={() => selectRange(pill.id)}
-                    className="shrink-0 px-3 py-1 text-[13px] font-semibold transition-colors"
-                    style={
-                      active
-                        ? { color: "var(--ink)" }
-                        : { color: "var(--muted)" }
-                    }
-                    onMouseEnter={(e) => {
-                      if (!active) (e.target as HTMLElement).style.color = "var(--ink)";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!active) (e.target as HTMLElement).style.color = "var(--muted)";
-                    }}
-                  >
-                    {pill.label}
-                  </button>
-                );
-              })}
+            <div className="flex flex-col px-4 py-2 gap-1.5">
+              {/* Row 1: time range pills */}
+              <div className="flex items-center gap-2">
+                {rangePills.map((pill) => {
+                  const active = pill.id === activeRange;
+                  return (
+                    <button
+                      key={pill.id}
+                      type="button"
+                      onClick={() => selectRange(pill.id)}
+                      className="shrink-0 px-3 py-1 text-[13px] font-semibold transition-colors"
+                      style={
+                        active
+                          ? { color: "var(--ink)" }
+                          : { color: "var(--muted)" }
+                      }
+                      onMouseEnter={(e) => {
+                        if (!active) (e.target as HTMLElement).style.color = "var(--ink)";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!active) (e.target as HTMLElement).style.color = "var(--muted)";
+                      }}
+                    >
+                      {pill.label}
+                    </button>
+                  );
+                })}
+              </div>
 
-              {/* ---- Divider ---- */}
-              <span className="w-px h-4 bg-[var(--hairline)] mx-1" />
-
-              {/* ---- 站内精选 toggle ---- */}
-              <button
-                type="button"
-                onClick={toggleInternalOnly}
-                className="shrink-0 px-3 py-1 text-[13px] font-semibold transition-colors"
-                style={
-                  showInternalOnly
-                    ? { color: "var(--ink)" }
-                    : { color: "var(--muted)" }
-                }
-                onMouseEnter={(e) => {
-                  if (!showInternalOnly) (e.target as HTMLElement).style.color = "var(--ink)";
-                }}
-                onMouseLeave={(e) => {
-                  if (!showInternalOnly) (e.target as HTMLElement).style.color = "var(--muted)";
-                }}
-              >
-                站内精选
-              </button>
+              {/* Row 2: 站内精选 toggle */}
+              <div className="flex items-center gap-2 pt-1 border-t border-[var(--hairline)]">
+                <button
+                  type="button"
+                  onClick={toggleInternalOnly}
+                  className="shrink-0 px-3 py-1 text-[13px] font-semibold transition-colors"
+                  style={
+                    showInternalOnly
+                      ? { color: "var(--ink)" }
+                      : { color: "var(--muted)" }
+                  }
+                  onMouseEnter={(e) => {
+                    if (!showInternalOnly) (e.target as HTMLElement).style.color = "var(--ink)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!showInternalOnly) (e.target as HTMLElement).style.color = "var(--muted)";
+                  }}
+                >
+                  站内精选
+                </button>
+              </div>
             </div>
           </div>
         )}
