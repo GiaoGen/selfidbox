@@ -35,14 +35,19 @@ export function EditableSlider({
 
   function handlePointerDown(e: React.PointerEvent) {
     e.preventDefault();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    trackRef.current!.setPointerCapture(e.pointerId);
     update(e.clientX);
   }
 
   function handlePointerMove(e: React.PointerEvent) {
     if (e.buttons > 0) {
+      e.preventDefault();
       update(e.clientX);
     }
+  }
+
+  function handlePointerUp(e: React.PointerEvent) {
+    trackRef.current!.releasePointerCapture(e.pointerId);
   }
 
   const pct = ((value - min) / (max - min)) * 100;
@@ -61,6 +66,7 @@ export function EditableSlider({
         ref={trackRef}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
         className="relative h-1.5 flex-1 cursor-pointer rounded-full touch-none select-none"
         style={{ backgroundColor: trackBg, opacity: trackBgOpacity }}
       >
