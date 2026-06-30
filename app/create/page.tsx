@@ -1443,31 +1443,22 @@ function CreatePageContent() {
                   </p>
                 );
               }
-              const itemBg = accentColors?.[5] ?? "#b8a4ed";
-              const tc = (() => {
-                const r = parseInt(itemBg.slice(1, 3), 16);
-                const g = parseInt(itemBg.slice(3, 5), 16);
-                const b = parseInt(itemBg.slice(5, 7), 16);
-                return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? "#1a1a1a" : "#ffffff";
-              })();
-              const isDark = tc === "#1a1a1a";
-              const mutedText = isDark ? "rgba(10,10,10,0.6)" : "rgba(255,255,255,0.7)";
               const closePairs = pairs.filter((p) => p.close);
               const distinctPairs = pairs.filter((p) => !p.close);
 
               return (
                 <div className="space-y-5">
                   {closePairs.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-sm font-semibold text-[var(--muted)]">距离较近的结果对（可能存在相似输出）</p>
+                    <div className="space-y-0">
+                      <p className="text-sm font-semibold text-[var(--muted)] mb-3">距离较近的结果对（可能存在相似输出）</p>
                       {closePairs.map((pair) => (
-                        <div key={`${pair.resultA.id}-${pair.resultB.id}`} className="rounded-[20px] p-4" style={{ backgroundColor: itemBg }}>
-                          <p className="text-sm leading-6" style={{ color: mutedText }}>
-                            <span className="font-semibold" style={{ color: tc }}>{pair.resultA.name}</span>
+                        <div key={`${pair.resultA.id}-${pair.resultB.id}`} className="border-b border-dashed border-[var(--ink)]/10 py-3 last:border-b-0 last:pb-0">
+                          <p className="text-sm leading-6 text-[var(--muted)]">
+                            <span className="font-semibold text-[var(--ink)]">{pair.resultA.name}</span>
                             {" 和 "}
-                            <span className="font-semibold" style={{ color: tc }}>{pair.resultB.name}</span>
+                            <span className="font-semibold text-[var(--ink)]">{pair.resultB.name}</span>
                             {" 人格位置较接近（相似度 "}
-                            <span className="font-semibold" style={{ color: tc }}>{pair.similarity}%</span>
+                            <span className="font-semibold text-[var(--ink)]">{pair.similarity}%</span>
                             {"），可能会产生相似结果。"}
                           </p>
                         </div>
@@ -1476,16 +1467,16 @@ function CreatePageContent() {
                   )}
 
                   {distinctPairs.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-sm font-semibold text-[var(--muted)]">区分度良好的结果对</p>
+                    <div className="space-y-0">
+                      <p className="text-sm font-semibold text-[var(--muted)] mb-3">区分度良好的结果对</p>
                       {distinctPairs.map((pair) => (
-                        <div key={`${pair.resultA.id}-${pair.resultB.id}`} className="rounded-[20px] p-4" style={{ backgroundColor: itemBg }}>
-                          <p className="text-sm leading-6" style={{ color: mutedText }}>
-                            <span className="font-semibold" style={{ color: tc }}>{pair.resultA.name}</span>
+                        <div key={`${pair.resultA.id}-${pair.resultB.id}`} className="border-b border-dashed border-[var(--ink)]/10 py-3 last:border-b-0 last:pb-0">
+                          <p className="text-sm leading-6 text-[var(--muted)]">
+                            <span className="font-semibold text-[var(--ink)]">{pair.resultA.name}</span>
                             {" 和 "}
-                            <span className="font-semibold" style={{ color: tc }}>{pair.resultB.name}</span>
+                            <span className="font-semibold text-[var(--ink)]">{pair.resultB.name}</span>
                             {" 区分度良好（相似度 "}
-                            <span className="font-semibold" style={{ color: tc }}>{pair.similarity}%</span>
+                            <span className="font-semibold text-[var(--ink)]">{pair.similarity}%</span>
                             {"）。"}
                           </p>
                         </div>
@@ -1527,37 +1518,27 @@ function CreatePageContent() {
                 );
               }
               const coverage = validateQuestionCoverage(quiz.questions, quiz.factors);
-              const itemBg = accentColors?.[2] ?? "#b8a4ed";
-              const tc = (() => {
-                const r = parseInt(itemBg.slice(1, 3), 16);
-                const g = parseInt(itemBg.slice(3, 5), 16);
-                const b = parseInt(itemBg.slice(5, 7), 16);
-                return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? "#1a1a1a" : "#ffffff";
-              })();
-              const isDark = tc === "#1a1a1a";
-              const mutedText = isDark ? "rgba(10,10,10,0.55)" : "rgba(255,255,255,0.65)";
-              const iconColor = isDark ? "rgba(10,10,10,0.7)" : "rgba(255,255,255,0.85)";
 
               return (
                 <div className="space-y-5">
-                  <div className="space-y-3">
+                  <div className="space-y-0">
                     {coverage.map((item) => (
-                      <div key={item.factor.id} className="flex items-center justify-between rounded-[20px] p-4" style={{ backgroundColor: itemBg }}>
+                      <div key={item.factor.id} className="flex items-center justify-between py-3 border-b border-dashed border-[var(--ink)]/10 last:border-b-0">
                         <div className="flex items-center gap-3">
                           {item.covered ? (
-                            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" className="shrink-0" style={{ color: iconColor }}>
-                              <circle cx="11" cy="11" r="10" fill="currentColor" />
-                              <path d="M7 11.5l2.5 2.5 5-5" stroke={isDark ? "#fff" : "#1a1a1a"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0 text-green-500">
+                              <circle cx="10" cy="10" r="9" fill="currentColor" />
+                              <path d="M6.5 10.5l2 2 4.5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                           ) : (
-                            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" className="shrink-0" style={{ color: iconColor }}>
-                              <circle cx="11" cy="11" r="10" fill="currentColor" />
-                              <path d="M8 8l6 6M14 8l-6 6" stroke={isDark ? "#fff" : "#1a1a1a"} strokeWidth="2" strokeLinecap="round" />
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0 text-red-400">
+                              <circle cx="10" cy="10" r="9" fill="currentColor" />
+                              <path d="M7.5 7.5l5 5M12.5 7.5l-5 5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
                             </svg>
                           )}
-                          <span className="text-sm font-semibold" style={{ color: tc }}>{item.factor.name}</span>
+                          <span className="text-sm font-semibold text-[var(--ink)]">{item.factor.name}</span>
                         </div>
-                        <span className="text-sm font-semibold" style={{ color: mutedText }}>
+                        <span className={`text-sm font-semibold ${item.covered ? 'text-green-600' : 'text-red-400'}`}>
                           {item.covered ? "已覆盖" : "未覆盖"}
                         </span>
                       </div>
@@ -1565,8 +1546,8 @@ function CreatePageContent() {
                   </div>
 
                   {coverage.some((c) => !c.covered) && (
-                    <div className="rounded-[20px] p-4" style={{ backgroundColor: itemBg }}>
-                      <p className="text-sm font-semibold" style={{ color: tc }}>
+                    <div className="rounded-[20px] p-4 bg-[var(--ink)]/5">
+                      <p className="text-sm font-semibold text-[var(--ink)]">
                         {coverage.filter((c) => !c.covered).map((c) => `"${c.factor.name}"`).join("、")}
                         目前没有被任何题目测量。
                       </p>

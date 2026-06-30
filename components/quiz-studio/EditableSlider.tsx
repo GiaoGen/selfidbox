@@ -34,14 +34,12 @@ export function EditableSlider({
   );
 
   function handlePointerDown(e: React.PointerEvent) {
-    e.preventDefault();
     trackRef.current!.setPointerCapture(e.pointerId);
     update(e.clientX);
   }
 
   function handlePointerMove(e: React.PointerEvent) {
     if (e.buttons > 0) {
-      e.preventDefault();
       update(e.clientX);
     }
   }
@@ -62,22 +60,28 @@ export function EditableSlider({
 
   return (
     <div className={`flex items-center gap-3 ${className}`}>
+      {/* Touch target wrapper: py-3 expands hit area to ~30px for reliable mobile dragging */}
       <div
         ref={trackRef}
+        className="relative flex-1 py-3 cursor-pointer touch-none select-none"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        className="relative h-1.5 flex-1 cursor-pointer rounded-full touch-none select-none"
-        style={{ backgroundColor: trackBg, opacity: trackBgOpacity }}
+        onLostPointerCapture={handlePointerUp}
       >
         <div
-          className="absolute inset-y-0 left-0 rounded-full transition-[width]"
-          style={{ width: `${pct}%`, backgroundColor: fillColor, opacity: fillOpacity }}
-        />
-        <div
-          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 rounded-full shadow-sm ring-1 ring-white/40 transition-transform hover:scale-110 active:scale-95"
-          style={{ left: `${pct}%`, backgroundColor: thumbColor }}
-        />
+          className="relative h-1.5 w-full rounded-full"
+          style={{ backgroundColor: trackBg, opacity: trackBgOpacity }}
+        >
+          <div
+            className="absolute inset-y-0 left-0 rounded-full transition-[width]"
+            style={{ width: `${pct}%`, backgroundColor: fillColor, opacity: fillOpacity }}
+          />
+          <div
+            className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 rounded-full shadow-sm ring-1 ring-white/40 transition-transform hover:scale-110 active:scale-95"
+            style={{ left: `${pct}%`, backgroundColor: thumbColor }}
+          />
+        </div>
       </div>
       <span className="w-8 text-right text-xs font-semibold tabular-nums" style={{ color: valueColor }}>
         {value}
