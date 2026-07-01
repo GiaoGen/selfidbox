@@ -1,6 +1,6 @@
 # TASKER STATUS
 
-Last updated: 2026-06-26
+Last updated: 2026-07-02
 
 ---
 
@@ -56,6 +56,36 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
 ---
 
 ## Recent Progress (Last 30 Days)
+
+### 2026-07-02 — Hydration mismatch 修复 + 结果图片预加载 + Explore 滚动动画优化
+
+- **Hydration mismatch 三处修复**：
+  - `ExploreClient.tsx`：`Date.now()` 在 `filterByRange` 中导致 SSR/hydration 过滤结果不一致 → 加 `now` state，初始 0 时跳过过滤，`useEffect` 后更新
+  - `ExploreClient.tsx`：`Math.random()` 在 `pickRandom` 中导致随机卡片顺序不一致 → 改为基于 `card.id + seed` 的 deterministic hash sort
+  - `Greeting.tsx`：`useRef(Math.random())` 在 SSR/hydration 间值不同 → 改为 `useState({ type: "time" })` 确定性初始值 + `useEffect` 随机选择
+- **结果图片预加载**：`QuizPlayer` 答题阶段 `new Image()` 静默预加载所有 result 的 `image_url`，share card 弹出时图片从缓存瞬间渲染
+- **Explore 滚动感知进场动画**：从 [slug] 返回 explore 时不再从卡片 #0 开始 stagger，改为等 scroll 恢复后只对视口附近卡片播放动画（`scroll` 事件 + 300ms 兜底 timer）
+- **Commits**: `a9a8fe3`
+
+### 2026-06-30 — 弹窗去色 + 虚线分割 + EditableSlider 移动端触摸修复
+
+- **区分度检查 / 因子覆盖检查弹窗**：移除 `accentColors` 自动取色背景和 inline 颜色计算，条目改用 CSS 变量（`var(--ink)` / `var(--muted)`）+ `border-b border-dashed` 虚线分割；覆盖检查 icon 改为语义色（green-500 / red-400）
+- **EditableSlider 移动端触摸**：新增 `py-3` 触摸层 wrapper（触摸面积 6px → ~30px），pointer 事件从视觉轨道移到 wrapper，移除冗余 `e.preventDefault()`，新增 `onLostPointerCapture` 防止 capture 意外丢失
+- **Commits**: `49551fa`
+
+### 2026-06-30 — Explore 时间下拉布局修复
+
+- **时间下拉菜单**：时间范围 pills 和「站内精选」toggle 从水平单行改为 `flex-col` 垂直两行布局，中间 `border-t` 分割，防止 pills 数量变化时溢出
+- **Commits**: `c6cb7a5`
+
+### 2026-06-28 — Explore 测验候选库扩充（quiz-scout agent 采集）
+
+- **quiz-scout agent** 搜索并验证 30 个公开可访问的测验/测试候选
+- 输出文档：`docs/explore-quiz-candidates-2026-06-28.md`，含完整 Markdown 表格
+- 覆盖 17 个平台、10 个中文来源、6 个日韩来源、14 个国际来源
+- 主题覆盖：人格/性格、审美/风格、恋爱/关系、趣味/娱乐、职业/工作、色彩/元素、动物/原型、心理/情感、友情、生活方式
+- 全字段已中文化（name / description / long description / tags），描述 ≤15 中文字符
+- 已排除需登录/付费/下载应用的候选
 
 ### 2026-06-26 — 卡片颜色全链路统一 + 自定义颜色 + 图片主色调提取 + 背景模糊移除
 
