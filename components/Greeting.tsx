@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 
@@ -17,17 +17,21 @@ function timeGreeting(): string {
   return "晚上好";
 }
 
-/* eslint-disable react-hooks/purity, react-hooks/refs */
 export function Greeting({ className = "" }: { className?: string }) {
   const [name, setName] = useState<string | null | undefined>(undefined);
   const supabase = createClient();
 
-  // Pick one of: time greeting or a random tagline — stable for the session
-  const pick = useRef<{ type: "time" } | { type: "tagline"; text: string }>(
-    Math.random() < 0.5
-      ? { type: "time" }
-      : { type: "tagline", text: TAGLINES[Math.floor(Math.random() * TAGLINES.length)] },
+  // Pick one of: time greeting or a random tagline — stable for the session.
+  // Initialised deterministically for SSR; random choice runs client-side in useEffect.
+  const [pick, setPick] = useState<{ type: "time" } | { type: "tagline"; text: string }>(
+    { type: "time" },
   );
+
+  useEffect(() => {
+    if (Math.random() < 0.5) return; // keep "time"
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPick({ type: "tagline", text: TAGLINES[Math.floor(Math.random() * TAGLINES.length)] });
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user: u } }) => {
@@ -51,10 +55,10 @@ export function Greeting({ className = "" }: { className?: string }) {
 
   let display: string = "";
   if (name !== undefined) {
-    if (pick.current.type === "time") {
+    if (pick.type === "time") {
       display = name ? `${timeGreeting()}，${name}` : timeGreeting();
     } else {
-      display = pick.current.text;
+      display = pick.text;
     }
   }
 
@@ -73,4 +77,3 @@ export function Greeting({ className = "" }: { className?: string }) {
     </div>
   );
 }
-/* eslint-enable react-hooks/purity, react-hooks/refs */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { QuizRuntimeData, AnswerRecord, RankedRuntimeResult, RankedRuntimeResultV2 } from "@/lib/quiz-runtime";
 import { calculateUserVector, rankRuntimeResultsV2, MAX_SANDBOX_ATTEMPTS } from "@/lib/quiz-runtime";
 import { createClient } from "@/lib/supabase/client";
@@ -29,6 +29,17 @@ export function QuizPlayer({ quiz }: Props) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [syncError, setSyncError] = useState<string>("");
   const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Preload result images during quiz phase so the share card renders instantly
+  useEffect(() => {
+    quiz.results.forEach((r) => {
+      if (r.image_url) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = r.image_url;
+      }
+    });
+  }, [quiz.results]);
 
   const questions = quiz.questions;
   const total = questions.length;

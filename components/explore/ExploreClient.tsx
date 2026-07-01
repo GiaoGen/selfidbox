@@ -30,10 +30,10 @@ function filterByTab(cards: ExploreCard[], tab: string): ExploreCard[] {
   return result;
 }
 
-function filterByRange(cards: ExploreCard[], range: Range): ExploreCard[] {
-  if (range === "all") return cards;
+function filterByRange(cards: ExploreCard[], range: Range, now: number): ExploreCard[] {
+  if (range === "all" || now === 0) return cards;
   const days = range === "7d" ? 7 : 30;
-  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  const cutoff = now - days * 24 * 60 * 60 * 1000;
   return cards.filter((c) => {
     if (!c.created_at) return true;
     return new Date(c.created_at).getTime() >= cutoff;
@@ -59,14 +59,23 @@ function filterBySource(
   return cards.filter((c) => c.source_type === source);
 }
 
-/** Pick up to `count` random items using Fisher-Yates shuffle */
-function pickRandom(cards: ExploreCard[], count: number): ExploreCard[] {
-  const shuffled = [...cards];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
+/** Pick up to `count` items deterministically from a seed (avoids hydration mismatch from Math.random) */
+function pickRandom(cards: ExploreCard[], count: number, seed: number): ExploreCard[] {
+  const shuffled = [...cards].sort((a, b) => {
+    const ha = simpleHash(a.id + String(seed));
+    const hb = simpleHash(b.id + String(seed));
+    return ha - hb;
+  });
   return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
+function simpleHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return hash;
 }
 
 /* ------------------------------------------------------------------ */
@@ -143,6 +152,47 @@ export function ExploreClient({
   const [showInternalOnly, setShowInternalOnly] = useState(initialInternalOnly ?? false);
   const [randomSeed, setRandomSeed] = useState(0);
   const filterRowRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [firstAnimatedIndex, setFirstAnimatedIndex] = useState<number | null>(null);
+  const [now, setNow] = useState<number>(0); // client-side timestamp for deterministic range filter
+
+  // Capture client timestamp after hydration (avoids Date.now() mismatch)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setNow(Date.now()); }, []);
+
+  // On mount: wait for Next.js scroll restoration, then compute which card
+  // sits at the viewport top.  Only animate cards within ~5 rows of that
+  // position — the rest render immediately.
+  useEffect(() => {
+    let done = false;
+
+    function measure() {
+      if (done) return;
+      done = true;
+      const grid = gridRef.current;
+      if (!grid) return;
+      const rect = grid.getBoundingClientRect();
+      if (rect.top >= 0) {
+        setFirstAnimatedIndex(0);
+        return;
+      }
+      const width = window.innerWidth;
+      const cardsPerRow = width >= 1280 ? 3 : width >= 640 ? 2 : 1;
+      const rowHeight = 192; // approx card height + gap
+      const hiddenRows = Math.floor(-rect.top / rowHeight);
+      const hiddenCards = hiddenRows * cardsPerRow;
+      setFirstAnimatedIndex(Math.max(0, hiddenCards - 5));
+    }
+
+    // Fire on first scroll (Next.js scroll restoration) or after 300ms at the latest
+    window.addEventListener("scroll", measure, { once: true });
+    const fallback = setTimeout(measure, 300);
+
+    return () => {
+      window.removeEventListener("scroll", measure);
+      clearTimeout(fallback);
+    };
+  }, []);
 
   // When navigated to via navbar search, auto-open dropdown
   useEffect(() => {
@@ -170,13 +220,13 @@ export function ExploreClient({
     // Random mode — bypass tab/range/source, pick 5 internal quizzes
     if (activeTab === "random") {
       const pool = sites.filter((c) => c.source_type === "community");
-      return pickRandom(pool, 5);
+      return pickRandom(pool, 5, randomSeed);
     }
     let result = filterByTab(sites, activeTab);
     if (showInternalOnly) result = filterBySource(result, "community");
-    result = filterByRange(result, activeRange);
+    result = filterByRange(result, activeRange, now);
     return sortExploreCards(result);
-  }, [sites, activeTab, activeRange, showInternalOnly, randomSeed]);
+  }, [sites, activeTab, activeRange, showInternalOnly, randomSeed, now]);
 
   const searchResults = useMemo(() => {
     if (!searching) return [];
@@ -410,22 +460,42 @@ export function ExploreClient({
         </div>
       ) : (
         <motion.div
+          ref={gridRef}
           className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
-          variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
-          initial="hidden"
-          animate="visible"
         >
-          {filtered.map((card) => (
-            <motion.div
-              key={card.id}
-              variants={{
-                hidden: { opacity: 0, scale: 0.90 },
-                visible: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 260, damping: 22 } }
-              }}
-            >
-              <TestCard site={card} />
-            </motion.div>
-          ))}
+          {filtered.map((card, i) => {
+            // Not measured yet: render all cards statically (no animation)
+            if (firstAnimatedIndex === null) {
+              return (
+                <motion.div key={card.id} initial={{ opacity: 1, scale: 1 }} animate={false}>
+                  <TestCard site={card} />
+                </motion.div>
+              );
+            }
+
+            // Measured: cards above the animated zone stay static;
+            // cards inside the zone get staggered entrance via key change
+            const shouldAnimate = i >= firstAnimatedIndex;
+            if (!shouldAnimate) {
+              return (
+                <motion.div key={card.id} initial={{ opacity: 1, scale: 1 }} animate={false}>
+                  <TestCard site={card} />
+                </motion.div>
+              );
+            }
+
+            const delay = (i - firstAnimatedIndex) * 0.08;
+            return (
+              <motion.div
+                key={`${card.id}-anim`}
+                initial={{ opacity: 0, scale: 0.90 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: "spring", stiffness: 260, damping: 22, delay }}
+              >
+                <TestCard site={card} />
+              </motion.div>
+            );
+          })}
         </motion.div>
       )}
 
