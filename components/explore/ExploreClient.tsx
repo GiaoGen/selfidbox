@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import Link from "next/link";
 import type { ExploreCard } from "@/lib/explore/types";
 import { sortExploreCards } from "@/lib/explore/sort";
@@ -150,49 +149,14 @@ export function ExploreClient({
   const [query, setQuery] = useState(initialSearch || "");
   const [timeOpen, setTimeOpen] = useState(false);
   const [showInternalOnly, setShowInternalOnly] = useState(initialInternalOnly ?? false);
+  const [sortByLatest, setSortByLatest] = useState(false);
   const [randomSeed, setRandomSeed] = useState(0);
   const filterRowRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const [firstAnimatedIndex, setFirstAnimatedIndex] = useState<number | null>(null);
   const [now, setNow] = useState<number>(0); // client-side timestamp for deterministic range filter
 
   // Capture client timestamp after hydration (avoids Date.now() mismatch)
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setNow(Date.now()); }, []);
-
-  // On mount: wait for Next.js scroll restoration, then compute which card
-  // sits at the viewport top.  Only animate cards within ~5 rows of that
-  // position — the rest render immediately.
-  useEffect(() => {
-    let done = false;
-
-    function measure() {
-      if (done) return;
-      done = true;
-      const grid = gridRef.current;
-      if (!grid) return;
-      const rect = grid.getBoundingClientRect();
-      if (rect.top >= 0) {
-        setFirstAnimatedIndex(0);
-        return;
-      }
-      const width = window.innerWidth;
-      const cardsPerRow = width >= 1280 ? 3 : width >= 640 ? 2 : 1;
-      const rowHeight = 192; // approx card height + gap
-      const hiddenRows = Math.floor(-rect.top / rowHeight);
-      const hiddenCards = hiddenRows * cardsPerRow;
-      setFirstAnimatedIndex(Math.max(0, hiddenCards - 5));
-    }
-
-    // Fire on first scroll (Next.js scroll restoration) or after 300ms at the latest
-    window.addEventListener("scroll", measure, { once: true });
-    const fallback = setTimeout(measure, 300);
-
-    return () => {
-      window.removeEventListener("scroll", measure);
-      clearTimeout(fallback);
-    };
-  }, []);
 
   // When navigated to via navbar search, auto-open dropdown
   useEffect(() => {
@@ -225,8 +189,14 @@ export function ExploreClient({
     let result = filterByTab(sites, activeTab);
     if (showInternalOnly) result = filterBySource(result, "community");
     result = filterByRange(result, activeRange, now);
+    // "最新" sorts by creation time (desc) for all tabs except "hot" and "random"
+    if (sortByLatest && activeTab !== "hot") {
+      return [...result].sort(
+        (a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime(),
+      );
+    }
     return sortExploreCards(result);
-  }, [sites, activeTab, activeRange, showInternalOnly, randomSeed, now]);
+  }, [sites, activeTab, activeRange, showInternalOnly, randomSeed, now, sortByLatest]);
 
   const searchResults = useMemo(() => {
     if (!searching) return [];
@@ -421,6 +391,29 @@ export function ExploreClient({
                     </button>
                   );
                 })}
+
+                {/* Divider */}
+                <span className="w-px h-4 bg-[var(--hairline)] mx-1" />
+
+                {/* Sort by latest */}
+                <button
+                  type="button"
+                  onClick={() => setSortByLatest((v) => !v)}
+                  className="shrink-0 px-3 py-1 text-[13px] font-semibold transition-colors"
+                  style={
+                    sortByLatest
+                      ? { color: "var(--ink)" }
+                      : { color: "var(--muted)" }
+                  }
+                  onMouseEnter={(e) => {
+                    if (!sortByLatest) (e.target as HTMLElement).style.color = "var(--ink)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!sortByLatest) (e.target as HTMLElement).style.color = "var(--muted)";
+                  }}
+                >
+                  最新
+                </button>
               </div>
 
               {/* Row 2: 站内精选 toggle */}
@@ -459,44 +452,13 @@ export function ExploreClient({
           <p className="text-sm text-[var(--muted)]">换个分类或时间范围看看。</p>
         </div>
       ) : (
-        <motion.div
-          ref={gridRef}
-          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
-        >
-          {filtered.map((card, i) => {
-            // Not measured yet: render all cards statically (no animation)
-            if (firstAnimatedIndex === null) {
-              return (
-                <motion.div key={card.id} initial={{ opacity: 1, scale: 1 }} animate={false}>
-                  <TestCard site={card} />
-                </motion.div>
-              );
-            }
-
-            // Measured: cards above the animated zone stay static;
-            // cards inside the zone get staggered entrance via key change
-            const shouldAnimate = i >= firstAnimatedIndex;
-            if (!shouldAnimate) {
-              return (
-                <motion.div key={card.id} initial={{ opacity: 1, scale: 1 }} animate={false}>
-                  <TestCard site={card} />
-                </motion.div>
-              );
-            }
-
-            const delay = (i - firstAnimatedIndex) * 0.08;
-            return (
-              <motion.div
-                key={`${card.id}-anim`}
-                initial={{ opacity: 0, scale: 0.90 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ type: "spring", stiffness: 260, damping: 22, delay }}
-              >
-                <TestCard site={card} />
-              </motion.div>
-            );
-          })}
-        </motion.div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((card) => (
+            <div key={card.id}>
+              <TestCard site={card} />
+            </div>
+          ))}
+        </div>
       )}
 
       {/* ---- Random mode: refresh button ---- */}
