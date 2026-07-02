@@ -37,7 +37,7 @@ self.addEventListener("activate", (event) => {
 /* ---- Fetch: stale-while-revalidate for nav, cache-first for assets ---- */
 self.addEventListener("fetch", (event) => {
   const { request } = event;
-  let url: URL;
+  let url;
   try {
     url = new URL(request.url);
   } catch {

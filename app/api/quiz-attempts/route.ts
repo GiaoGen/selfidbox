@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { rebuildUserProfile } from "@/lib/rebuild-user-profile";
 import { MAX_SANDBOX_ATTEMPTS } from "@/lib/quiz-runtime";
 import { grantCredit } from "@/lib/credits/service";
@@ -126,16 +127,10 @@ export async function POST(request: Request) {
     console.log("[QuizAttempt] answers saved");
   }
 
-  /* ---- 5. Increment quiz attempt_count ---- */
+  /* ---- 5. Increment quiz attempt_count (service client — bypasses RLS) ---- */
   try {
-    const { data: quizRow } = await supabase
-      .from("quizzes")
-      .select("attempt_count")
-      .eq("id", quizId)
-      .single();
-
     const newCount = (quizRow?.attempt_count ?? 0) + 1;
-    await supabase
+    await createServiceClient()
       .from("quizzes")
       .update({ attempt_count: newCount })
       .eq("id", quizId);
