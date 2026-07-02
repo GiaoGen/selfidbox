@@ -125,6 +125,7 @@ type ExploreClientProps = {
   initialRange: Range;
   initialSearch?: string;
   initialInternalOnly?: boolean;
+  initialSortByLatest?: boolean;
 };
 
 /* ------------------------------------------------------------------ */
@@ -140,6 +141,7 @@ export function ExploreClient({
   initialRange,
   initialSearch,
   initialInternalOnly,
+  initialSortByLatest,
 }: ExploreClientProps) {
   const router = useRouter();
 
@@ -149,7 +151,7 @@ export function ExploreClient({
   const [query, setQuery] = useState(initialSearch || "");
   const [timeOpen, setTimeOpen] = useState(false);
   const [showInternalOnly, setShowInternalOnly] = useState(initialInternalOnly ?? false);
-  const [sortByLatest, setSortByLatest] = useState(false);
+  const [sortByLatest, setSortByLatest] = useState(initialSortByLatest ?? false);
   const [randomSeed, setRandomSeed] = useState(0);
   const filterRowRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState<number>(0); // client-side timestamp for deterministic range filter
@@ -209,11 +211,12 @@ export function ExploreClient({
 
   /* ---- URL sync (no reload) ---- */
   const syncURL = useCallback(
-    (tab: string, range: Range, internalOnly: boolean) => {
+    (tab: string, range: Range, internalOnly: boolean, latest: boolean) => {
       const params = new URLSearchParams();
       if (tab !== "hot") params.set("tab", tab);
       if (range !== "all") params.set("range", range);
       if (internalOnly) params.set("internal", "1");
+      if (latest) params.set("latest", "1");
       const qs = params.toString();
       router.replace(`/explore${qs ? `?${qs}` : ""}`, { scroll: false });
     },
@@ -222,19 +225,25 @@ export function ExploreClient({
 
   function selectTab(tab: string) {
     setActiveTab(tab);
-    syncURL(tab, activeRange, showInternalOnly);
+    syncURL(tab, activeRange, showInternalOnly, sortByLatest);
   }
 
   function selectRange(range: Range) {
     setActiveRange(range);
     setTimeOpen(false);
-    syncURL(activeTab, range, showInternalOnly);
+    syncURL(activeTab, range, showInternalOnly, sortByLatest);
   }
 
   function toggleInternalOnly() {
     const next = !showInternalOnly;
     setShowInternalOnly(next);
-    syncURL(activeTab, activeRange, next);
+    syncURL(activeTab, activeRange, next, sortByLatest);
+  }
+
+  function toggleSortByLatest() {
+    const next = !sortByLatest;
+    setSortByLatest(next);
+    syncURL(activeTab, activeRange, showInternalOnly, next);
   }
 
   function exitSearch() {
@@ -392,31 +401,9 @@ export function ExploreClient({
                   );
                 })}
 
-                {/* Divider */}
-                <span className="w-px h-4 bg-[var(--hairline)] mx-1" />
-
-                {/* Sort by latest */}
-                <button
-                  type="button"
-                  onClick={() => setSortByLatest((v) => !v)}
-                  className="shrink-0 px-3 py-1 text-[13px] font-semibold transition-colors"
-                  style={
-                    sortByLatest
-                      ? { color: "var(--ink)" }
-                      : { color: "var(--muted)" }
-                  }
-                  onMouseEnter={(e) => {
-                    if (!sortByLatest) (e.target as HTMLElement).style.color = "var(--ink)";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!sortByLatest) (e.target as HTMLElement).style.color = "var(--muted)";
-                  }}
-                >
-                  最新
-                </button>
               </div>
 
-              {/* Row 2: 站内精选 toggle */}
+              {/* Row 2: 站内精选 + 时间排序 toggles */}
               <div className="flex items-center gap-2 pt-1 border-t border-[var(--hairline)]">
                 <button
                   type="button"
@@ -435,6 +422,28 @@ export function ExploreClient({
                   }}
                 >
                   站内精选
+                </button>
+
+                {/* Divider */}
+                <span className="w-px h-4 bg-[var(--hairline)] mx-1" />
+
+                <button
+                  type="button"
+                  onClick={toggleSortByLatest}
+                  className="shrink-0 px-3 py-1 text-[13px] font-semibold transition-colors"
+                  style={
+                    sortByLatest
+                      ? { color: "var(--ink)" }
+                      : { color: "var(--muted)" }
+                  }
+                  onMouseEnter={(e) => {
+                    if (!sortByLatest) (e.target as HTMLElement).style.color = "var(--ink)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!sortByLatest) (e.target as HTMLElement).style.color = "var(--muted)";
+                  }}
+                >
+                  时间排序
                 </button>
               </div>
             </div>

@@ -53,7 +53,7 @@ export const metadata: Metadata = {
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; range?: string; search?: string; internal?: string }>;
+  searchParams: Promise<{ tab?: string; range?: string; search?: string; internal?: string; latest?: string }>;
 }) {
   const sp = await searchParams;
 
@@ -64,6 +64,7 @@ export default async function ExplorePage({
   ]);
 
   const showInternalOnly = sp.internal === "1";
+  const sortByLatest = sp.latest === "1";
 
   const categories: ExploreCategory[] = categoryRows.map(mapCategory);
   const siteCards: ExploreCard[] = siteRows
@@ -110,6 +111,7 @@ export default async function ExplorePage({
           initialRange={parseRange(sp.range)}
           initialSearch={sp.search || ""}
           initialInternalOnly={showInternalOnly}
+          initialSortByLatest={sortByLatest}
         />
       </section>
     </main>
