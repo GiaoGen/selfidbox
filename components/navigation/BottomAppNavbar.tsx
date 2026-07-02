@@ -26,7 +26,7 @@ function NavItem({
   label: string;
   onClick?: () => void;
 }) {
-  const classes = `flex items-center gap-2 px-5 py-3 text-[14px] font-semibold transition-colors duration-200 ${
+  const classes = `flex items-center gap-2.5 rounded-full px-6 py-3.5 text-[15px] font-semibold transition-colors duration-200 ${
     active
       ? "bg-[var(--ink)] text-white"
       : "text-[var(--muted)] hover:text-[var(--ink)]"
@@ -152,7 +152,7 @@ export function BottomAppNavbar() {
           {/* menu sheet — receipt style */}
           <div
             ref={profileMenuRef}
-            className="relative fixed bottom-[calc(84px+env(safe-area-inset-bottom))] left-4 right-4 z-50 mx-auto max-w-sm bg-[var(--surface-card)] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.20)]"
+            className="relative fixed bottom-[calc(92px+env(safe-area-inset-bottom))] left-4 right-4 z-50 mx-auto max-w-sm bg-[var(--surface-card)] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.20)]"
           >
             {/* ---- 锯齿：顶部穿孔条 ---- */}
             <div
@@ -222,7 +222,7 @@ export function BottomAppNavbar() {
         style={{ pointerEvents: "none" }}
       >
         <div
-          className="flex items-center bg-[var(--surface-card)]/10 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.20)]"
+          className="flex items-center rounded-full bg-[var(--surface-card)]/10 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.20)] px-2 py-2"
           style={{ pointerEvents: "auto" }}
         >
           <NavItem
@@ -246,7 +246,7 @@ export function BottomAppNavbar() {
           <button
             type="button"
             onClick={openSearch}
-            className="flex items-center gap-2 px-5 py-3 text-[14px] font-semibold text-[var(--muted)] transition-colors duration-200 hover:text-[var(--ink)]"
+            className="flex items-center gap-2.5 rounded-full px-6 py-3.5 text-[15px] font-semibold text-[var(--muted)] transition-colors duration-200 hover:text-[var(--ink)]"
             aria-label="搜索"
           >
             <Search size={20} />
