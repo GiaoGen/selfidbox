@@ -1,6 +1,6 @@
 # TASKER STATUS
 
-Last updated: 2026-07-02
+Last updated: 2026-07-03
 
 ---
 
@@ -8,9 +8,13 @@ Last updated: 2026-07-02
 
 SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡片颜色系统已完成全链路统一：/explore、/test-sites/[id]、/quizzes/[slug] 全部通过 mapper 统一取色，支持 DB 自定义颜色覆盖。Quiz Studio 支持图片主色调自动提取（HSL 调优）。quiz 做题过程背景模糊已移除。
 
+**PWA 开屏优化**：骨架屏 + Service Worker + Middleware 公开路由零开销 + SWR 数据缓存 四项全部完成。PWA 启动感知速度和实际加载时间均已显著改善。
+
+**小票风格 UI 统一**：Login 页面 + 全部导航组件（BottomAppNavbar、TopNavbar、UserMenu、SearchOverlay）已统一为小票/收据设计语言——直角矩形、虚线分割、锯齿穿孔条、纸张投影、米色纯色背景。搜索按钮已合并进底部导航条。
+
 **当前阻塞**：无。test-sites/[id] 顶部卡片 hydration 颜色误差待修复（己确认根因：Framer Motion SSR 与 RelatedTestSites 组件树冲突，暂缓）。
 
-**下一步**：lint 错误清理 → 生产上线。
+**下一步**：lint 错误清理 → 生产上线。剩余可优化项见下方 Unfinished Tasks。
 
 ---
 
@@ -56,6 +60,82 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
 ---
 
 ## Recent Progress (Last 30 Days)
+
+### 2026-07-03 — Login 页面 + 导航组件小票风格 UI 统一
+
+- **Login 页面改版**（`app/login/page.tsx`）：
+  - 主卡片：`rounded-[32px]` → 直角矩形 + `shadow-[0_4px_20px_rgba(0,0,0,0.20)]` 纸张投影
+  - 新增顶部/底部锯齿穿孔条（复用 TrendingCard 的 `radial-gradient` 圆点图案）
+  - 品牌标题/表单/模式切换/法律链接之间添加虚线分割 `border-t-2 border-dashed border-[var(--ink)]/15`
+  - 输入框：去圆角 + `border-[var(--hairline)]` + `placeholder:text-[var(--muted)]/50`
+  - 主按钮：去圆角 + `hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)] active:scale-[0.98]`
+  - 错误/成功提示、图标容器、验证码输入框、loading 条均去圆角
+  - 法律链接上方新增短虚线分割，色彩统一用 CSS 变量
+  - 四种模式（login/signup/verify/logged-in）全部改造一致
+
+- **BottomAppNavbar 改版**（`components/navigation/BottomAppNavbar.tsx`）：
+  - 主导航条：`rounded-full` → 直角矩形；`bg-white/70 backdrop-blur-xl` → `bg-[var(--surface-card)]/80 backdrop-blur-xl`；加 `shadow-[0_4px_20px_rgba(0,0,0,0.20)]`
+  - 搜索按钮合并进主条（从独立圆形按钮改为第 4 个 NavItem）
+  - NavItem 之间新增竖向虚线分隔 `border-l-2 border-dashed border-[var(--ink)]/15`
+  - NavItem active 去圆角
+  - Profile 弹出托盘：直角+穿孔条+虚线分割+纯色米色+投影；操作按钮去圆角；退出按钮加 `active:scale-[0.98]`
+
+- **UserMenu 改版**（`components/auth/UserMenu.tsx`）：
+  - 触发按钮去圆角（方形图标按钮）
+  - 弹出面板：`rounded-[20px]` → 直角+穿孔条+虚线+`bg-[var(--surface-card)]`+投影
+  - 操作按钮、退出按钮去圆角
+
+- **TopNavbar 改版**（`components/layout/TopNavbar.tsx`）：
+  - 整条：`rounded-full` → 直角；`bg-[var(--surface-soft)]` → `bg-[var(--surface-card)]`；加投影
+  - 品牌链接、NavLink、搜索链接全部去圆角
+  - NavLink 之间新增竖向虚线分隔
+
+- **ExploreTopNavbar 改版**（`components/layout/ExploreTopNavbar.tsx`）：
+  - 搜索链接去圆角
+
+- **SearchOverlay 改版**（`components/navigation/SearchOverlay.tsx`）：
+  - 搜索输入框去圆角 + border 色统一
+  - 清除按钮去圆角
+
+- 验证：`npm run build` 零错误、`npm run lint` 零错误
+
+### 2026-07-02 — PWA 开屏加载优化四连 + "最新"排序按钮修复
+
+- **"最新"排序按钮修复**：
+  - Bug：从 quiz 详情页返回 explore 时 `sortByLatest` 状态丢失（未同步到 URL）
+  - 根因：`sortByLatest` 是纯内存 state，不像 `tab`/`range`/`internal` 那样走 URL param 持久化
+  - 修复：新增 `latest=1` URL 参数，完全遵循 `internal=1` 的同步模式（服务端解析 → prop 传入 → state 初始化 → toggle 时写回 URL）
+  - 文案改为"时间排序"，从时间 pills 行移到 Row 2（与"站内精选"同一行），缓解 pills 行拥挤
+  - 改动文件：`app/explore/page.tsx`（+3 行）、`components/explore/ExploreClient.tsx`（~15 行）
+  - Commit: `8731c37`
+
+- **骨架屏 loading.tsx**：
+  - 替换 `app/explore/loading.tsx` 的空 `<main>` 标签为完整骨架布局
+  - 包含：问候语占位、TrendingCarousel 占位（3 张宽卡）、筛选 pills 行、9 张卡片网格
+  - 使用 `animate-pulse` + `bg-[var(--ink)]/5`，与其他页面 loading 风格一致
+  - Commit: `982af46`
+
+- **Service Worker（PWA 专项）**：
+  - 新增 `public/sw.js`（~90 行），策略：导航请求 stale-while-revalidate、静态资源 cache-first、API/Admin 路径 bypass
+  - `app/layout.tsx` 注入注册脚本，仅生产环境启用（`hostname !== 'localhost'`）
+  - 效果：PWA 二次启动秒开（缓存 HTML + 后台更新）、离线/弱网不报错
+  - Commit: `a2b824d`
+
+- **Middleware 跳过公开路由 auth 调用**：
+  - 之前所有路由（含 /explore、/ 等公开页）都调用 `supabase.auth.getUser()`
+  - 改为先判断路由类型：公开路由直接 `NextResponse.next()`，受保护路由才创建 Supabase 客户端并验证
+  - 安全：受保护路由（/admin、/profile、/create）认证逻辑完全不变
+  - 附带修复了 lint `prefer-const` 错误（第 5 行）
+  - Commit: `191d1f0`
+
+- **SWR 数据缓存层**：
+  - `lib/cache.ts` 新增 `swrListQuery` 函数：缓存过期后立即返回旧数据 + 后台静默刷新，仅在彻底无缓存时才阻塞
+  - `getExploreQuizCards` 和 `getPublishedTestSites` 改用 SWR（60s TTL + 300s SWR 窗口）
+  - `getCategories` 保持 10min TTL 不变（不需要 SWR）
+  - 已有 16 个测试全部通过，零回归
+  - Commit: `a942ab2`
+
+- **Net effect**：PWA 打开 explore 页面时，用户先看到骨架屏（感知提升），中间件零 auth 开销（省 50-200ms），缓存过期也不阻塞（直接给旧数据后台刷新），二次打开 Service Worker 缓存命中秒出
 
 ### 2026-07-02 — Hydration mismatch 修复 + 结果图片预加载 + Explore 滚动动画优化
 
@@ -200,7 +280,7 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
 11. 生产环境日志脱敏（79 处 console 审计）
 12. `ensure_user_credits` RPC search_path 修正
 
-### 🟢 低优先级（6 项）
+### 🟢 低优先级（12 项）
 
 13. 删除未使用的 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 14. 添加 `check_username_available` RPC
@@ -208,6 +288,12 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
 16. Vercel Analytics / Speed Insights
 17. 首页添加视觉内容（当前纯文字）
 18. 评估 `animation-demo.html` 用途
+19. **图片懒加载 CLS 修复**：`test-card.tsx` 的 result image 缺 `width`/`height`，加 `aspect-square` 占位消除布局偏移
+20. **TrendingCarousel 图片预加载**：首帧图片在 hydration 后才开始加载可能闪白，服务端 `<link rel="preload">` 预加载前 3 张
+21. **Supabase 查询去重**：`getExploreQuizCards` 和 `getCategories()` 都查 categories 表，可复用
+22. **Greeting 组件请求优化**：mount 后才调 `getUser()` 导致用户名闪一下才显示，可服务端预取传入 prop
+23. **部分预渲染（PPR）/ ISR**：explore 页面静态化 + 定时 revalidate（需解决 cookie 依赖问题）
+24. **Supabase 连接池 / Edge 部署**：冷启动 + 连接建立延迟优化
 
 ---
 

@@ -26,9 +26,9 @@ function NavItem({
   label: string;
   onClick?: () => void;
 }) {
-  const classes = `flex items-center gap-2 rounded-full px-5 py-3 text-[14px] font-semibold transition-colors duration-200 ${
+  const classes = `flex items-center gap-2 px-5 py-3 text-[14px] font-semibold transition-colors duration-200 ${
     active
-      ? "bg-[var(--ink)] text-white shadow-[0_2px_8px_rgba(10,10,10,0.15)]"
+      ? "bg-[var(--ink)] text-white"
       : "text-[var(--muted)] hover:text-[var(--ink)]"
   }`;
 
@@ -149,11 +149,21 @@ export function BottomAppNavbar() {
             onClick={() => setProfileMenuOpen(false)}
             aria-label="关闭菜单"
           />
-          {/* menu sheet */}
+          {/* menu sheet — receipt style */}
           <div
             ref={profileMenuRef}
-            className="fixed bottom-[calc(84px+env(safe-area-inset-bottom))] left-4 right-4 z-50 mx-auto max-w-sm rounded-[24px] border border-white/50 bg-white/75 p-4 shadow-[0_8px_40px_rgba(10,10,10,0.12)] backdrop-blur-xl"
+            className="relative fixed bottom-[calc(84px+env(safe-area-inset-bottom))] left-4 right-4 z-50 mx-auto max-w-sm bg-[var(--surface-card)] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.20)]"
           >
+            {/* ---- 锯齿：顶部穿孔条 ---- */}
+            <div
+              className="pointer-events-none absolute left-0 right-0 top-0 h-[6px]"
+              style={{
+                backgroundImage: "radial-gradient(circle at 4px 3px, var(--canvas) 2.5px, transparent 2.5px)",
+                backgroundSize: "8px 6px",
+                backgroundRepeat: "repeat-x",
+              }}
+            />
+
             <p className="truncate px-3 pt-1 text-[14px] font-semibold text-[var(--ink)]">
               {user.username ? `@${user.username}` : user.email}
             </p>
@@ -163,25 +173,39 @@ export function BottomAppNavbar() {
               </p>
             )}
 
+            <hr className="my-3 border-t-2 border-dashed border-[var(--ink)]/15" />
+
             <button
               type="button"
               onClick={() => {
                 setProfileMenuOpen(false);
                 setSourceOpen(true);
               }}
-              className="mt-1.5 w-full rounded-full px-3 py-2.5 text-left text-[14px] font-medium text-[var(--ink)]/70 transition hover:bg-[var(--ink)]/6"
+              className="w-full px-3 py-2.5 text-left text-[14px] font-medium text-[var(--ink)]/70 transition hover:bg-[var(--ink)]/6"
             >
               数据来源
             </button>
 
+            <hr className="my-3 border-t-2 border-dashed border-[var(--ink)]/15" />
+
             <button
               type="button"
               onClick={handleSignOut}
-              className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-[var(--ink)] px-4 py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+              className="inline-flex w-full items-center justify-center gap-1.5 bg-[var(--ink)] px-4 py-2.5 text-[14px] font-semibold text-white transition-shadow transition-transform duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)] active:scale-[0.98]"
             >
               <LogOut size={14} />
               退出登录
             </button>
+
+            {/* ---- 锯齿：底部穿孔条 ---- */}
+            <div
+              className="pointer-events-none absolute left-0 right-0 bottom-0 h-[6px]"
+              style={{
+                backgroundImage: "radial-gradient(circle at 4px 3px, var(--canvas) 2.5px, transparent 2.5px)",
+                backgroundSize: "8px 6px",
+                backgroundRepeat: "repeat-x",
+              }}
+            />
           </div>
         </>
       )}
@@ -198,43 +222,48 @@ export function BottomAppNavbar() {
         style={{ pointerEvents: "none" }}
       >
         <div
-          className="flex items-center gap-3 px-2"
+          className="flex items-center bg-[var(--surface-card)]/10 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.20)]"
           style={{ pointerEvents: "auto" }}
         >
-          {/* ---- Main capsule ---- */}
-          <div className="flex items-center gap-0.5 rounded-full border border-white/50 bg-white/70 px-2 py-2 shadow-[0_4px_24px_rgba(10,10,10,0.08),0_1px_3px_rgba(10,10,10,0.04)] backdrop-blur-xl">
-            <NavItem
-              href="/explore"
-              active={isExplore}
-              icon={<Compass size={20} />}
-              label="Explore"
-            />
-            <NavItem
-              href="/create"
-              active={isCreate}
-              icon={<WandSparkles size={20} />}
-              label="Create"
-            />
-            <NavItem
-              href="/profile"
-              active={isProfile}
-              icon={<User size={20} />}
-              label="Profile"
-              onClick={
-                isProfile ? () => setProfileMenuOpen((v) => !v) : undefined
-              }
-            />
-          </div>
+          <NavItem
+            href="/explore"
+            active={isExplore}
+            icon={<Compass size={20} />}
+            label="Explore"
+          />
 
-          {/* ---- Search circle ---- */}
+          <span className="h-6 border-l-2 border-dashed border-[var(--ink)]/15" />
+
+          <NavItem
+            href="/create"
+            active={isCreate}
+            icon={<WandSparkles size={20} />}
+            label="Create"
+          />
+
+          <span className="h-6 border-l-2 border-dashed border-[var(--ink)]/15" />
+
           <button
             type="button"
             onClick={openSearch}
-            className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/70 text-[var(--muted)] shadow-[0_4px_24px_rgba(10,10,10,0.08),0_1px_3px_rgba(10,10,10,0.04)] backdrop-blur-xl transition-colors transition-transform hover:text-[var(--ink)] active:scale-95"
+            className="flex items-center gap-2 px-5 py-3 text-[14px] font-semibold text-[var(--muted)] transition-colors duration-200 hover:text-[var(--ink)]"
             aria-label="搜索"
           >
-            <Search size={22} />
+            <Search size={20} />
+            <span className="hidden sm:inline">搜索</span>
           </button>
+
+          <span className="h-6 border-l-2 border-dashed border-[var(--ink)]/15" />
+
+          <NavItem
+            href="/profile"
+            active={isProfile}
+            icon={<User size={20} />}
+            label="Profile"
+            onClick={
+              isProfile ? () => setProfileMenuOpen((v) => !v) : undefined
+            }
+          />
         </div>
       </nav>
     </>

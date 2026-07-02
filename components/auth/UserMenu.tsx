@@ -67,13 +67,23 @@ export function UserMenu({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[var(--ink)] shadow-[0_1px_4px_rgba(10,10,10,0.08)] transition hover:bg-[var(--surface-strong)]"
+        className="flex h-9 w-9 items-center justify-center bg-white text-[var(--ink)] shadow-[0_1px_4px_rgba(10,10,10,0.08)] transition hover:bg-[var(--surface-strong)]"
       >
         <User size={16} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-56 rounded-[20px] bg-white p-3 shadow-[0_12px_40px_rgba(10,10,10,0.12)] ring-1 ring-[var(--ink)]/6">
+        <div className="absolute right-0 top-full mt-2 w-56 bg-[var(--surface-card)] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.20)]">
+          {/* ---- 锯齿：顶部穿孔条 ---- */}
+          <div
+            className="pointer-events-none absolute left-0 right-0 top-0 h-[6px]"
+            style={{
+              backgroundImage: "radial-gradient(circle at 4px 3px, var(--canvas) 2.5px, transparent 2.5px)",
+              backgroundSize: "8px 6px",
+              backgroundRepeat: "repeat-x",
+            }}
+          />
+
           <p className="truncate px-3 pt-1 text-[13px] font-semibold text-[var(--ink)]">
             {user.username ? `@${user.username}` : user.email}
           </p>
@@ -83,6 +93,8 @@ export function UserMenu({
             </p>
           )}
 
+          <hr className="my-3 border-t-2 border-dashed border-[var(--ink)]/15" />
+
           {actions?.map((action) => (
             <button
               key={action.label}
@@ -91,20 +103,32 @@ export function UserMenu({
                 setOpen(false);
                 action.onClick();
               }}
-              className="mt-1.5 w-full rounded-full px-3 py-2 text-left text-[13px] font-medium text-[var(--ink)]/70 transition hover:bg-[var(--ink)]/6"
+              className="w-full px-3 py-2 text-left text-[13px] font-medium text-[var(--ink)]/70 transition hover:bg-[var(--ink)]/6"
             >
               {action.label}
             </button>
           ))}
 
+          <hr className="my-3 border-t-2 border-dashed border-[var(--ink)]/15" />
+
           <button
             type="button"
             onClick={handleSignOut}
-            className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-[var(--ink)] px-4 py-2.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+            className="inline-flex w-full items-center justify-center gap-1.5 bg-[var(--ink)] px-4 py-2.5 text-[13px] font-semibold text-white transition-shadow transition-transform duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)] active:scale-[0.98]"
           >
             <LogOut size={14} />
             退出登录
           </button>
+
+          {/* ---- 锯齿：底部穿孔条 ---- */}
+          <div
+            className="pointer-events-none absolute left-0 right-0 bottom-0 h-[6px]"
+            style={{
+              backgroundImage: "radial-gradient(circle at 4px 3px, var(--canvas) 2.5px, transparent 2.5px)",
+              backgroundSize: "8px 6px",
+              backgroundRepeat: "repeat-x",
+            }}
+          />
         </div>
       )}
     </div>

@@ -124,7 +124,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
             <div
               className="shrink-0 pointer-events-auto flex items-center gap-2 px-3 pt-[calc(12px+env(safe-area-inset-top))] pb-2"
             >
-              <div className="flex flex-1 items-center gap-2 rounded-full border border-white/50 bg-white/80 pl-3 pr-2 py-2.5 shadow-[0_4px_24px_rgba(10,10,10,0.06)] backdrop-blur-xl">
+              <div className="flex flex-1 items-center gap-2 border border-[var(--hairline)] bg-white/90 pl-3 pr-2 py-2.5 shadow-[0_4px_20px_rgba(0,0,0,0.20)]">
                 <Search size={16} className="shrink-0 text-[var(--muted)]" />
                 <input
                   ref={inputRef}
@@ -141,7 +141,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                       setQuery("");
                       inputRef.current?.focus();
                     }}
-                    className="shrink-0 rounded-full p-0.5 text-[var(--muted)] hover:text-[var(--ink)]"
+                    className="shrink-0 p-0.5 text-[var(--muted)] hover:text-[var(--ink)]"
                   >
                     <X size={14} />
                   </button>

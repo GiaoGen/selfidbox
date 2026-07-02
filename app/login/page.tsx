@@ -224,32 +224,56 @@ function LoginPageContent() {
   if (checking) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[var(--canvas)] px-4">
-        <div className="h-[2px] w-24 overflow-hidden rounded-full bg-[var(--ink)]/8">
-          <div className="h-full w-1/3 animate-[loading_1s_ease-in-out_infinite] rounded-full bg-[var(--ink)]" />
+        <div className="h-[2px] w-24 overflow-hidden bg-[var(--ink)]/8">
+          <div className="h-full w-1/3 animate-[loading_1s_ease-in-out_infinite] bg-[var(--ink)]" />
         </div>
       </main>
     );
   }
 
+  /* dashed divider for receipt sections */
+  const dashedDivider = "my-4 border-t-2 border-dashed border-[var(--ink)]/15";
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-[var(--canvas)] px-4 py-12">
       <div className="w-full max-w-[400px]">
-        {/* header */}
-        <div className="text-center">
-          <Link
-            href="/explore"
-            className="text-[22px] font-semibold tracking-[-0.03em] text-[var(--ink)]"
-          >
-            SelfIDBox
-          </Link>
-        </div>
-
         {/* card */}
-        <div className="mt-8 rounded-[32px] bg-[var(--surface-card)] p-6 sm:p-8">
+        <div className="relative shadow-[0_4px_20px_rgba(0,0,0,0.20)] bg-[var(--surface-card)] p-6 sm:p-8">
+          {/* ---- 锯齿：顶部穿孔条 ---- */}
+          <div
+            className="pointer-events-none absolute left-0 right-0 top-0 h-[6px]"
+            style={{
+              backgroundImage: "radial-gradient(circle at 4px 3px, var(--canvas) 2.5px, transparent 2.5px)",
+              backgroundSize: "8px 6px",
+              backgroundRepeat: "repeat-x",
+            }}
+          />
+
+          {/* ---- 锯齿：底部穿孔条 ---- */}
+          <div
+            className="pointer-events-none absolute left-0 right-0 bottom-0 h-[6px]"
+            style={{
+              backgroundImage: "radial-gradient(circle at 4px 3px, var(--canvas) 2.5px, transparent 2.5px)",
+              backgroundSize: "8px 6px",
+              backgroundRepeat: "repeat-x",
+            }}
+          />
+
+          {/* header */}
+          <div className="text-center">
+            <Link
+              href="/explore"
+              className="text-[22px] font-semibold tracking-[-0.03em] text-[var(--ink)]"
+            >
+              SelfIDBox
+            </Link>
+          </div>
+
+          <hr className={dashedDivider} />
           {user ? (
             /* ---- logged in ---- */
             <div className="text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--ink)]/8">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center bg-[var(--ink)]/8">
                 <svg
                   width="24"
                   height="24"
@@ -280,14 +304,14 @@ function LoginPageContent() {
               <div className="mt-6 flex flex-col gap-3">
                 <Link
                   href="/profile"
-                  className="inline-flex min-h-12 items-center justify-center rounded-full bg-[var(--ink)] px-6 text-[15px] font-semibold text-white transition-opacity hover:opacity-90"
+                  className="inline-flex min-h-12 items-center justify-center bg-[var(--ink)] px-6 text-[15px] font-semibold text-white transition-shadow transition-transform duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)] active:scale-[0.98]"
                 >
                   进入个人图谱
                 </Link>
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="inline-flex min-h-12 items-center justify-center rounded-full border border-[var(--ink)]/12 bg-white px-6 text-[15px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--ink)]/25"
+                  className="inline-flex min-h-12 items-center justify-center border border-[var(--ink)]/12 bg-white px-6 text-[15px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--ink)]/25"
                 >
                   退出登录
                 </button>
@@ -297,7 +321,7 @@ function LoginPageContent() {
             /* ---- verify OTP inline ---- */
             <>
               <div className="text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--ink)]/8">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center bg-[var(--ink)]/8">
                   <svg
                     width="24"
                     height="24"
@@ -327,7 +351,9 @@ function LoginPageContent() {
                 </p>
               </div>
 
-              <form onSubmit={handleVerify} className="mt-6 flex flex-col gap-4">
+              <hr className={dashedDivider} />
+
+              <form onSubmit={handleVerify} className="flex flex-col gap-4">
                 <div>
                   <label
                     htmlFor="token"
@@ -344,13 +370,13 @@ function LoginPageContent() {
                     required
                     autoComplete="one-time-code"
                     placeholder="输入验证码"
-                    className="mt-1.5 w-full rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-3 text-center text-[24px] tracking-[0.3em] text-[var(--ink)] outline-none transition-colors placeholder:text-[13px] placeholder:tracking-normal placeholder:text-[#9a9a9a] focus:border-[var(--ink)]/40"
+                    className="mt-1.5 w-full border border-[var(--hairline)] bg-white px-4 py-3 text-center text-[24px] tracking-[0.3em] text-[var(--ink)] outline-none transition-colors placeholder:text-[13px] placeholder:tracking-normal placeholder:text-[var(--muted)]/50 focus:border-[var(--ink)]/40"
                     style={{ minHeight: 56 }}
                   />
                 </div>
 
                 {error && (
-                  <p className="rounded-[12px] bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#dc2626]">
+                  <p className="bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#dc2626]">
                     {error}
                   </p>
                 )}
@@ -358,13 +384,15 @@ function LoginPageContent() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-1 inline-flex min-h-12 items-center justify-center rounded-full bg-[var(--ink)] px-6 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  className="mt-1 inline-flex min-h-12 items-center justify-center bg-[var(--ink)] px-6 text-[15px] font-semibold text-white transition-shadow transition-transform duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)] active:scale-[0.98] disabled:opacity-50"
                 >
                   {loading ? "..." : "验证"}
                 </button>
               </form>
 
-              <p className="mt-4 text-center text-[13px] text-[var(--muted)]">
+              <hr className={dashedDivider} />
+
+              <p className="text-center text-[13px] text-[var(--muted)]">
                 没有收到？{" "}
                 <button
                   type="button"
@@ -386,7 +414,9 @@ function LoginPageContent() {
                 登录后同步你的测评报告、人格图谱和 Quiz 结果。
               </p>
 
-              <form onSubmit={handleLogin} className="mt-6 flex flex-col gap-4">
+              <hr className={dashedDivider} />
+
+              <form onSubmit={handleLogin} className="flex flex-col gap-4">
                 <div>
                   <label
                     htmlFor="email"
@@ -401,7 +431,7 @@ function LoginPageContent() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     autoComplete="email"
-                    className="mt-1.5 w-full rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[#9a9a9a] focus:border-[var(--ink)]/40"
+                    className="mt-1.5 w-full border border-[var(--hairline)] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[var(--muted)]/50 focus:border-[var(--ink)]/40"
                     style={{ minHeight: 48 }}
                   />
                 </div>
@@ -420,19 +450,19 @@ function LoginPageContent() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     autoComplete="current-password"
-                    className="mt-1.5 w-full rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[#9a9a9a] focus:border-[var(--ink)]/40"
+                    className="mt-1.5 w-full border border-[var(--hairline)] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[var(--muted)]/50 focus:border-[var(--ink)]/40"
                     style={{ minHeight: 48 }}
                   />
                 </div>
 
                 {error && (
-                  <p className="rounded-[12px] bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#dc2626]">
+                  <p className="bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#dc2626]">
                     {error}
                   </p>
                 )}
 
                 {success && (
-                  <p className="rounded-[12px] bg-[#f0fdf4] px-4 py-3 text-[13px] font-medium text-[#16a34a]">
+                  <p className="bg-[#f0fdf4] px-4 py-3 text-[13px] font-medium text-[#16a34a]">
                     {success}
                   </p>
                 )}
@@ -440,13 +470,15 @@ function LoginPageContent() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-1 inline-flex min-h-12 items-center justify-center rounded-full bg-[var(--ink)] px-6 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  className="mt-1 inline-flex min-h-12 items-center justify-center bg-[var(--ink)] px-6 text-[15px] font-semibold text-white transition-shadow transition-transform duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)] active:scale-[0.98] disabled:opacity-50"
                 >
                   {loading ? "..." : "登录"}
                 </button>
               </form>
 
-              <p className="mt-4 text-center text-[13px] text-[var(--muted)]">
+              <hr className={dashedDivider} />
+
+              <p className="text-center text-[13px] text-[var(--muted)]">
                 没有账号？{" "}
                 <button
                   type="button"
@@ -467,7 +499,9 @@ function LoginPageContent() {
                 注册后可同步你的测评报告、人格图谱和 Quiz 结果。
               </p>
 
-              <form onSubmit={handleSignUp} className="mt-6 flex flex-col gap-4">
+              <hr className={dashedDivider} />
+
+              <form onSubmit={handleSignUp} className="flex flex-col gap-4">
                 <div>
                   <label
                     htmlFor="email"
@@ -482,7 +516,7 @@ function LoginPageContent() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     autoComplete="email"
-                    className="mt-1.5 w-full rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[#9a9a9a] focus:border-[var(--ink)]/40"
+                    className="mt-1.5 w-full border border-[var(--hairline)] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[var(--muted)]/50 focus:border-[var(--ink)]/40"
                     style={{ minHeight: 48 }}
                   />
                 </div>
@@ -502,7 +536,7 @@ function LoginPageContent() {
                     required
                     autoComplete="username"
                     placeholder="2–30 个字符，注册后可修改"
-                    className="mt-1.5 w-full rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[#9a9a9a] focus:border-[var(--ink)]/40"
+                    className="mt-1.5 w-full border border-[var(--hairline)] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[var(--muted)]/50 focus:border-[var(--ink)]/40"
                     style={{ minHeight: 48 }}
                   />
                 </div>
@@ -521,19 +555,19 @@ function LoginPageContent() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     autoComplete="new-password"
-                    className="mt-1.5 w-full rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[#9a9a9a] focus:border-[var(--ink)]/40"
+                    className="mt-1.5 w-full border border-[var(--hairline)] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[var(--muted)]/50 focus:border-[var(--ink)]/40"
                     style={{ minHeight: 48 }}
                   />
                 </div>
 
                 {error && (
-                  <p className="rounded-[12px] bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#dc2626]">
+                  <p className="bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#dc2626]">
                     {error}
                   </p>
                 )}
 
                 {success && (
-                  <p className="rounded-[12px] bg-[#f0fdf4] px-4 py-3 text-[13px] font-medium text-[#16a34a]">
+                  <p className="bg-[#f0fdf4] px-4 py-3 text-[13px] font-medium text-[#16a34a]">
                     {success}
                   </p>
                 )}
@@ -541,13 +575,15 @@ function LoginPageContent() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-1 inline-flex min-h-12 items-center justify-center rounded-full bg-[var(--ink)] px-6 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  className="mt-1 inline-flex min-h-12 items-center justify-center bg-[var(--ink)] px-6 text-[15px] font-semibold text-white transition-shadow transition-transform duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)] active:scale-[0.98] disabled:opacity-50"
                 >
                   {loading ? "..." : "注册"}
                 </button>
               </form>
 
-              <p className="mt-4 text-center text-[13px] text-[var(--muted)]">
+              <hr className={dashedDivider} />
+
+              <p className="text-center text-[13px] text-[var(--muted)]">
                 已有账号？{" "}
                 <button
                   type="button"
@@ -562,14 +598,16 @@ function LoginPageContent() {
         </div>
 
         {/* legal links */}
-        <div className="mt-5 flex items-center justify-center gap-1.5 select-none">
+        <hr className="mx-auto mt-5 w-2/3 border-t-2 border-dashed border-[var(--ink)]/10" />
+
+        <div className="mt-3 flex items-center justify-center gap-1.5 select-none">
           {(Object.keys(TAB_LABELS) as LegalTab[]).map((t, i) => (
             <span key={t} className="flex items-center gap-1.5">
-              {i > 0 && <span className="text-[11px] text-[var(--muted)]/25">·</span>}
+              {i > 0 && <span className="text-[11px] text-[var(--ink)]/12">·</span>}
               <button
                 type="button"
                 onClick={() => setLegalTab(t)}
-                className="text-[11px] text-[var(--muted)]/35 transition-colors hover:text-[var(--muted)]/60"
+                className="text-[11px] text-[var(--muted)]/50 transition-colors hover:text-[var(--muted)]/80"
               >
                 {TAB_LABELS[t]}
               </button>
@@ -578,7 +616,7 @@ function LoginPageContent() {
         </div>
 
         {/* footer */}
-        <p className="mt-3 text-center text-[13px] text-[#9a9a9a]">
+        <p className="mt-3 text-center text-[13px] text-[var(--muted)]/40">
           你的数据只用于生成个人图谱。
         </p>
       </div>
