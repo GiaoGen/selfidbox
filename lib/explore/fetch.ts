@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { listQuery } from "@/lib/cache";
+import { swrListQuery } from "@/lib/cache";
 import type { ExploreCard } from "./types";
 import { quizToExploreCard } from "./mapper";
 import type { AdminCategoryRow, AdminQuizRow } from "@/lib/admin-db";
@@ -95,7 +95,7 @@ async function fetchResultImages(
  * Fetch all published quizzes mapped to ExploreCard.
  * Categories and result images are fetched in parallel.
  */
-export const getExploreQuizCards = listQuery(
+export const getExploreQuizCards = swrListQuery(
   "getExploreQuizCards",
   async () => {
     const [quizzes, categories] = await Promise.all([
@@ -122,7 +122,8 @@ export const getExploreQuizCards = listQuery(
 
     return cards;
   },
-  60, // 1 min cache
+  60, // 1 min TTL
+  300, // 5 min SWR window (stale data acceptable for 6 min total)
 );
 
 /**

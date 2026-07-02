@@ -2,7 +2,7 @@ import { createClient as createSSRClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TestSite, TestAccent } from "./test-sites";
-import { listQuery, keyedSingleQuery, keyedObjectQuery } from "./cache";
+import { listQuery, keyedSingleQuery, keyedObjectQuery, swrListQuery } from "./cache";
 import { computeHeatScore } from "@/lib/explore/sort";
 
 async function getDb(): Promise<SupabaseClient> {
@@ -150,7 +150,7 @@ export const getCategories = listQuery(
   600, // 10 min
 );
 
-export const getPublishedTestSites = listQuery(
+export const getPublishedTestSites = swrListQuery(
   "getPublishedTestSites",
   async () => {
     const { data, error } = await (await getDb())
@@ -168,7 +168,8 @@ export const getPublishedTestSites = listQuery(
     if (error) throw error;
     return (data as TestSiteRow[]) ?? [];
   },
-  60, // 1 min
+  60, // 1 min TTL
+  300, // 5 min SWR window
 );
 
 export const getTestSiteBySlug = keyedSingleQuery(
