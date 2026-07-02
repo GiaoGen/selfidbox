@@ -2,7 +2,21 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  // Protected routes — check FIRST to avoid unnecessary auth calls on public pages
+  const protectedPaths = ["/admin", "/profile", "/create"];
+  const isProtected = protectedPaths.some(
+    (path) =>
+      request.nextUrl.pathname === path ||
+      request.nextUrl.pathname.startsWith(path + "/"),
+  );
+
+  // Public routes: skip auth entirely, pass through with zero overhead
+  if (!isProtected) {
+    return NextResponse.next({ request });
+  }
+
+  // Protected routes: create Supabase client and verify session
+  const response = NextResponse.next({ request });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,16 +35,11 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  // Refresh the auth session
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // Protected routes — redirect unauthenticated users to /login
-  const protectedPaths = ["/admin", "/profile", "/create"];
-  const isProtected = protectedPaths.some(
-    (path) => request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(path + "/"),
-  );
-
-  if (isProtected && !user) {
+  if (!user) {
     const loginUrl = new URL("/login", request.url);
     return NextResponse.redirect(loginUrl);
   }
