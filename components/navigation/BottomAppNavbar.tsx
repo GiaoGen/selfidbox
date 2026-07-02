@@ -152,7 +152,7 @@ export function BottomAppNavbar() {
           {/* menu sheet — receipt style */}
           <div
             ref={profileMenuRef}
-            className="relative fixed bottom-[calc(92px+env(safe-area-inset-bottom))] left-4 right-4 z-50 mx-auto max-w-sm bg-[var(--surface-card)] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.20)]"
+            className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] left-4 right-4 z-50 mx-auto max-w-sm max-h-[60vh] overflow-y-auto bg-[var(--surface-card)] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.20)]"
           >
             {/* ---- 锯齿：顶部穿孔条 ---- */}
             <div

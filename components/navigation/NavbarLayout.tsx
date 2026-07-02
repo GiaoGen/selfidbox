@@ -27,7 +27,7 @@ export function NavbarLayout({ children }: { children: ReactNode }) {
         <>
           <BottomAppNavbar />
           {/* spacer to prevent content from being hidden behind the fixed navbar */}
-          <div className="h-[calc(92px+env(safe-area-inset-bottom))] shrink-0" aria-hidden />
+          <div className="h-[calc(80px+env(safe-area-inset-bottom))] shrink-0" aria-hidden />
         </>
       )}
     </>
