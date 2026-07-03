@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { AuthUser } from "@/lib/types";
 import { LegalModal, TAB_LABELS, type LegalTab } from "@/components/legal/LegalModal";
 
-type Mode = "login" | "signup" | "verify";
+type Mode = "login" | "signup" | "verify" | "forgot" | "reset";
 
 function LoginPageContent() {
   const router = useRouter();
@@ -15,19 +15,38 @@ function LoginPageContent() {
   const redirect = searchParams.get("redirect");
   const supabase = createClient();
 
-  const [mode, setMode] = useState<Mode>("login");
+  // 检测密码重置回调 — 在渲染阶段计算，避免 effect 中同步 setState
+  const [isRecovery] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const hashType = hashParams.get("type");
+    const searchType = searchParams.get("type");
+    return hashType === "recovery" || searchType === "recovery";
+  });
+
+  const [mode, setMode] = useState<Mode>(isRecovery ? "reset" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [token, setToken] = useState("");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [checking, setChecking] = useState(!isRecovery);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [legalTab, setLegalTab] = useState<LegalTab | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
 
   useEffect(() => {
+    // 安全：清除 URL 中的 recovery token，防止泄露到浏览器历史
+    if (isRecovery) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      return;
+    }
+
+    // 正常流程 — 检查已登录用户
     supabase.auth.getUser().then(({ data: { user: u } }) => {
       if (u) setUser({ id: u.id, email: u.email });
       setChecking(false);
@@ -187,6 +206,177 @@ function LoginPageContent() {
   }, [email, supabase]);
 
   /* ------------------------------------------------------------------ */
+  /*  Forgot password — send reset link                                  */
+  /* ------------------------------------------------------------------ */
+
+  const handleForgotPassword = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault();
+      setError("");
+      setSuccess("");
+      setLoading(true);
+
+      if (!email.trim()) {
+        setError("请输入邮箱地址");
+        setLoading(false);
+        return;
+      }
+
+      const { error: err } = await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+      );
+
+      setLoading(false);
+
+      if (err) {
+        if (err.status === 429) {
+          setError("请求过于频繁，请稍后再试");
+        } else {
+          // 不泄露邮箱是否存在 — 仅记录日志
+          console.error("Password reset error:", err.message);
+        }
+      }
+
+      // 无论邮箱是否存在，始终显示相同成功消息（防邮箱枚举攻击）
+      setSuccess("如果该邮箱已注册，验证码已发送至您的邮箱。请检查垃圾邮件文件夹。");
+      setCodeSent(true);
+    },
+    [email, supabase],
+  );
+
+  /* ------------------------------------------------------------------ */
+  /*  Reset with code — verify recovery OTP then update password         */
+  /* ------------------------------------------------------------------ */
+
+  const handleResetWithCode = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault();
+      setError("");
+      setSuccess("");
+
+      const code = token.trim();
+      if (!code) {
+        setError("请输入验证码");
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        setError("密码至少需要 8 个字符");
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setError("两次输入的密码不一致");
+        return;
+      }
+
+      setLoading(true);
+
+      // Step 1: Verify recovery code (authenticates the user)
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: code,
+        type: "recovery",
+      });
+
+      if (verifyError) {
+        setError(verifyError.message);
+        setLoading(false);
+        return;
+      }
+
+      // Step 2: Update password (user is now authenticated from verifyOtp)
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (updateError) {
+        setError(updateError.message);
+        setLoading(false);
+        return;
+      }
+
+      setSuccess("密码已重置成功");
+      setLoading(false);
+
+      setTimeout(() => {
+        router.push("/profile");
+        router.refresh();
+      }, 1500);
+    },
+    [email, token, newPassword, confirmPassword, router, supabase],
+  );
+
+  /* ------------------------------------------------------------------ */
+  /*  Resend recovery code                                                */
+  /* ------------------------------------------------------------------ */
+
+  const handleResendRecoveryCode = useCallback(async () => {
+    setError("");
+    setSuccess("");
+    setLoading(true);
+
+    const { error: resendError } = await supabase.auth.resetPasswordForEmail(
+      email.trim(),
+    );
+
+    setLoading(false);
+
+    if (resendError) {
+      if (resendError.status === 429) {
+        setError("请求过于频繁，请稍后再试");
+      } else {
+        console.error("Resend recovery code error:", resendError.message);
+      }
+    } else {
+      setSuccess("验证码已重新发送至您的邮箱。");
+    }
+  }, [email, supabase]);
+
+  /* ------------------------------------------------------------------ */
+  /*  Reset password — set new password after recovery link              */
+  /* ------------------------------------------------------------------ */
+
+  const handleResetPassword = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault();
+      setError("");
+      setSuccess("");
+
+      if (newPassword.length < 8) {
+        setError("密码至少需要 8 个字符");
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setError("两次输入的密码不一致");
+        return;
+      }
+
+      setLoading(true);
+
+      const { error: err } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (err) {
+        setError(err.message);
+        setLoading(false);
+        return;
+      }
+
+      setSuccess("密码已重置成功");
+      setLoading(false);
+
+      setTimeout(() => {
+        router.push("/profile");
+        router.refresh();
+      }, 1500);
+    },
+    [newPassword, confirmPassword, router, supabase],
+  );
+
+  /* ------------------------------------------------------------------ */
   /*  Sign out                                                            */
   /* ------------------------------------------------------------------ */
 
@@ -215,6 +405,9 @@ function LoginPageContent() {
     setPassword("");
     setUsername("");
     setToken("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setCodeSent(false);
   }, []);
 
   /* ------------------------------------------------------------------ */
@@ -270,7 +463,7 @@ function LoginPageContent() {
           </div>
 
           <hr className={dashedDivider} />
-          {user ? (
+          {user && mode !== "reset" ? (
             /* ---- logged in ---- */
             <div className="text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center bg-[var(--ink)]/8">
@@ -404,6 +597,343 @@ function LoginPageContent() {
                 </button>
               </p>
             </>
+          ) : mode === "forgot" ? (
+            <>
+              {/* ---- forgot password ---- */}
+              {!codeSent ? (
+                /* ---- Phase 1: enter email ---- */
+                <>
+                  <div className="text-center">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center bg-[var(--ink)]/8">
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-[var(--ink)]"
+                      >
+                        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+                      </svg>
+                    </div>
+
+                    <h1 className="mt-4 text-xl font-semibold tracking-[-0.02em] text-[var(--ink)]">
+                      重置密码
+                    </h1>
+
+                    <p className="mt-2 text-[15px] leading-relaxed text-[var(--muted)]">
+                      输入注册邮箱，我们将发送验证码。
+                    </p>
+                  </div>
+
+                  <hr className={dashedDivider} />
+
+                  <form onSubmit={handleForgotPassword} className="flex flex-col gap-4">
+                    <div>
+                      <label
+                        htmlFor="forgot-email"
+                        className="text-[13px] font-semibold text-[var(--muted)]"
+                      >
+                        邮箱
+                      </label>
+                      <input
+                        id="forgot-email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        autoComplete="email"
+                        className="mt-1.5 w-full border border-[var(--hairline)] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[var(--muted)]/50 focus:border-[var(--ink)]/40"
+                        style={{ minHeight: 48 }}
+                      />
+                    </div>
+
+                    {error && (
+                      <p className="bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#dc2626]">
+                        {error}
+                      </p>
+                    )}
+
+                    {success && (
+                      <p className="bg-[#f0fdf4] px-4 py-3 text-[13px] font-medium text-[#16a34a]">
+                        {success}
+                      </p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="mt-1 inline-flex min-h-12 items-center justify-center bg-[var(--ink)] px-6 text-[15px] font-semibold text-white transition-shadow transition-transform duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)] active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {loading ? "..." : "发送验证码"}
+                    </button>
+                  </form>
+
+                  <hr className={dashedDivider} />
+
+                  <p className="text-center text-[13px] text-[var(--muted)]">
+                    记起密码了？{" "}
+                    <button
+                      type="button"
+                      onClick={() => switchMode("login")}
+                      className="font-semibold text-[var(--ink)] hover:underline"
+                    >
+                      返回登录
+                    </button>
+                  </p>
+                </>
+              ) : (
+                /* ---- Phase 2: enter code + new password ---- */
+                <>
+                  <div className="text-center">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center bg-[var(--ink)]/8">
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-[var(--ink)]"
+                      >
+                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                      </svg>
+                    </div>
+
+                    <h1 className="mt-4 text-xl font-semibold tracking-[-0.02em] text-[var(--ink)]">
+                      验证身份
+                    </h1>
+
+                    <p className="mt-2 text-[15px] leading-relaxed text-[var(--muted)]">
+                      请输入发送至邮箱的验证码
+                    </p>
+
+                    <p className="mt-1 text-[13px] font-medium text-[var(--muted)]/70">
+                      {email}
+                    </p>
+                  </div>
+
+                  <hr className={dashedDivider} />
+
+                  <form onSubmit={handleResetWithCode} className="flex flex-col gap-4">
+                    <div>
+                      <label
+                        htmlFor="recovery-token"
+                        className="text-[13px] font-semibold text-[var(--muted)]"
+                      >
+                        验证码
+                      </label>
+                      <input
+                        id="recovery-token"
+                        type="text"
+                        inputMode="numeric"
+                        value={token}
+                        onChange={(e) => setToken(e.target.value)}
+                        required
+                        autoComplete="one-time-code"
+                        placeholder="输入验证码"
+                        className="mt-1.5 w-full border border-[var(--hairline)] bg-white px-4 py-3 text-center text-[24px] tracking-[0.3em] text-[var(--ink)] outline-none transition-colors placeholder:text-[13px] placeholder:tracking-normal placeholder:text-[var(--muted)]/50 focus:border-[var(--ink)]/40"
+                        style={{ minHeight: 56 }}
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="new-password"
+                        className="text-[13px] font-semibold text-[var(--muted)]"
+                      >
+                        新密码
+                      </label>
+                      <input
+                        id="new-password"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        required
+                        autoComplete="new-password"
+                        placeholder="至少 8 个字符"
+                        className="mt-1.5 w-full border border-[var(--hairline)] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[var(--muted)]/50 focus:border-[var(--ink)]/40"
+                        style={{ minHeight: 48 }}
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="confirm-password"
+                        className="text-[13px] font-semibold text-[var(--muted)]"
+                      >
+                        确认密码
+                      </label>
+                      <input
+                        id="confirm-password"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        autoComplete="new-password"
+                        placeholder="再次输入新密码"
+                        className="mt-1.5 w-full border border-[var(--hairline)] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[var(--muted)]/50 focus:border-[var(--ink)]/40"
+                        style={{ minHeight: 48 }}
+                      />
+                    </div>
+
+                    {error && (
+                      <p className="bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#dc2626]">
+                        {error}
+                      </p>
+                    )}
+
+                    {success && (
+                      <p className="bg-[#f0fdf4] px-4 py-3 text-[13px] font-medium text-[#16a34a]">
+                        {success}
+                      </p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="mt-1 inline-flex min-h-12 items-center justify-center bg-[var(--ink)] px-6 text-[15px] font-semibold text-white transition-shadow transition-transform duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)] active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {loading ? "..." : "重置密码"}
+                    </button>
+                  </form>
+
+                  <hr className={dashedDivider} />
+
+                  <p className="text-center text-[13px] text-[var(--muted)]">
+                    没有收到？{" "}
+                    <button
+                      type="button"
+                      onClick={handleResendRecoveryCode}
+                      disabled={loading}
+                      className="font-semibold text-[var(--ink)] hover:underline disabled:opacity-50"
+                    >
+                      重新发送
+                    </button>
+                    {" · "}
+                    <button
+                      type="button"
+                      onClick={() => switchMode("login")}
+                      className="font-semibold text-[var(--ink)] hover:underline"
+                    >
+                      返回登录
+                    </button>
+                  </p>
+                </>
+              )}
+            </>
+          ) : mode === "reset" ? (
+            <>
+              {/* ---- reset password ---- */}
+              <div className="text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center bg-[var(--ink)]/8">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-[var(--ink)]"
+                  >
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                </div>
+
+                <h1 className="mt-4 text-xl font-semibold tracking-[-0.02em] text-[var(--ink)]">
+                  设置新密码
+                </h1>
+
+                <p className="mt-2 text-[15px] leading-relaxed text-[var(--muted)]">
+                  请输入新密码，完成后将自动登录。
+                </p>
+              </div>
+
+              <hr className={dashedDivider} />
+
+              <form onSubmit={handleResetPassword} className="flex flex-col gap-4">
+                <div>
+                  <label
+                    htmlFor="new-password"
+                    className="text-[13px] font-semibold text-[var(--muted)]"
+                  >
+                    新密码
+                  </label>
+                  <input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                    placeholder="至少 8 个字符"
+                    className="mt-1.5 w-full border border-[var(--hairline)] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[var(--muted)]/50 focus:border-[var(--ink)]/40"
+                    style={{ minHeight: 48 }}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="confirm-password"
+                    className="text-[13px] font-semibold text-[var(--muted)]"
+                  >
+                    确认密码
+                  </label>
+                  <input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                    placeholder="再次输入新密码"
+                    className="mt-1.5 w-full border border-[var(--hairline)] bg-white px-4 py-3 text-[15px] text-[var(--ink)] outline-none transition-colors placeholder:text-[var(--muted)]/50 focus:border-[var(--ink)]/40"
+                    style={{ minHeight: 48 }}
+                  />
+                </div>
+
+                {error && (
+                  <p className="bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#dc2626]">
+                    {error}
+                  </p>
+                )}
+
+                {success && (
+                  <p className="bg-[#f0fdf4] px-4 py-3 text-[13px] font-medium text-[#16a34a]">
+                    {success}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="mt-1 inline-flex min-h-12 items-center justify-center bg-[var(--ink)] px-6 text-[15px] font-semibold text-white transition-shadow transition-transform duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)] active:scale-[0.98] disabled:opacity-50"
+                >
+                  {loading ? "..." : "重置密码"}
+                </button>
+              </form>
+
+              <hr className={dashedDivider} />
+
+              <p className="text-center text-[13px] text-[var(--muted)]">
+                <button
+                  type="button"
+                  onClick={() => switchMode("login")}
+                  className="font-semibold text-[var(--ink)] hover:underline"
+                >
+                  返回登录
+                </button>
+              </p>
+            </>
           ) : mode === "login" ? (
             /* ---- login form ---- */
             <>
@@ -437,12 +967,21 @@ function LoginPageContent() {
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="password"
-                    className="text-[13px] font-semibold text-[var(--muted)]"
-                  >
-                    密码
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="password"
+                      className="text-[13px] font-semibold text-[var(--muted)]"
+                    >
+                      密码
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => switchMode("forgot")}
+                      className="text-[12px] font-medium text-[var(--muted)]/70 transition-colors hover:text-[var(--ink)]"
+                    >
+                      忘记密码?
+                    </button>
+                  </div>
                   <input
                     id="password"
                     type="password"

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Compass, WandSparkles, User, Search, LogOut } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { DataSourceModal } from "@/components/DataSourceModal";
 import { SearchOverlay } from "./SearchOverlay";
@@ -29,7 +30,7 @@ function NavItem({
   const classes = `flex items-center gap-2.5 rounded-full px-6 py-3.5 text-[15px] font-semibold transition-colors duration-200 ${
     active
       ? "bg-[var(--ink)] text-white"
-      : "text-[var(--muted)] hover:text-[var(--ink)]"
+      : "text-white/70 hover:text-white"
   }`;
 
   if (onClick) {
@@ -139,21 +140,30 @@ export function BottomAppNavbar() {
       {/* ---- Search overlay ---- */}
       <SearchOverlay open={searchOpen} onClose={closeSearch} />
 
-      {/* ---- Profile menu popup (appears above navbar, only on /profile) ---- */}
-      {profileMenuOpen && user && (
-        <>
-          {/* backdrop */}
-          <button
-            type="button"
-            className="fixed inset-0 z-40"
-            onClick={() => setProfileMenuOpen(false)}
-            aria-label="关闭菜单"
-          />
-          {/* menu sheet — receipt style */}
-          <div
-            ref={profileMenuRef}
-            className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] left-4 right-4 z-50 mx-auto max-w-sm max-h-[60vh] overflow-y-auto bg-[var(--surface-card)] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.20)]"
-          >
+      {/* ---- Profile menu popup (slides up from behind navbar) ---- */}
+      <AnimatePresence>
+        {profileMenuOpen && user && (
+          <>
+            {/* backdrop */}
+            <motion.button
+              type="button"
+              className="fixed inset-0 z-20"
+              onClick={() => setProfileMenuOpen(false)}
+              aria-label="关闭菜单"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            />
+            {/* menu sheet — receipt style, slides up from behind navbar */}
+            <motion.div
+              ref={profileMenuRef}
+              className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] left-4 right-4 z-20 mx-auto max-w-sm max-h-[60vh] overflow-y-auto bg-[var(--surface-card)] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.20)]"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "150%" }}
+              transition={{ type: "spring", damping: 26, stiffness: 250 }}
+            >
             {/* ---- 锯齿：顶部穿孔条 ---- */}
             <div
               className="pointer-events-none absolute left-0 right-0 top-0 h-[6px]"
@@ -206,9 +216,10 @@ export function BottomAppNavbar() {
                 backgroundRepeat: "repeat-x",
               }}
             />
-          </div>
+          </motion.div>
         </>
       )}
+      </AnimatePresence>
 
       {/* ---- Data source modal ---- */}
       <DataSourceModal
@@ -246,7 +257,7 @@ export function BottomAppNavbar() {
           <button
             type="button"
             onClick={openSearch}
-            className="flex items-center gap-2.5 rounded-full px-6 py-3.5 text-[15px] font-semibold text-[var(--muted)] transition-colors duration-200 hover:text-[var(--ink)]"
+            className="flex items-center gap-2.5 rounded-full px-6 py-3.5 text-[15px] font-semibold text-white/70 transition-colors duration-200 hover:text-white"
             aria-label="搜索"
           >
             <Search size={20} />

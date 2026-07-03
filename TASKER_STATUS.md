@@ -6,15 +6,19 @@ Last updated: 2026-07-03
 
 ## Current State
 
-SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡片颜色系统已完成全链路统一：/explore、/test-sites/[id]、/quizzes/[slug] 全部通过 mapper 统一取色，支持 DB 自定义颜色覆盖。Quiz Studio 支持图片主色调自动提取（HSL 调优）。quiz 做题过程背景模糊已移除。
+SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡片颜色系统已完成全链路统一。Quiz Studio 支持图片主色调自动提取。quiz 做题过程背景模糊已移除。
 
-**PWA 开屏优化**：骨架屏 + Service Worker + Middleware 公开路由零开销 + SWR 数据缓存 四项全部完成。PWA 启动感知速度和实际加载时间均已显著改善。
+**PWA 开屏优化**：骨架屏 + Service Worker + Middleware 公开路由零开销 + SWR 数据缓存 四项全部完成。
 
-**小票风格 UI 统一**：Login 页面 + 全部导航组件（BottomAppNavbar、TopNavbar、UserMenu、SearchOverlay）已统一为小票/收据设计语言——直角矩形、虚线分割、锯齿穿孔条、纸张投影、米色纯色背景。搜索按钮已合并进底部导航条。
+**小票风格 UI 统一**：Login 页面 + 全部导航组件（BottomAppNavbar、TopNavbar、UserMenu、SearchOverlay）已统一为小票/收据设计语言。
 
-**当前阻塞**：无。test-sites/[id] 顶部卡片 hydration 颜色误差待修复（己确认根因：Framer Motion SSR 与 RelatedTestSites 组件树冲突，暂缓）。
+**登录页忘记密码验证码化**：从 Supabase magic link 邮件跳转改为验证码输入 + 原地改密，保留旧 magic link 路径向后兼容。UI 严格对齐小票设计（直角、虚线、穿孔条、投影）。
 
-**下一步**：lint 错误清理 → 生产上线。剩余可优化项见下方 Unfinished Tasks。
+**底部导航条 Profile 菜单动画**：图标白色化，菜单托盘接入 Framer Motion 出入场动画——从 navbar 上沿自下而上滑出，退出滑出屏幕外。
+
+**当前阻塞**：无。test-sites/[id] 顶部卡片 hydration 颜色误差待修复（根因：Framer Motion SSR 与 RelatedTestSites 组件树冲突，暂缓）。
+
+**下一步**：lint 错误清理 → 生产上线。
 
 ---
 
@@ -60,6 +64,29 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
 ---
 
 ## Recent Progress (Last 30 Days)
+
+### 2026-07-03 — Login 页面忘记密码验证码化 + 底部导航条动画
+
+- **验证码验证**：`verifyOtp({ email, token, type: "recovery" })` 验证 recovery 验证码
+- **原地改密**：验证码通过后 `updateUser({ password })` 直接改密，无需邮件链接跳转
+- **重发校验码**：`handleResendRecoveryCode` 再次调用 `resetPasswordForEmail`（Supabase `resend()` 不支持 `type:"recovery"`）
+- **向后兼容**：保留 `reset` 模式 + `isRecovery` URL hash 检测，旧 magic link 邮件仍可使用
+- **防邮箱枚举**：无论邮箱是否存在，始终显示相同成功消息
+- **UI 约束**：新增 Phase 1（邮箱输入）/ Phase 2（验证码 + 新密码 + 确认密码），全部复用现有小票设计原语（验证码输入框、密码输入框、按钮、虚线分割、锯齿穿孔条），零 CSS 新增
+
+- **底部导航条 icon 白色化**（`components/navigation/BottomAppNavbar.tsx`）：
+  - NavItem 未激活：`text-[var(--muted)]` → `text-white/70 hover:text-white`
+  - 搜索按钮：`text-[var(--muted)]` → `text-white/70 hover:text-white`
+  - Navbar 背景保持 `bg-[var(--surface-card)]/10` 不变
+
+- **Profile 菜单托盘出入场动画**：
+  - 入场：从 navbar 上沿下方 `y: "100%"` → `y: 0`（spring: damping 26, stiffness 250），自下而上滑出
+  - 出场：`y: 0` → `y: "150%"` 滑出屏幕外
+  - 遮罩：`opacity: 0 ↔ 1`（duration 0.2s）
+  - z-index 栈：遮罩 z-20 / 菜单 z-20（低于 navbar z-30，navbar 自然裁剪滑出部分）
+  - 引入 `AnimatePresence` + `motion.div` / `motion.button`（项目已有 framer-motion 依赖，无新增库）
+
+- 验证：`npm run build` 零错误
 
 ### 2026-07-03 — Login 页面 + 导航组件小票风格 UI 统一
 
