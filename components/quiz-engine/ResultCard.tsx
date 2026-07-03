@@ -38,6 +38,7 @@ export function ResultCard({ result, onChange, onDelete, onTogglePin, cardColor 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const colorInputRef = useRef<HTMLInputElement>(null);
   const [uploadState, setUploadState] = useState<"idle" | "loading" | "error">("idle");
+  const [uploadError, setUploadError] = useState("");
 
   const btnBase = "flex h-7 w-7 items-center justify-center rounded-full transition-colors";
   const btnVisible = darkText
@@ -66,6 +67,15 @@ export function ResultCard({ result, onChange, onDelete, onTogglePin, cardColor 
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // client-side pre-check: reject files > 10 MB before sending to server
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadState("error");
+      setUploadError("图片不能超过 10 MB");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setUploadError("");
     setUploadState("loading");
     try {
       const { image_url } = await uploadResultImage(file, result.id);
@@ -79,6 +89,7 @@ export function ResultCard({ result, onChange, onDelete, onTogglePin, cardColor 
       setUploadState("idle");
     } catch {
       setUploadState("error");
+      setUploadError("上传失败，请重试");
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
@@ -117,7 +128,7 @@ export function ResultCard({ result, onChange, onDelete, onTogglePin, cardColor 
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/png,image/jpeg,image/webp"
               className="hidden"
               onChange={handleFileChange}
             />
@@ -240,8 +251,8 @@ export function ResultCard({ result, onChange, onDelete, onTogglePin, cardColor 
       )}
 
       {/* upload error feedback */}
-      {uploadState === "error" && (
-        <p className={`mt-2 text-xs ${opacityClass}`}>上传失败，请重试</p>
+      {uploadState === "error" && uploadError && (
+        <p className={`mt-2 text-xs ${opacityClass}`}>{uploadError}</p>
       )}
     </article>
   );
