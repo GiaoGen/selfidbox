@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/admin-auth";
 import { getAdminCategories, deleteCategory } from "@/lib/admin-db";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatusBadge } from "@/components/admin/StatusBadge";
@@ -9,6 +10,8 @@ import { DeleteConfirm } from "@/components/admin/DeleteConfirm";
 function DeleteCategoryButton({ id, name }: { id: string; name: string }) {
   async function handleDelete() {
     "use server";
+    const adminId = await requireAdmin();
+    if (!adminId) redirect("/explore");
     await deleteCategory(id);
     revalidatePath("/admin/categories");
     redirect("/admin/categories");

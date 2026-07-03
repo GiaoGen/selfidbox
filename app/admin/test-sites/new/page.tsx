@@ -1,4 +1,5 @@
 import { getAdminCategories, createTestSite } from "@/lib/admin-db";
+import { requireAdmin } from "@/lib/admin-auth";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { TestSiteForm, type TestSiteFormData } from "@/components/admin/TestSiteForm";
 import { redirect } from "next/navigation";
@@ -8,8 +9,9 @@ export default async function NewTestSitePage() {
 
   async function handleCreate(data: TestSiteFormData) {
     "use server";
+    const adminId = await requireAdmin();
+    if (!adminId) return { success: false as const, error: "未授权" };
     try {
-      console.log("CREATE TEST SITE PAYLOAD", data);
       await createTestSite(data);
       redirect("/admin/test-sites");
     } catch (error) {

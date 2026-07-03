@@ -1,4 +1,5 @@
 import { createCategory } from "@/lib/admin-db";
+import { requireAdmin } from "@/lib/admin-auth";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { CategoryForm, type CategoryFormData } from "@/components/admin/CategoryForm";
 import { redirect } from "next/navigation";
@@ -6,6 +7,8 @@ import { redirect } from "next/navigation";
 export default function NewCategoryPage() {
   async function handleCreate(data: CategoryFormData) {
     "use server";
+    const adminId = await requireAdmin();
+    if (!adminId) redirect("/explore");
     await createCategory(data);
     redirect("/admin/categories");
   }

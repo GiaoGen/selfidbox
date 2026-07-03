@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/admin-auth";
 import {
   getAdminQuizById,
   getAdminCategories,
@@ -33,6 +34,8 @@ export default async function EditQuizPage({
     color: string;
   }) {
     "use server";
+    const adminId = await requireAdmin();
+    if (!adminId) return { success: false as const, error: "未授权" };
     try {
       // Grant +5 credits when quiz is first approved (status → published)
       const oldStatus = quiz?.status;

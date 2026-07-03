@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/admin-auth";
 import { getPromptByKey, upsertPrompt, validatePromptContent, clearPromptCache } from "@/lib/ai/prompts";
 import { revalidatePath } from "next/cache";
 
@@ -21,6 +22,8 @@ export default async function EditPromptPage({
 
   async function handleSave(formData: FormData) {
     "use server";
+    const adminId = await requireAdmin();
+    if (!adminId) redirect("/explore");
 
     const name = formData.get("name") as string;
     const description = formData.get("description") as string;

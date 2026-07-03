@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/admin-auth";
 import { getAdminCategoryById, updateCategory } from "@/lib/admin-db";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { CategoryForm, type CategoryFormData } from "@/components/admin/CategoryForm";
@@ -17,6 +18,8 @@ export default async function EditCategoryPage({
 
   async function handleUpdate(data: CategoryFormData) {
     "use server";
+    const adminId = await requireAdmin();
+    if (!adminId) redirect("/explore");
     await updateCategory(id, data);
     redirect("/admin/categories");
   }

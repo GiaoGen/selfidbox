@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAdminQuizzes } from "@/lib/admin-db";
+import { requireAdmin } from "@/lib/admin-auth";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { DeleteConfirm } from "@/components/admin/DeleteConfirm";
@@ -214,6 +215,8 @@ function Td({
 function DeleteQuizButton({ id, title }: { id: string; title: string }) {
   async function handleDelete() {
     "use server";
+    const adminId = await requireAdmin();
+    if (!adminId) redirect("/explore");
     await deleteQuiz(id);
     revalidatePath("/admin/quizzes");
     redirect("/admin/quizzes");

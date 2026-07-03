@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles } from "lucide-react";
+import { X, Sparkles, CircleHelp } from "lucide-react";
 import type { CreditSnapshot } from "@/lib/credits/service";
 
 interface Props {
@@ -39,6 +39,7 @@ export function CreditPanel({ open, onClose }: Props) {
   const [data, setData] = useState<CreditSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -62,6 +63,7 @@ export function CreditPanel({ open, onClose }: Props) {
   }, [open]);
 
   return (
+    <>
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
@@ -89,6 +91,14 @@ export function CreditPanel({ open, onClose }: Props) {
                 <h2 className="text-lg font-semibold tracking-[-0.01em] text-[var(--ink)]">
                   Credits
                 </h2>
+                <button
+                  type="button"
+                  onClick={() => setHelpOpen(true)}
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--muted)]/50 transition-colors hover:text-[var(--ink)]"
+                  title="如何获得 Credits"
+                >
+                  <CircleHelp size={15} />
+                </button>
               </div>
               <button
                 type="button"
@@ -191,6 +201,60 @@ export function CreditPanel({ open, onClose }: Props) {
         </div>
       )}
     </AnimatePresence>
+
+      {/* ---- 如何获得 Credits 帮助弹窗 ---- */}
+      {helpOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          {/* backdrop */}
+          <div
+            className="absolute inset-0 bg-[var(--ink)]/15"
+            onClick={() => setHelpOpen(false)}
+          />
+          {/* card */}
+          <div
+            className="relative z-10 w-full max-w-sm rounded-2xl bg-[var(--surface-card)] p-6 shadow-[0_18px_60px_rgba(10,10,10,0.15)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-semibold tracking-[-0.01em] text-[var(--ink)]">
+              如何获得 Credits
+            </h3>
+            <div className="mt-4 space-y-3">
+              <div className="flex gap-3 text-sm leading-relaxed">
+                <span className="shrink-0 select-none">📦</span>
+                <span>
+                  <strong className="text-[var(--ink)]">每月保底</strong>
+                  <br />
+                  <span className="text-[var(--muted)]">每月自动补充 20 credits</span>
+                </span>
+              </div>
+              <div className="flex gap-3 text-sm leading-relaxed">
+                <span className="shrink-0 select-none">✅</span>
+                <span>
+                  <strong className="text-[var(--ink)]">他人完成你的测评</strong>
+                  <br />
+                  <span className="text-[var(--muted)]">每个用户完成你的 quiz 获得 +1 credit</span>
+                </span>
+              </div>
+              <div className="flex gap-3 text-sm leading-relaxed">
+                <span className="shrink-0 select-none">⭐</span>
+                <span>
+                  <strong className="text-[var(--ink)]">测评审核通过</strong>
+                  <br />
+                  <span className="text-[var(--muted)]">管理员发布你的 quiz 获得 +5 credits</span>
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setHelpOpen(false)}
+              className="mt-5 w-full rounded-full bg-[var(--ink)] py-2.5 text-sm font-semibold text-white transition-shadow hover:shadow-[0_4px_16px_rgba(10,10,10,0.15)] active:scale-[0.98]"
+            >
+              知道了
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

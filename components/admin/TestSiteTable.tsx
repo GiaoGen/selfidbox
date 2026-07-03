@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { AdminTestSiteRow } from "@/lib/admin-db";
+import { requireAdmin } from "@/lib/admin-auth";
 import { StatusBadge } from "./StatusBadge";
 import { FeaturedBadge } from "./FeaturedBadge";
 import { DeleteConfirm } from "./DeleteConfirm";
@@ -10,6 +11,8 @@ import { redirect } from "next/navigation";
 function DeleteButton({ id, name }: { id: string; name: string }) {
   async function handleDelete() {
     "use server";
+    const adminId = await requireAdmin();
+    if (!adminId) redirect("/explore");
     await deleteTestSite(id);
     revalidatePath("/admin/test-sites");
     redirect("/admin/test-sites");

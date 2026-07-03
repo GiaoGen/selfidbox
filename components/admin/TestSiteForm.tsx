@@ -178,7 +178,7 @@ export function TestSiteForm({
     try {
       const result = await onSubmit(form);
       if (!result.success) {
-        setError(JSON.stringify(result.error, null, 2));
+        setError("保存失败，请稍后重试");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "保存失败");

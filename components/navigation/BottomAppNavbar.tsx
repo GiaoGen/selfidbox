@@ -27,25 +27,43 @@ function NavItem({
   label: string;
   onClick?: () => void;
 }) {
-  const classes = `flex items-center gap-2.5 rounded-full px-6 py-3.5 text-[15px] font-semibold transition-colors duration-200 ${
+  const classes = `relative flex items-center gap-2.5 rounded-full px-6 py-3.5 text-[15px] font-semibold ${
     active
-      ? "bg-[var(--ink)] text-white"
-      : "text-white/70 hover:text-white"
+      ? "text-white"
+      : "text-white/70 hover:text-white transition-colors duration-200"
   }`;
+
+  const content = (
+    <>
+      {active && (
+        <motion.div
+          layoutId="nav-pill"
+          className="absolute inset-0 rounded-full bg-[var(--ink)]"
+          transition={{ type: "spring", stiffness: 400, damping: 28, mass: 0.8 }}
+        />
+      )}
+      <motion.span
+        className="relative z-10 flex items-center gap-2.5"
+        animate={{ scale: active ? [0.9, 1] : 1 }}
+        transition={{ type: "spring", stiffness: 400, damping: 15, mass: 0.8 }}
+      >
+        {icon}
+        <span className="hidden sm:inline">{label}</span>
+      </motion.span>
+    </>
+  );
 
   if (onClick) {
     return (
       <button type="button" onClick={onClick} className={classes}>
-        {icon}
-        <span className="hidden sm:inline">{label}</span>
+        {content}
       </button>
     );
   }
 
   return (
     <Link href={href} className={classes}>
-      {icon}
-      <span className="hidden sm:inline">{label}</span>
+      {content}
     </Link>
   );
 }
@@ -232,6 +250,7 @@ export function BottomAppNavbar() {
         className="fixed bottom-0 left-0 right-0 z-30 flex items-end justify-center pb-[calc(16px+env(safe-area-inset-bottom))]"
         style={{ pointerEvents: "none" }}
       >
+        <div className="flex items-center gap-3">
         <div
           className="flex items-center rounded-full bg-[var(--surface-card)]/10 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.20)] px-2 py-2"
           style={{ pointerEvents: "auto" }}
@@ -254,18 +273,6 @@ export function BottomAppNavbar() {
 
           <span className="h-6 border-l-2 border-dashed border-[var(--ink)]/15" />
 
-          <button
-            type="button"
-            onClick={openSearch}
-            className="flex items-center gap-2.5 rounded-full px-6 py-3.5 text-[15px] font-semibold text-white/70 transition-colors duration-200 hover:text-white"
-            aria-label="搜索"
-          >
-            <Search size={20} />
-            <span className="hidden sm:inline">搜索</span>
-          </button>
-
-          <span className="h-6 border-l-2 border-dashed border-[var(--ink)]/15" />
-
           <NavItem
             href="/profile"
             active={isProfile}
@@ -275,6 +282,18 @@ export function BottomAppNavbar() {
               isProfile ? () => setProfileMenuOpen((v) => !v) : undefined
             }
           />
+        </div>
+
+        {/* Search — standalone circle to the right of the pill */}
+        <button
+          type="button"
+          onClick={openSearch}
+          className="flex items-center justify-center rounded-full w-14 h-14 bg-[var(--surface-card)]/10 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.20)] text-white/70 transition-colors duration-200 hover:text-white"
+          style={{ pointerEvents: "auto" }}
+          aria-label="搜索"
+        >
+          <Search size={24} />
+        </button>
         </div>
       </nav>
     </>

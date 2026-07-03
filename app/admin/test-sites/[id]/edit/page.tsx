@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/admin-auth";
 import {
   getAdminTestSiteById,
   getAdminCategories,
@@ -24,8 +25,9 @@ export default async function EditTestSitePage({
 
   async function handleUpdate(data: TestSiteFormData) {
     "use server";
+    const adminId = await requireAdmin();
+    if (!adminId) return { success: false as const, error: "未授权" };
     try {
-      console.log("UPDATE TEST SITE PAYLOAD", { id, ...data });
       await updateTestSite(id, data);
       redirect("/admin/test-sites");
     } catch (error) {
