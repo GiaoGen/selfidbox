@@ -76,7 +76,7 @@ function LoginPageContent() {
         return;
       }
 
-      router.push(redirect || "/explore");
+      router.push(redirect || "/profile");
       router.refresh();
     },
     [email, password, redirect, router, supabase],
@@ -127,7 +127,7 @@ function LoginPageContent() {
           return;
         }
 
-        router.push(redirect || "/explore");
+        router.push(redirect || "/profile");
         router.refresh();
         return;
       }
@@ -179,7 +179,7 @@ function LoginPageContent() {
         }).catch(() => {});
       }
 
-      router.push(redirect || "/explore");
+      router.push(redirect || "/profile");
       router.refresh();
     },
     [email, username, token, redirect, router, supabase],
@@ -300,7 +300,7 @@ function LoginPageContent() {
       setLoading(false);
 
       setTimeout(() => {
-        router.push("/explore");
+        router.push("/profile");
         router.refresh();
       }, 1500);
     },
@@ -369,7 +369,7 @@ function LoginPageContent() {
       setLoading(false);
 
       setTimeout(() => {
-        router.push("/explore");
+        router.push("/profile");
         router.refresh();
       }, 1500);
     },

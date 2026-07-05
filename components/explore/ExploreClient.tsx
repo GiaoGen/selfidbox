@@ -58,23 +58,26 @@ function filterBySource(
   return cards.filter((c) => c.source_type === source);
 }
 
-/** Pick up to `count` items deterministically from a seed (avoids hydration mismatch from Math.random) */
-function pickRandom(cards: ExploreCard[], count: number, seed: number): ExploreCard[] {
-  const shuffled = [...cards].sort((a, b) => {
-    const ha = simpleHash(a.id + String(seed));
-    const hb = simpleHash(b.id + String(seed));
-    return ha - hb;
-  });
-  return shuffled.slice(0, Math.min(count, shuffled.length));
+/** Mulberry32 — tiny seeded 32-bit PRNG (deterministic, avoids hydration mismatch from Math.random) */
+function mulberry32(seed: number): () => number {
+  return () => {
+    seed |= 0;
+    seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-function simpleHash(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i);
-    hash |= 0;
+/** Pick up to `count` items deterministically from a seed using Fisher-Yates shuffle */
+function pickRandom(cards: ExploreCard[], count: number, seed: number): ExploreCard[] {
+  const rng = mulberry32(seed);
+  const shuffled = [...cards];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  return hash;
+  return shuffled.slice(0, Math.min(count, shuffled.length));
 }
 
 /* ------------------------------------------------------------------ */
