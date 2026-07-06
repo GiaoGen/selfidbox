@@ -5,6 +5,8 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toPng } from "html-to-image";
 import { X } from "lucide-react";
+import { isSafari } from "@/lib/browser-detect";
+import { useSafariScrollLock } from "@/lib/use-safari-scroll-lock";
 import type { RankedRuntimeResult } from "@/lib/quiz-runtime";
 import { QuizResultShareCard } from "@/components/share/QuizResultShareCard";
 
@@ -39,6 +41,10 @@ export function QuizResult({ ranking, quizTitle, quizSlug, syncStatus, syncError
   const [saving, setSaving] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // Safari: lock body scroll when share modal is open (overflow:hidden alone
+  // does not prevent iOS rubber-band overscroll behind fixed overlays).
+  useSafariScrollLock(showShare);
+
   const saveImage = useCallback(async () => {
     if (!cardRef.current) return;
     setSaving(true);
@@ -58,9 +64,41 @@ export function QuizResult({ ranking, quizTitle, quizSlug, syncStatus, syncError
     }
   }, []);
 
-  // Auto-open share card on mount
-  // eslint-disable-next-line
-  useEffect(() => { setShowShare(true); }, []);
+  // Auto-open share card on mount.
+  // On Safari/WebKit: wait for the result <img> to finish loading first,
+  // so the share card's <img> (same URL) hits the render cache instantly
+  // instead of triggering a fresh network request.
+  useEffect(() => {
+    if (isSafari() && resultImageUrl) {
+      const img = document.querySelector<HTMLImageElement>(
+        `img[src="${resultImageUrl}"]`,
+      );
+      if (img && !img.complete) {
+        let cancelled = false;
+        const timeout = setTimeout(() => {
+          if (!cancelled) setShowShare(true);
+        }, 1500);
+        img.addEventListener(
+          "load",
+          () => {
+            if (!cancelled) {
+              clearTimeout(timeout);
+              setShowShare(true);
+            }
+          },
+          { once: true },
+        );
+        return () => {
+          cancelled = true;
+          clearTimeout(timeout);
+        };
+      }
+      // Safari but image already ready — fall through to immediate open
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShowShare(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!top) {
     return (
@@ -84,7 +122,7 @@ export function QuizResult({ ranking, quizTitle, quizSlug, syncStatus, syncError
   const hasImage = !!resultImageUrl;
 
   return (
-    <div className="relative" style={hasImage ? { minHeight: "100vh" } : undefined}>
+    <div className="relative" style={hasImage ? { minHeight: isSafari() ? "100dvh" : "100vh" } : undefined}>
       {/* ── Blurred image background ── */}
       {hasImage && (
         <>

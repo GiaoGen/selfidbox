@@ -10,8 +10,6 @@ export interface DimOut {
 
 export interface UserProfileRow {
   user_id: string;
-  selfid_profile: string | null;
-  summary: string | null;
   core_vector: Record<string, DimOut> | null;
   social_vector: Record<string, DimOut> | null;
   report_count: number;

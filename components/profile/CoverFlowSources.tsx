@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { RotatingCardModal } from "@/components/share/RotatingCardModal";
 import { QuizResultShareCard } from "@/components/share/QuizResultShareCard";
 import { useSourceCardOpen } from "@/components/profile/useSourceCardOpen";
+import { isSafari } from "@/lib/browser-detect";
 import type { ProfileSourceEntry } from "@/lib/user-profile-db";
 import type { QuizDetailData } from "@/lib/source-detail-db";
 
@@ -84,6 +85,32 @@ export function CoverFlowSources({
     const scroller = scrollRef.current;
     if (!scroller) return;
 
+    if (isSafari()) {
+      // Safari/WebKit: compute card positions mathematically instead of
+      // calling getBoundingClientRect() on every card — avoids layout
+      // thrashing that causes stutter on iOS Safari's slower layout engine.
+      const viewportW = window.innerWidth;
+      const cardW = Math.max(CARD_MIN_W, Math.min(CARD_MAX_W, viewportW * 0.5));
+      const step = cardW + GAP;
+      const sidePadPx = (SIDE_PAD_VW / 100) * viewportW;
+      const scrollLeft = scroller.scrollLeft;
+      const vpCenter = scrollLeft + scroller.clientWidth / 2;
+
+      for (let i = 0; i < cardRefs.current.length; i++) {
+        const el = cardRefs.current[i];
+        if (!el) continue;
+        const cardCenter = sidePadPx + i * step + cardW / 2;
+        const dist = Math.abs(cardCenter - vpCenter);
+        const n = Math.min(dist / step, 3);
+
+        el.style.transform = `scale(${scaleAt(n)}) translateY(${liftAt(n)}px)`;
+        el.style.opacity = String(opacityAt(n));
+        el.style.zIndex = String(zAt(n));
+      }
+      return;
+    }
+
+    // Chromium: original getBoundingClientRect path (unchanged)
     const cr = scroller.getBoundingClientRect();
     const vpCenter = cr.left + cr.width / 2;
 
@@ -195,7 +222,8 @@ export function CoverFlowSources({
                   overflow: "hidden",
                   // initial depth — will be overwritten by updateStyles
                   transformOrigin: "center center",
-                  willChange: "transform, opacity",
+                  // Safari: willChange over-creates GPU layers, hurting more than helping
+                  willChange: isSafari() ? undefined : "transform, opacity",
                 }}
                 onClick={() => openCard(src)}
               >

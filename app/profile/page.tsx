@@ -89,14 +89,11 @@ export default async function ProfilePage() {
     getUserProfile(user.id, supabase),
     getProfileSources(user.id, supabase),
   ]);
-  const hasProfile =
-    profile != null &&
-    (profile.selfid_profile != null || profile.summary != null);
-
   const coreVector = profile?.core_vector ?? {};
   const socialVector = profile?.social_vector ?? {};
   const hasCore = Object.keys(coreVector).length > 0;
   const hasSocial = Object.keys(socialVector).length > 0;
+  const hasProfile = profile != null && (hasCore || hasSocial);
 
   return (
     <>

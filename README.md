@@ -121,7 +121,7 @@ components/
 lib/
 ├── ai/                       # AI tracking, prompt versioning
 ├── explore/                  # Explore data fetching, mapping, types
-├── prompts/                  # AI prompt templates (quiz-*, profile-summary)
+├── prompts/                  # AI prompt templates (quiz-*)
 ├── cache.ts                  # In-memory TTL cache layer
 ├── logger.ts                 # Environment-aware logger
 ├── quizzes-db.ts             # Quiz CRUD operations

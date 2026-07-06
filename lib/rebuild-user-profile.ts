@@ -1,7 +1,5 @@
 import { supabase as defaultSupabase } from "./supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { trackAISuccess, trackAIError } from "@/lib/ai/track-ai-usage";
-import { generateAISelfidProfile } from "@/lib/prompts/profile-summary";
 import { logger } from "@/lib/logger";
 
 /* ================================================================== */
@@ -197,82 +195,6 @@ function fuseDim(old: DimOut, value: number, weight: number): DimOut {
     confidence: Number(((old.confidence * old.count + weight * weight) / newCount).toFixed(2)),
   };
 }
-
-/* ---- selfid_profile / summary generation (simple, no AI) ---- */
-
-interface TraitInfo {
-  key: string;
-  label: string;
-  value: number;
-  group: "core" | "social";
-}
-
-function generateProfileLabel(core: Record<string, DimOut>, social: Record<string, DimOut>): {
-  selfid_profile: string;
-  summary: string;
-} {
-  const traits: TraitInfo[] = [];
-
-  for (const [key, dim] of Object.entries(core)) {
-    traits.push({ key, label: CORE_CN[key] ?? key, value: dim.value, group: "core" });
-  }
-  for (const [key, dim] of Object.entries(social)) {
-    traits.push({ key, label: SOCIAL_CN[key] ?? key, value: dim.value, group: "social" });
-  }
-
-  // Sort by deviation from 50 (most distinctive first)
-  const sorted = [...traits].sort((a, b) => Math.abs(b.value - 50) - Math.abs(a.value - 50));
-
-  // selfid_profile: top 3-4 distinctive traits with direction prefix
-  const top = sorted.slice(0, 4);
-  const parts = top.map((t) => {
-    const dir = t.value >= 65 ? "高" : t.value <= 35 ? "低" : "";
-    return dir ? `${dir}${t.label}` : t.label;
-  });
-  const selfid_profile = parts.join(" · ") || "人格图谱";
-
-  // summary: simple natural-language template
-  const topCore = sorted.filter((t) => t.group === "core").slice(0, 3);
-  const topSocial = sorted.filter((t) => t.group === "social").slice(0, 3);
-
-  let summary = "";
-  if (topCore.length > 0) {
-    summary +=
-      "核心人格中" +
-      topCore.map((t) => `「${t.label}」${t.value >= 50 ? "偏高" : "偏低"}（${t.value}）`).join("、");
-  }
-  if (topSocial.length > 0) {
-    if (summary) summary += "；";
-    summary +=
-      "社会表达中" +
-      topSocial.map((t) => `「${t.label}」${t.value >= 50 ? "偏高" : "偏低"}（${t.value}）`).join("、");
-  }
-  if (!summary) summary = "人格数据收集中，完成更多测评以丰富你的图谱。";
-
-  return { selfid_profile, summary };
-}
-
-const CORE_CN: Record<string, string> = {
-  social: "社交性",
-  sensitivity: "敏感度",
-  rationality: "理性度",
-  curiosity: "探索欲",
-  independence: "独立性",
-  expressiveness: "表达欲",
-  drive: "行动力",
-  imagination: "幻想度",
-};
-
-const SOCIAL_CN: Record<string, string> = {
-  assertiveness: "主张性",
-  security_need: "安全感需求",
-  empathy: "共情力",
-  dramaticness: "戏剧性",
-  orderliness: "秩序感",
-  contradiction: "反差感",
-  attachment: "亲密倾向",
-  presence: "存在感",
-};
 
 /* ================================================================== */
 /*  MAIN                                                               */
@@ -523,70 +445,13 @@ export async function rebuildUserProfile(
     `(+${reportsUsed} reports, +${attemptsUsed} attempts)`,
   );
 
-  /* ---- 11. Generate labels (rule-based fallback) ---- */
-
-  const { selfid_profile: fallbackProfile, summary } = generateProfileLabel(core_vector, social_vector);
-  let selfid_profile = fallbackProfile;
-
-  /* ---- 12. AI summary (best-effort, non-blocking) ---- */
-
-  try {
-    const topCore = Object.entries(core_vector)
-      .sort(([, a], [, b]) => Math.abs(b.value - 50) - Math.abs(a.value - 50))
-      .slice(0, 4)
-      .map(([key, dim]) => ({ label: CORE_CN[key] ?? key, value: Math.round(dim.value) }));
-
-    const topSocial = Object.entries(social_vector)
-      .sort(([, a], [, b]) => Math.abs(b.value - 50) - Math.abs(a.value - 50))
-      .slice(0, 4)
-      .map(([key, dim]) => ({ label: SOCIAL_CN[key] ?? key, value: Math.round(dim.value) }));
-
-    const aiResult = await generateAISelfidProfile(
-      topCore,
-      topSocial,
-      recentResults,
-      newReportCount,
-    );
-
-    if (aiResult.text) {
-      selfid_profile = aiResult.text;
-      trackAISuccess({
-        client: supabase,
-        userId,
-        feature: "profile_summary",
-        model: "deepseek-chat",
-        ...aiResult.tokens,
-        metadata: {
-          input_trait_count: topCore.length + topSocial.length,
-          tag_count: recentResults.length,
-          source: "profile_rebuild",
-        },
-      });
-    } else {
-      trackAIError({
-        client: supabase,
-        userId,
-        feature: "profile_summary",
-        model: "deepseek-chat",
-        errorMessage: "AI returned empty or failed",
-        metadata: { source: "profile_rebuild" },
-      });
-    }
-  } catch (err) {
-    logger.warn("[ProfileRebuild] AI summary failed, using fallback:", err);
-  }
-
-  logger.debug(`[ProfileRebuild] selfid_profile: "${selfid_profile}"`);
-
-  /* ---- 13. Upsert ---- */
+  /* ---- 11. Upsert ---- */
 
   const { error: upsertError } = await supabase.from("user_profile").upsert(
     {
       user_id: userId,
       core_vector,
       social_vector,
-      selfid_profile,
-      summary,
       report_count: newReportCount,
       updated_at: new Date().toISOString(),
     },
@@ -699,8 +564,6 @@ export async function rebuildUserProfileFromAllSources(
         user_id: userId,
         core_vector: emptyCore,
         social_vector: emptySocial,
-        selfid_profile: "待完善的人格画像",
-        summary: "目前还没有足够的数据生成个人图谱。",
         report_count: 0,
         updated_at: new Date().toISOString(),
       },
@@ -815,70 +678,13 @@ export async function rebuildUserProfileFromAllSources(
     if (name && !recentResults.includes(name)) recentResults.push(name);
   }
 
-  /* ---- 8. Generate labels (rule-based fallback) ---- */
-
-  const { selfid_profile: fallbackProfile, summary } = generateProfileLabel(core_vector, social_vector);
-  let selfid_profile = fallbackProfile;
-
-  /* ---- 9. AI summary (best-effort, non-blocking) ---- */
-
-  try {
-    const topCore = Object.entries(core_vector)
-      .sort(([, a], [, b]) => Math.abs(b.value - 50) - Math.abs(a.value - 50))
-      .slice(0, 4)
-      .map(([key, dim]) => ({ label: CORE_CN[key] ?? key, value: Math.round(dim.value) }));
-
-    const topSocial = Object.entries(social_vector)
-      .sort(([, a], [, b]) => Math.abs(b.value - 50) - Math.abs(a.value - 50))
-      .slice(0, 4)
-      .map(([key, dim]) => ({ label: SOCIAL_CN[key] ?? key, value: Math.round(dim.value) }));
-
-    const aiResult = await generateAISelfidProfile(
-      topCore,
-      topSocial,
-      recentResults,
-      newReportCount,
-    );
-
-    if (aiResult.text) {
-      selfid_profile = aiResult.text;
-      trackAISuccess({
-        client: supabase,
-        userId,
-        feature: "profile_summary",
-        model: "deepseek-chat",
-        ...aiResult.tokens,
-        metadata: {
-          input_trait_count: topCore.length + topSocial.length,
-          tag_count: recentResults.length,
-          source: "profile_rebuild_full",
-        },
-      });
-    } else {
-      trackAIError({
-        client: supabase,
-        userId,
-        feature: "profile_summary",
-        model: "deepseek-chat",
-        errorMessage: "AI returned empty or failed",
-        metadata: { source: "profile_rebuild_full" },
-      });
-    }
-  } catch (err) {
-    logger.warn("[ProfileRebuild-Full] AI summary failed, using fallback:", err);
-  }
-
-  logger.debug(`[ProfileRebuild-Full] selfid_profile: "${selfid_profile}"`);
-
-  /* ---- 10. Upsert ---- */
+  /* ---- 8. Upsert ---- */
 
   const { error: upsertError } = await supabase.from("user_profile").upsert(
     {
       user_id: userId,
       core_vector,
       social_vector,
-      selfid_profile,
-      summary,
       report_count: newReportCount,
       updated_at: new Date().toISOString(),
     },

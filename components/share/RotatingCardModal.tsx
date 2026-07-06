@@ -2,6 +2,7 @@
 
 import { type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSafariScrollLock } from "@/lib/use-safari-scroll-lock";
 
 /* ================================================================== */
 /*  RotatingCardModal                                                   */
@@ -24,6 +25,9 @@ interface Props {
 }
 
 export function RotatingCardModal({ open, onClose, children, maxWidth }: Props) {
+  // Safari: lock body scroll when modal is open
+  useSafariScrollLock(open);
+
   return (
     <AnimatePresence>
       {open && (

@@ -1,6 +1,6 @@
 # TASKER STATUS
 
-Last updated: 2026-07-03
+Last updated: 2026-07-06
 
 ---
 
@@ -64,6 +64,43 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
 ---
 
 ## Recent Progress (Last 30 Days)
+
+### 2026-07-06 — 清理 profile-summary 遗留代码
+
+- 删除 `components/ProfileSummary.tsx`（死组件，无引用）
+- 删除 `lib/prompts/profile-summary.ts`（AI prompt builder + DeepSeek API 调用，结果从未在 UI 展示）
+- 清理 `lib/rebuild-user-profile.ts`：移除 `generateProfileLabel()`、两处 `generateAISelfidProfile()` AI 调用、`CORE_CN`/`SOCIAL_CN` 常量字典、DB upsert 中的 `selfid_profile`/`summary` 字段
+- 清理 `lib/user-profile-db.ts`：`UserProfileRow` 接口移除 `selfid_profile`/`summary` 字段
+- 简化 `app/profile/page.tsx`：`hasProfile` 改用 `hasCore || hasSocial` 判断
+- 节省：每次 profile rebuild 不再调用 DeepSeek API
+- 验证：`npm run build` 零错误，`npm run lint` 零问题，`npm run test` 16/16 通过
+
+### 2026-07-06 — Safari/WebKit 专项优化（3 项 P0）
+
+**1. 图片预加载优化**
+- **问题**：iOS Safari 上 quiz 结束 → share card 自动弹出时，result image 未能及时加载，出现短暂空白（Chromium 正常）。根因：Safari 对 `new Image()` 预加载采用低优先级延迟解码 + 弱引用缓存，答题期间可能被驱逐。
+- **新建 `lib/browser-detect.ts`**：UA-based Safari 检测（排除 Chrome/CriOS）。
+- **增强 `QuizPlayer.tsx` 预加载**（仅 Safari）：双通道预热 —— `new Image()` + `.decode()` 强制完整解码，`fetch()` 独立预热 HTTP 缓存。
+- **守卫 `QuizResult.tsx` auto-open**（仅 Safari）：等待 result image DOM 元素 `load` 事件后再弹出 share card，1.5s 超时兜底。
+
+**2. iOS Safari `100vh` 修复**
+- **问题**：iOS Safari 将地址栏高度计入 `100vh`，导致 28 处 `min-h-screen` 页面底部被地址栏遮挡。
+- **CSS 层**：`@supports (-webkit-touch-callout: none)` 覆盖 `.min-h-screen` → `min-height: 100dvh`。
+- **JS 层**：`QuizResult` 内联 `minHeight: "100vh"` → Safari 时用 `100dvh`。
+
+**3. 模态框 body scroll lock**
+- **问题**：iOS Safari 橡皮筋弹性滚动穿透 `position:fixed` 遮罩，share card / RotatingCardModal 弹出时 body 仍可滚动。
+- **新建 `lib/use-safari-scroll-lock.ts`**：`position:fixed` + `top:-${scrollY}` 冻结 body（唯一可靠的 iOS Safari body lock 方式），解锁时恢复 scrollTop。
+- **接入点**：`QuizResult` share modal + `RotatingCardModal`（覆盖 profile data source / OCR 卡片等所有模态框）。
+- 性能审计 H-8 已修复。
+
+**4. CoverFlow 滚动流畅度优化（仅 Safari）**
+- **问题**：iOS Safari 上 CoverFlow 滑动有顿挫感。根因：(1) `updateStyles()` 中每帧对每张卡片调用 `getBoundingClientRect()` 造成布局颠簸；(2) `willChange: transform,opacity` 在每张卡片上创建独立 GPU 层，Safari GPU 内存预算不足。
+- **`updateStyles()` 数学化**（仅 Safari）：用 `scrollLeft + clientWidth + 已知 cardWidth/sidePad` 计算卡片位置，替代所有 `getBoundingClientRect()` 调用，消除布局颠簸。
+- **`willChange` 移除**（仅 Safari）：卡片 `style` 中 `willChange` 仅在非 Safari 时设置，减少 GPU 层数。
+
+- 验证：`npm run build` 零错误，`npm run lint` 零问题，`npm run test` 16/16 通过。
+- 设计文档：`docs/superpowers/specs/2026-07-06-safari-image-preload-optimization.md`
 
 ### 2026-07-03 — Login 页面忘记密码验证码化 + 底部导航条动画
 

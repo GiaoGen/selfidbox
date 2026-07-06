@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import type { QuizRuntimeData, AnswerRecord, RankedRuntimeResult, RankedRuntimeResultV2 } from "@/lib/quiz-runtime";
 import { calculateUserVector, rankRuntimeResultsV2, MAX_SANDBOX_ATTEMPTS } from "@/lib/quiz-runtime";
 import { createClient } from "@/lib/supabase/client";
+import { isSafari } from "@/lib/browser-detect";
 import { useNipponTheme } from "./useNipponTheme";
 import { QuizProgress } from "./QuizProgress";
 import { QuestionCard } from "./QuestionCard";
@@ -34,9 +35,22 @@ export function QuizPlayer({ quiz }: Props) {
   useEffect(() => {
     quiz.results.forEach((r) => {
       if (r.image_url) {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = r.image_url;
+        if (isSafari()) {
+          // Safari/WebKit: dual-channel preload to prime both the decode cache
+          // and the HTTP cache independently — WebKit's new Image() alone is a
+          // low-priority speculative fetch that may never fully decode.
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => { img.decode().catch(() => {}); };
+          img.src = r.image_url;
+          // Channel 2: prime HTTP cache so the <img> tag gets a cache hit even
+          // if the decoded bitmap was evicted during the quiz session.
+          fetch(r.image_url, { mode: "cors" }).catch(() => {});
+        } else {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = r.image_url;
+        }
       }
     });
   }, [quiz.results]);

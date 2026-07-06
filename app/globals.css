@@ -55,3 +55,10 @@ a {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* ── Safari/iOS Safari: 100vh includes address bar, so use dvh ── */
+@supports (-webkit-touch-callout: none) {
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+}
