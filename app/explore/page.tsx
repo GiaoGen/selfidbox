@@ -21,11 +21,17 @@ type Range = "7d" | "30d" | "all";
 
 function parseRange(raw: string | undefined): Range {
   if (raw === "7d" || raw === "30d") return raw;
-  return "all";
+  return "30d"; // default: one month
 }
 
 function getTrending(cards: ExploreCard[]): ExploreCard[] {
-  const sorted = sortExploreCards(cards);
+  // Default to past 30 days so trending reflects recent activity
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const recent = cards.filter((c) => {
+    if (!c.created_at) return true;
+    return new Date(c.created_at).getTime() >= cutoff;
+  });
+  const sorted = sortExploreCards(recent);
   // Reserve at least 2 community (internal quiz) slots
   const top3 = sorted.slice(0, 3);
   const top3Ids = new Set(top3.map((c) => c.id));

@@ -217,7 +217,7 @@ export function ExploreClient({
     (tab: string, range: Range, internalOnly: boolean, latest: boolean) => {
       const params = new URLSearchParams();
       if (tab !== "hot") params.set("tab", tab);
-      if (range !== "all") params.set("range", range);
+      if (range !== "30d") params.set("range", range);
       if (internalOnly) params.set("internal", "1");
       if (latest) params.set("latest", "1");
       const qs = params.toString();

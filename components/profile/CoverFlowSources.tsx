@@ -86,26 +86,13 @@ export function CoverFlowSources({
     if (!scroller) return;
 
     if (isSafari()) {
-      // Safari/WebKit: compute card positions mathematically instead of
-      // calling getBoundingClientRect() on every card — avoids layout
-      // thrashing that causes stutter on iOS Safari's slower layout engine.
-      const viewportW = window.innerWidth;
-      const cardW = Math.max(CARD_MIN_W, Math.min(CARD_MAX_W, viewportW * 0.5));
-      const step = cardW + GAP;
-      const sidePadPx = (SIDE_PAD_VW / 100) * viewportW;
-      const scrollLeft = scroller.scrollLeft;
-      const vpCenter = scrollLeft + scroller.clientWidth / 2;
-
+      // Safari: flat layout — all cards same size, full opacity, no depth.
       for (let i = 0; i < cardRefs.current.length; i++) {
         const el = cardRefs.current[i];
         if (!el) continue;
-        const cardCenter = sidePadPx + i * step + cardW / 2;
-        const dist = Math.abs(cardCenter - vpCenter);
-        const n = Math.min(dist / step, 3);
-
-        el.style.transform = `scale(${scaleAt(n)}) translateY(${liftAt(n)}px)`;
-        el.style.opacity = String(opacityAt(n));
-        el.style.zIndex = String(zAt(n));
+        el.style.transform = "";
+        el.style.opacity = "1";
+        el.style.zIndex = "";
       }
       return;
     }
