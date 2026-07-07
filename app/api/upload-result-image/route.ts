@@ -62,7 +62,6 @@ export async function POST(request: Request) {
 
     /* ---- process with sharp ---- */
     const buffer = Buffer.from(await file.arrayBuffer());
-    console.log("[upload-result-image] Input buffer size:", buffer.length, "bytes, type:", file.type);
 
     // Adaptive quality: try initial quality, downgrade if output exceeds target
     let quality = INITIAL_QUALITY;
@@ -80,17 +79,14 @@ export async function POST(request: Request) {
       quality -= 10;
     } while (webpBuffer.length > TARGET_BYTES && quality >= MIN_QUALITY);
 
-    console.log("[upload-result-image] WebP output size:", webpBuffer.length, "bytes, quality used:", quality + 10);
-
-    // Validate WebP header (RIFF....WEBP)
+    // Validate WebP header (sharp might produce corrupted output on some platforms)
     const isValidWebP =
       webpBuffer.length >= 12 &&
       webpBuffer.slice(0, 4).toString("ascii") === "RIFF" &&
       webpBuffer.slice(8, 12).toString("ascii") === "WEBP";
 
     if (!isValidWebP) {
-      const headerHex = webpBuffer.slice(0, Math.min(16, webpBuffer.length)).toString("hex");
-      console.error("[upload-result-image] Invalid WebP header:", headerHex, "size:", webpBuffer.length);
+      console.error("[upload-result-image] Invalid WebP output, size:", webpBuffer.length);
       return NextResponse.json(
         { error: "图片处理失败" },
         { status: 500 },
@@ -124,43 +120,6 @@ export async function POST(request: Request) {
     const { data: publicUrlData } = storage.storage
       .from(BUCKET)
       .getPublicUrl(path);
-
-    // Verify: download the uploaded file and compare with what we sent
-    try {
-      const verifyRes = await fetch(publicUrlData.publicUrl);
-      if (verifyRes.ok) {
-        const downloaded = Buffer.from(await verifyRes.arrayBuffer());
-        const match =
-          downloaded.length === webpBuffer.length &&
-          downloaded.equals(webpBuffer);
-        console.log(
-          "[upload-result-image] Download verify:",
-          match ? "MATCH" : "MISMATCH",
-          "| uploaded:", webpBuffer.length, "bytes",
-          "| downloaded:", downloaded.length, "bytes",
-        );
-        if (!match) {
-          console.error(
-            "[upload-result-image] First 20 bytes uploaded:",
-            webpBuffer.slice(0, 20).toString("hex"),
-          );
-          console.error(
-            "[upload-result-image] First 20 bytes downloaded:",
-            downloaded.slice(0, 20).toString("hex"),
-          );
-        }
-      } else {
-        console.error(
-          "[upload-result-image] Download verify failed: HTTP",
-          verifyRes.status,
-        );
-      }
-    } catch (verifyErr) {
-      console.error(
-        "[upload-result-image] Download verify error:",
-        (verifyErr as Error).message,
-      );
-    }
 
     return NextResponse.json({ image_url: publicUrlData.publicUrl });
   } catch (err) {
