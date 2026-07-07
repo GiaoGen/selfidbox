@@ -180,7 +180,6 @@ export function ResultCard({ result, onChange, onDelete, onTogglePin, cardColor 
           <img
             src={result.image_url}
             alt=""
-            crossOrigin="anonymous"
             onError={() => {
               console.error("[ResultCard] Image load failed:", result.image_url);
             }}
