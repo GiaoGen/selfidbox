@@ -6,7 +6,7 @@ Last updated: 2026-07-07
 
 ## Current State
 
-SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡片颜色系统已完成全链路统一。Quiz Studio 支持图片主色调自动提取。quiz 做题过程背景模糊已移除。
+SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡片颜色系统已完成全链路统一。Quiz Studio 图片上传（sharp 压缩 + Vercel 部署）已修复。
 
 **PWA 开屏优化**：骨架屏 + Service Worker + Middleware 公开路由零开销 + SWR 数据缓存 四项全部完成。
 
@@ -65,15 +65,17 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
 
 ## Recent Progress (Last 30 Days)
 
-### 2026-07-07 — Quiz Studio Step 2 图片上传 broken image 修复
+### 2026-07-07 — Quiz Studio Step 2 图片上传 Vercel 部署 broken image 修复（三轮定位）
 
-- **Bug**：上传成功后 image_url 正常返回，但 ResultCard 图片区域显示浏览器 broken-image 占位符
-- **根因**：`extractDominantColor()` 在上传成功后立即用 `crossOrigin="anonymous"`（CORS 模式）加载同一 URL 做 Canvas 颜色提取，DOM `<img>` 却无 `crossOrigin` 属性（非 CORS 模式），两种模式对同一 URL 的请求在浏览器缓存中产生冲突，导致 DOM `<img>` 加载失败
-- **修复**（`components/quiz-engine/ResultCard.tsx`）：
-  - `<img>` 添加 `crossOrigin="anonymous"` + `onError` handler，对齐 `QuizResultShareCard.tsx` 的已有模式
-  - 调换 `update` 和 `extractDominantColor` 顺序：先 `update({ image_url })` 渲染 DOM `<img>`，再延迟提取颜色
-- **安全加固**（`app/api/upload-result-image/route.ts`）：`resultId` 添加 `/^[a-zA-Z0-9_-]+$/` 格式验证，防止路径遍历
-- 验证：`npm run lint` 零问题，`npm run build` TypeScript + 编译零错误通过
+- **初始 Bug**：上传成功后返回 image_url，但 ResultCard 显示 broken-image 占位符。本地正常，Vercel 异常。
+- **第一轮（CORS 假设，已回退）**：`<img>` 添加 `crossOrigin="anonymous"` + 调换 update/extractDominantColor 顺序。本地通过，Vercel 仍然 broken。
+- **第二轮（Sharp 假设，已回退）**：添加 `serverExternalPackages: ["sharp"]` 防止 WASM 降级。Vercel 仍然 broken。
+- **第三轮（诊断定位 — 真根因）**：添加 input/output 日志 + 上传后下载字节比对。发现：上传 30,650 字节 Buffer → Supabase → 下载 55,564 字节 → hex 显示 `0xB2→0xEF 0xBF 0xBD`（UTF-8 替换字符）。**根因**：Vercel Node.js `fetch()` 将 raw Buffer body 当作文本/UTF-8，> 0x7F 字节被替换为 U+FFFD。
+- **最终修复**：
+  - `app/api/upload-result-image/route.ts`：上传前将 Buffer 转 Blob（`new Blob([new Uint8Array(webpBuffer)])`），触发 Supabase JS client FormData 路径，避免 Buffer→text 编码问题。保留 WebP header 校验 + `resultId` 正则验证。
+  - `next.config.ts`：添加 `serverExternalPackages: ["sharp"]`（保留，防止 sharp 原生二进制被 trace 排除）
+  - `components/quiz-engine/ResultCard.tsx`：移除 `crossOrigin="anonymous"`（回退，DOM `<img>` 不需要 CORS）；保留 `update` 顺序调整 + `onError` handler
+- 验证：`npm run lint && npm run build` 通过，Vercel 部署后上传正常显示
 
 ### 2026-07-06 — 清理 profile-summary 遗留代码
 
