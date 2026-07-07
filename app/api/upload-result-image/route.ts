@@ -69,6 +69,7 @@ export async function POST(request: Request) {
 
     do {
       webpBuffer = await sharp(buffer)
+        .rotate() // Auto-correct EXIF orientation (iPhone photos)
         .resize(MAX_DIMENSION, MAX_DIMENSION, {
           fit: "inside",
           withoutEnlargement: true,
