@@ -79,14 +79,14 @@ export function ResultCard({ result, onChange, onDelete, onTogglePin, cardColor 
     setUploadState("loading");
     try {
       const { image_url } = await uploadResultImage(file, result.id);
-      // Extract dominant color from the uploaded image
-      const extractedColor = await extractDominantColor(image_url);
-      update({
-        ...result,
-        image_url,
-        ...(extractedColor ? { color: extractedColor } : {}),
-      });
+      // Update state first so the DOM <img> renders immediately;
+      // defer color extraction to avoid CORS cache conflict
+      update({ ...result, image_url });
       setUploadState("idle");
+      const extractedColor = await extractDominantColor(image_url);
+      if (extractedColor) {
+        update({ ...result, image_url, color: extractedColor });
+      }
     } catch {
       setUploadState("error");
       setUploadError("上传失败，请重试");
@@ -180,6 +180,10 @@ export function ResultCard({ result, onChange, onDelete, onTogglePin, cardColor 
           <img
             src={result.image_url}
             alt=""
+            crossOrigin="anonymous"
+            onError={() => {
+              console.error("[ResultCard] Image load failed:", result.image_url);
+            }}
             className="aspect-[16/10] w-full object-cover"
           />
         </div>

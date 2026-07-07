@@ -37,6 +37,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "缺少 resultId" }, { status: 400 });
     }
 
+    // Validate resultId contains only safe characters for file paths
+    if (!/^[a-zA-Z0-9_-]+$/.test(resultId)) {
+      return NextResponse.json(
+        { error: "resultId 格式不正确" },
+        { status: 400 },
+      );
+    }
+
     /* ---- validate ---- */
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(

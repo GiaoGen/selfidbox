@@ -1,6 +1,6 @@
 # TASKER STATUS
 
-Last updated: 2026-07-06
+Last updated: 2026-07-07
 
 ---
 
@@ -64,6 +64,16 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
 ---
 
 ## Recent Progress (Last 30 Days)
+
+### 2026-07-07 — Quiz Studio Step 2 图片上传 broken image 修复
+
+- **Bug**：上传成功后 image_url 正常返回，但 ResultCard 图片区域显示浏览器 broken-image 占位符
+- **根因**：`extractDominantColor()` 在上传成功后立即用 `crossOrigin="anonymous"`（CORS 模式）加载同一 URL 做 Canvas 颜色提取，DOM `<img>` 却无 `crossOrigin` 属性（非 CORS 模式），两种模式对同一 URL 的请求在浏览器缓存中产生冲突，导致 DOM `<img>` 加载失败
+- **修复**（`components/quiz-engine/ResultCard.tsx`）：
+  - `<img>` 添加 `crossOrigin="anonymous"` + `onError` handler，对齐 `QuizResultShareCard.tsx` 的已有模式
+  - 调换 `update` 和 `extractDominantColor` 顺序：先 `update({ image_url })` 渲染 DOM `<img>`，再延迟提取颜色
+- **安全加固**（`app/api/upload-result-image/route.ts`）：`resultId` 添加 `/^[a-zA-Z0-9_-]+$/` 格式验证，防止路径遍历
+- 验证：`npm run lint` 零问题，`npm run build` TypeScript + 编译零错误通过
 
 ### 2026-07-06 — 清理 profile-summary 遗留代码
 
@@ -291,13 +301,7 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
 - **颜色管道**：`quiz_results.color` AI 生成 → DB → Profile 全链路持久化
 - Commits: `03cd627` `1b64516` `8bc8d41` `1f76b9c`
 
-### 2026-06-17 — 探索页重构 + 小票卡片
-
-- **Explore UI 重构**：筛选区域单行化 + 时间下拉菜单
-- **详情页重构**：TestSiteDetail + QuizDetail 小票样式 + 邮票 grid（`StampCard.tsx`）
-- **卡片重新设计**：TrendingCard + TestCard 直角 Nippon 纯色 + 虚线三段式 + 锯齿穿孔
-- **轮播优化**：极简线型 dots
-- Commits: `9e4a00b` `274d69e`
+> 更早记录见 [`PROJECT_HISTORY.md`](./PROJECT_HISTORY.md)（2026-06-17 — 探索页重构 + 小票卡片 及更早）
 
 ---
 
