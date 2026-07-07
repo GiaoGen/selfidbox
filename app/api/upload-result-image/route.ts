@@ -101,9 +101,14 @@ export async function POST(request: Request) {
     const storage = createServiceClient();
     const path = `${resultId}/${Date.now()}.webp`;
 
+    // Use Blob instead of raw Buffer to avoid binary→text encoding
+    // corruption on Vercel's Node.js runtime (Buffer → fetch → UTF-8
+    // replacement character expansion for bytes > 0x7F)
+    const blob = new Blob([new Uint8Array(webpBuffer)], { type: "image/webp" });
+
     const { error } = await storage.storage
       .from(BUCKET)
-      .upload(path, webpBuffer, {
+      .upload(path, blob, {
         contentType: "image/webp",
         upsert: true,
       });
