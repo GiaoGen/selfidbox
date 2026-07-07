@@ -62,6 +62,7 @@ export async function POST(request: Request) {
 
     /* ---- process with sharp ---- */
     const buffer = Buffer.from(await file.arrayBuffer());
+    console.log("[upload-result-image] Input buffer size:", buffer.length, "bytes, type:", file.type);
 
     // Adaptive quality: try initial quality, downgrade if output exceeds target
     let quality = INITIAL_QUALITY;
@@ -78,6 +79,23 @@ export async function POST(request: Request) {
 
       quality -= 10;
     } while (webpBuffer.length > TARGET_BYTES && quality >= MIN_QUALITY);
+
+    console.log("[upload-result-image] WebP output size:", webpBuffer.length, "bytes, quality used:", quality + 10);
+
+    // Validate WebP header (RIFF....WEBP)
+    const isValidWebP =
+      webpBuffer.length >= 12 &&
+      webpBuffer.slice(0, 4).toString("ascii") === "RIFF" &&
+      webpBuffer.slice(8, 12).toString("ascii") === "WEBP";
+
+    if (!isValidWebP) {
+      const headerHex = webpBuffer.slice(0, Math.min(16, webpBuffer.length)).toString("hex");
+      console.error("[upload-result-image] Invalid WebP header:", headerHex, "size:", webpBuffer.length);
+      return NextResponse.json(
+        { error: "图片处理失败" },
+        { status: 500 },
+      );
+    }
 
     /* ---- upload to Supabase Storage ---- */
     const storage = createServiceClient();
