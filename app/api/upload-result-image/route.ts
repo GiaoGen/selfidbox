@@ -120,6 +120,43 @@ export async function POST(request: Request) {
       .from(BUCKET)
       .getPublicUrl(path);
 
+    // Verify: download the uploaded file and compare with what we sent
+    try {
+      const verifyRes = await fetch(publicUrlData.publicUrl);
+      if (verifyRes.ok) {
+        const downloaded = Buffer.from(await verifyRes.arrayBuffer());
+        const match =
+          downloaded.length === webpBuffer.length &&
+          downloaded.equals(webpBuffer);
+        console.log(
+          "[upload-result-image] Download verify:",
+          match ? "MATCH" : "MISMATCH",
+          "| uploaded:", webpBuffer.length, "bytes",
+          "| downloaded:", downloaded.length, "bytes",
+        );
+        if (!match) {
+          console.error(
+            "[upload-result-image] First 20 bytes uploaded:",
+            webpBuffer.slice(0, 20).toString("hex"),
+          );
+          console.error(
+            "[upload-result-image] First 20 bytes downloaded:",
+            downloaded.slice(0, 20).toString("hex"),
+          );
+        }
+      } else {
+        console.error(
+          "[upload-result-image] Download verify failed: HTTP",
+          verifyRes.status,
+        );
+      }
+    } catch (verifyErr) {
+      console.error(
+        "[upload-result-image] Download verify error:",
+        (verifyErr as Error).message,
+      );
+    }
+
     return NextResponse.json({ image_url: publicUrlData.publicUrl });
   } catch (err) {
     console.error("[upload-result-image] Unhandled error:", err);
