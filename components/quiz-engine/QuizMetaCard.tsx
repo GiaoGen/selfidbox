@@ -42,15 +42,19 @@ function StepLabel({ num, label, light, description }: {
           {helpOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setHelpOpen(false)} />
-              <div className="fixed bottom-6 left-4 right-4 z-50 mx-auto max-w-sm rounded-2xl bg-[var(--surface-card)] p-5 shadow-[0_12px_50px_rgba(10,10,10,0.15)] ring-1 ring-[var(--ink)]/6">
-                <p className="text-sm leading-6 text-[var(--body)]">{description}</p>
-                <button
-                  type="button"
-                  onClick={() => setHelpOpen(false)}
-                  className="mt-3 text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
-                >
-                  关闭
-                </button>
+              <div className="fixed bottom-6 left-4 right-4 z-50 mx-auto max-w-sm bg-[var(--surface-card)] p-5 shadow-[0_12px_50px_rgba(10,10,10,0.15)] ring-1 ring-[var(--ink)]/6">
+                <div className="border-t-2 border-dashed border-[var(--ink)]/10 pt-4">
+                  <p className="text-sm leading-6 text-[var(--body)]">{description}</p>
+                </div>
+                <div className="border-t-2 border-dashed border-[var(--ink)]/10 mt-4 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setHelpOpen(false)}
+                    className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
+                  >
+                    关闭
+                  </button>
+                </div>
               </div>
             </>
           )}
@@ -78,9 +82,10 @@ type Props = {
   /** When provided, renders step header at the top */
   stepNumber?: number;
   stepLabel?: string;
+  stepDescription?: string;
 };
 
-export function QuizMetaCard({ meta, onChange, bgColor, stepNumber, stepLabel }: Props) {
+export function QuizMetaCard({ meta, onChange, bgColor, stepNumber, stepLabel, stepDescription }: Props) {
   const isEditing = !!onChange;
   const update = onChange ?? (() => {});
 
@@ -100,7 +105,7 @@ export function QuizMetaCard({ meta, onChange, bgColor, stepNumber, stepLabel }:
     >
       {/* When stepLabel is provided, render step header */}
       {stepLabel && stepNumber != null ? (
-        <StepLabel num={stepNumber} label={stepLabel} light={light} />
+        <StepLabel num={stepNumber} label={stepLabel} light={light} description={stepDescription} />
       ) : (
         <p className={`text-sm font-semibold ${mutedClass} ${light ? "" : "opacity-70"}`}>Quiz Meta</p>
       )}

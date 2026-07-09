@@ -226,15 +226,19 @@ function StepLabel({ num, label, inverted, description }: {
           {helpOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setHelpOpen(false)} />
-              <div className="fixed bottom-6 left-4 right-4 z-50 mx-auto max-w-sm rounded-2xl bg-[var(--surface-card)] p-5 shadow-[0_12px_50px_rgba(10,10,10,0.15)] ring-1 ring-[var(--ink)]/6">
-                <p className="text-sm leading-6 text-[var(--body)]">{description}</p>
-                <button
-                  type="button"
-                  onClick={() => setHelpOpen(false)}
-                  className="mt-3 text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
-                >
-                  关闭
-                </button>
+              <div className="fixed bottom-6 left-4 right-4 z-50 mx-auto max-w-sm bg-[var(--surface-card)] p-5 shadow-[0_12px_50px_rgba(10,10,10,0.15)] ring-1 ring-[var(--ink)]/6">
+                <div className="border-t-2 border-dashed border-[var(--ink)]/10 pt-4">
+                  <p className="text-sm leading-6 text-[var(--body)]">{description}</p>
+                </div>
+                <div className="border-t-2 border-dashed border-[var(--ink)]/10 mt-4 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setHelpOpen(false)}
+                    className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
+                  >
+                    关闭
+                  </button>
+                </div>
               </div>
             </>
           )}
@@ -268,7 +272,7 @@ function RangeSelector({
 
   return (
     <span
-      className="inline-flex items-center gap-px rounded-full p-px text-[10px] overflow-x-auto max-w-[220px] sm:max-w-[300px]"
+      className="inline-flex items-center gap-px rounded-full p-px text-xs overflow-x-auto max-w-[260px] sm:max-w-[360px]"
       style={{ scrollbarWidth: "none", backgroundColor: "#fff" }}
     >
       {options.map((n) => {
@@ -279,7 +283,7 @@ function RangeSelector({
             type="button"
             disabled={disabled}
             onClick={() => onChange(n)}
-            className="shrink-0 rounded-full px-1.5 py-0 font-semibold transition-colors transition-shadow disabled:cursor-not-allowed"
+            className="shrink-0 rounded-full px-2 py-0.5 font-semibold transition-colors transition-shadow disabled:cursor-not-allowed"
             style={
               value === n
                 ? { backgroundColor: "var(--ink)", color: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
@@ -1067,6 +1071,7 @@ function CreatePageContent() {
           bgColor={bgS1}
           stepNumber={1}
           stepLabel="测试基础信息"
+          stepDescription="这是创建测试的起点。输入标题、副标题，并设定目标受众与语气风格。标题是整个测试的主题锚点——AI 在生成结果人格时会严格围绕标题主题命名（例如「你是哪种猫」→ 橘猫、布偶猫，而非泛泛的性格标签）。受众和语气则影响所有 AI 生成内容的表达方式。"
         />
 
         {/* ── Step 2: Results ── */}
@@ -1079,7 +1084,7 @@ function CreatePageContent() {
           style={{ backgroundColor: bgS2, color: textOn(bgS2) }}
         >
           <div className="flex items-center justify-between">
-            <StepLabel num={2} label="结果人格" inverted={inv2} description="定义测试可能产生的结果人格，每个结果有独立的名称、描述和特质标签。" />
+            <StepLabel num={2} label="结果人格" inverted={inv2} description="AI 根据 Step 1 的标题、副标题、受众和语气，自动生成多种结果人格。每个结果包含名称、副标题、人格描述和特质标签（traits）。标题决定了结果的「类型范畴」——例如「你是哪种猫」会生成橘猫、布偶猫等具体品种，而非泛化的性格标签。你可以手动修改、删除或点击 📌 固定任意结果；固定后的结果在下次 AI 生成时不会被覆盖。" />
             <AIGenerateBtn loading={aiLoading} onClick={handleGenerateResults} inverted={inv2} />
           </div>
           <StepDivider inverted={inv2} />
@@ -1161,7 +1166,7 @@ function CreatePageContent() {
           style={{ backgroundColor: bgS3, color: textOn(bgS3) }}
         >
           <div className="flex items-center justify-between">
-            <StepLabel num={3} label="影响因子" inverted={inv3} />
+            <StepLabel num={3} label="影响因子" inverted={inv3} description="AI 根据 Step 1 的标题和 Step 2 的结果人格列表，从 16 维 SelfID 因子库中自动挑选最能「拉开差距」的因子。一个好的因子应该让不同的结果在该维度上呈现明显的高低差异——如果所有结果在某个因子上得分相近，这个因子就缺乏区分力。你也可以从因子库中手动添加，或删除不需要的因子。" />
             <AIGenerateBtn loading={aiFactorsLoading} onClick={handleGenerateFactors} inverted={inv3} />
           </div>
           <StepDivider inverted={inv3} />
@@ -1215,7 +1220,7 @@ function CreatePageContent() {
           style={{ backgroundColor: bgS4, color: textOn(bgS4) }}
         >
           <div className="flex items-center justify-between">
-            <StepLabel num={4} label="结果向量" inverted={inv4} description="为每个结果在每个因子维度上设定 0-100 的位置，构成该结果的人格向量。" />
+            <StepLabel num={4} label="结果向量" inverted={inv4} description="AI 将 Step 2 每个结果人格的 traits（特质标签）和 description（描述）作为首要依据，在 Step 3 的每个因子维度上分配 0-100 的数值，构成该结果的人格向量。AI 会确保每个结果都有明显的高低差异（至少 2 个因子偏高、2 个因子偏低），且不同结果在同一条因子上保持足够差距（≥15 分）。右上角的指示灯按钮可以检查区分度——如果两个结果的向量过于接近，说明它们在测试中无法被有效区隔。" />
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -1301,6 +1306,7 @@ function CreatePageContent() {
             style={{ abstractness: quiz.abstractness, seriousness: quiz.seriousness, depth: quiz.depth, poeticness: quiz.poeticness, title_relevance: quiz.title_relevance, goofiness: quiz.goofiness }}
             onChange={updateStyle}
             inverted={invStyle}
+            description="这 6 个滑块专门控制 Step 5 题目 AI 生成时的写作风格（不影响 Step 2 结果人格和 Step 4 结果向量的 AI 生成）。每个参数 0-100 分为 5 个策略档位，AI 会匹配对应的行为指令：抽象度决定场景是日常具体还是隐喻想象；严肃度决定语气是轻松随意还是正式严谨；搞怪度控制内容的趣味性和反套路程度；深度决定问题是表面偏好还是深层价值观；文艺度控制语言是直白朴素还是抒情诗意；主题相关度决定题目与标题主题的绑定强度。"
           />
         </motion.section>
 
@@ -1314,7 +1320,7 @@ function CreatePageContent() {
           style={{ backgroundColor: bgS6, color: textOn(bgS6) }}
         >
           <div className="flex items-center justify-between">
-            <StepLabel num={5} label="题目" inverted={inv6} description="每道题的每个选项都会在特定因子上产生增量效果，用户的最终向量是所有选项效果的累加。" />
+            <StepLabel num={5} label="题目" inverted={inv6} description="AI 综合前面所有步骤的内容生成题目：Step 1 的标题/元信息决定主题方向，Step 2 的结果人格是需要区分的「目标画像」，Step 3 的因子定义了测量维度，Step 4 的结果向量标明了每个结果在各因子上的理想位置，上方风格偏好的 6 个参数控制写作风格。每个选项在特定因子上产生 -3 到 +3 的增量效果（factor_effects）；用户答题时这些效果逐步累加形成用户向量，最终与 Step 4 的结果向量做欧几里得距离匹配，计算出最相似的结果人格。右上角的指示灯按钮可以检查因子覆盖——确保每个因子都被至少一道题目测量到。" />
             <div className="flex items-center gap-2">
               <button
                 type="button"
