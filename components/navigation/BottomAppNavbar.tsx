@@ -7,6 +7,7 @@ import { Compass, WandSparkles, User, Search, LogOut } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { DataSourceModal } from "@/components/DataSourceModal";
+import { PwaDownloadModal } from "@/components/PwaDownloadModal";
 import { SearchOverlay } from "./SearchOverlay";
 import type { AuthUser } from "@/lib/types";
 
@@ -96,6 +97,7 @@ export function BottomAppNavbar() {
   /* ---- profile menu (only when already on /profile) ---- */
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [sourceOpen, setSourceOpen] = useState(false);
+  const [pwaOpen, setPwaOpen] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -218,6 +220,19 @@ export function BottomAppNavbar() {
 
             <button
               type="button"
+              onClick={() => {
+                setProfileMenuOpen(false);
+                setPwaOpen(true);
+              }}
+              className="w-full px-3 py-2.5 text-left text-[14px] font-medium text-[var(--ink)]/70 transition hover:bg-[var(--ink)]/6"
+            >
+              下载APP
+            </button>
+
+            <hr className="my-3 border-t-2 border-dashed border-[var(--ink)]/15" />
+
+            <button
+              type="button"
               onClick={handleSignOut}
               className="inline-flex w-full items-center justify-center gap-1.5 bg-[var(--ink)] px-4 py-2.5 text-[14px] font-semibold text-white transition-shadow transition-transform duration-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.28)] active:scale-[0.98]"
             >
@@ -243,6 +258,11 @@ export function BottomAppNavbar() {
       <DataSourceModal
         open={sourceOpen}
         onClose={() => setSourceOpen(false)}
+      />
+
+      <PwaDownloadModal
+        open={pwaOpen}
+        onClose={() => setPwaOpen(false)}
       />
 
       {/* ---- Bottom navbar ---- */}
