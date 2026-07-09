@@ -1,6 +1,6 @@
 # TASKER STATUS
 
-Last updated: 2026-07-07
+Last updated: 2026-07-09
 
 ---
 
@@ -14,7 +14,9 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
 
 **登录页忘记密码验证码化**：从 Supabase magic link 邮件跳转改为验证码输入 + 原地改密，保留旧 magic link 路径向后兼容。UI 严格对齐小票设计（直角、虚线、穿孔条、投影）。
 
-**底部导航条 Profile 菜单动画**：图标白色化，菜单托盘接入 Framer Motion 出入场动画——从 navbar 上沿自下而上滑出，退出滑出屏幕外。
+**Quiz Studio 步骤说明重写**：6 个步骤/区段的 "?" 帮助弹窗文本全部重写，串联 AI 生成内容的数据依赖链路（Step 1→2→3→4 + Style Controls→5）。Step 1 / Step 3 / 风格控制区补充了之前缺失的帮助图标，弹窗样式改为直角 + 虚线分割。
+
+**PWA 下载引导**：底部导航栏 Profile 弹出菜单新增"下载APP"入口，弹出小票风格弹窗，分 iOS / Chrome / Edge 三个 tab，逐步教用户将 PWA 添加到主屏幕。
 
 **当前阻塞**：无。test-sites/[id] 顶部卡片 hydration 颜色误差待修复（根因：Framer Motion SSR 与 RelatedTestSites 组件树冲突，暂缓）。
 
@@ -64,6 +66,28 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
 ---
 
 ## Recent Progress (Last 30 Days)
+
+### 2026-07-09 — Quiz Studio 步骤帮助弹窗重写 + PWA 下载引导弹窗
+
+- **Quiz Studio 帮助弹窗重写**（`bab0292`）：
+  - Step 1（QuizMetaCard）新增 `stepDescription` prop 透传，补充帮助图标和弹窗
+  - Step 3（影响因子）补充缺失的 `description` → 帮助图标和弹窗
+  - QuizStyleControls（题目风格偏好）新增 `description` prop + `CircleHelp` 按钮 + 弹窗，与 StepLabel 风格一致
+  - Step 2/4/5 的 `description` 文本全部重写，串联 AI 生成数据依赖链路：
+    - Step 1 标题是主题锚点 → Step 2 AI 围绕标题生成结果人格（名称不可为泛化性格标签）
+    - Step 2 结果人格 traits + Step 3 因子维度 → Step 4 AI 分配 0-100 结果向量
+    - Step 1 标题 + Step 2 结果 + Step 3 因子 + Step 4 向量 + 上方 6 个风格滑块 → Step 5 AI 生成题目
+  - 弹窗样式调整：去掉 `rounded-2xl` 圆角 → 直角；文本上下各加一条虚线分割线
+  - 改动的 3 个文件：`app/create/page.tsx`、`components/quiz-engine/QuizMetaCard.tsx`、`components/quiz-engine/QuizStyleControls.tsx`
+
+- **PWA 下载引导弹窗**（`2779790`）：
+  - 新建 `components/PwaDownloadModal.tsx`（188 行），完全复用小票设计语言（打孔点、虚线分割、直角面板、`surface-soft` 背景）
+  - 三个 tab（iOS / Chrome / Edge）切换，与 LegalModal tab 样式一致
+  - 每个平台 4 步教程 + 1 个完成提示，使用编号圆圈 + 纯文本
+  - 底部导航栏 `BottomAppNavbar.tsx` Profile 菜单："数据来源"下方新增虚线分割 + "下载APP"按钮
+  - 入口极简（纯文本按钮，与"数据来源"风格一致），弹窗位于 `z-50` 遮罩层
+
+- 验证：`npm run lint` 零错误，`npm run build` 零错误，`npm run test` 16/16 通过
 
 ### 2026-07-07 — Quiz Studio Step 2 图片上传 Vercel 部署 broken image 修复（三轮定位）
 
