@@ -284,6 +284,7 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
   /* -- Card modal (shared hook: cache + three-tier fetch) -- */
   const { cardOpen, cardLoading, cardData, cardType, openCard, closeCard } =
     useSourceCardOpen();
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const handleBlockClick = useCallback(
     (entry: ProfileSourceEntry) => { openCard(entry); },
@@ -361,7 +362,7 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
 
     {/* ── Quiz Result Share Card ── */}
     {cardType === "quiz" && (
-      <RotatingCardModal open={cardOpen} onClose={closeCard}>
+      <RotatingCardModal open={cardOpen} onClose={closeCard} cardRef={cardRef}>
         {cardLoading && (
           <div className="flex items-center justify-center py-16">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -369,6 +370,7 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
         )}
         {!cardLoading && cardData && (
           <QuizResultShareCard
+            ref={cardRef}
             quizTitle={(cardData as QuizDetailData).quiz_title}
             resultName={(cardData as QuizDetailData).final_result_name}
             resultSubtitle={(cardData as QuizDetailData).result_subtitle ?? ""}

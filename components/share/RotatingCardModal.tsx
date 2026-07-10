@@ -1,7 +1,9 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Download } from "lucide-react";
+import { toPng } from "html-to-image";
 import { useSafariScrollLock } from "@/lib/use-safari-scroll-lock";
 
 /* ================================================================== */
@@ -22,11 +24,30 @@ interface Props {
   children: ReactNode;
   /** Max width of the card wrapper. Defaults to "calc(100vw - 48px)". */
   maxWidth?: string;
+  /** Ref to the card DOM element for PNG export. When provided, a download button is shown. */
+  cardRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-export function RotatingCardModal({ open, onClose, children, maxWidth }: Props) {
+export function RotatingCardModal({ open, onClose, children, maxWidth, cardRef }: Props) {
   // Safari: lock body scroll when modal is open
   useSafariScrollLock(open);
+  const [saving, setSaving] = useState(false);
+
+  async function handleDownload() {
+    if (!cardRef?.current) return;
+    setSaving(true);
+    try {
+      const dataUrl = await toPng(cardRef.current, { pixelRatio: 2, cacheBust: true });
+      const link = document.createElement("a");
+      link.download = "selfidbox-share-card.png";
+      link.href = dataUrl;
+      link.click();
+    } catch {
+      // silently fail
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <AnimatePresence>
@@ -54,6 +75,17 @@ export function RotatingCardModal({ open, onClose, children, maxWidth }: Props) 
             style={{ maxWidth: maxWidth ?? "calc(100vw - 48px)" }}
           >
             {children}
+            {cardRef && (
+              <button
+                type="button"
+                onClick={handleDownload}
+                disabled={saving}
+                className="self-end mt-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white/70 transition hover:bg-white/25 hover:text-white disabled:opacity-40"
+                aria-label="保存图片"
+              >
+                <Download size={14} />
+              </button>
+            )}
           </motion.div>
         </div>
       )}

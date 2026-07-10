@@ -74,6 +74,7 @@ export function CoverFlowSources({
   /* ---- Card open hook ---- */
   const { cardOpen, cardLoading, cardData, openCard, closeCard } =
     useSourceCardOpen();
+  const cardRef = useRef<HTMLDivElement>(null);
 
   /* ---- Refs for scroll-driven depth ---- */
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -240,13 +241,14 @@ export function CoverFlowSources({
 
       {/* ── Card Modal (full-size, unchanged) ── */}
       {showModal && (
-        <RotatingCardModal open={cardOpen} onClose={closeCard}>
+        <RotatingCardModal open={cardOpen} onClose={closeCard} cardRef={cardRef}>
           {cardLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             </div>
           ) : (
             <QuizResultShareCard
+              ref={cardRef}
               quizTitle={(cardData as QuizDetailData).quiz_title}
               resultName={(cardData as QuizDetailData).final_result_name}
               resultSubtitle={(cardData as QuizDetailData).result_subtitle ?? ""}
