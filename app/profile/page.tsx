@@ -7,6 +7,7 @@ import { ProfileInteractions } from "@/components/profile/ProfileInteractions";
 
 import { Greeting } from "@/components/Greeting";
 import { PendingSaveHandler } from "@/components/profile/PendingSaveHandler";
+import { SlideOutTray } from "@/components/navigation/SlideOutTray";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -101,7 +102,10 @@ export default async function ProfilePage() {
       <div className="fixed inset-0" style={{ backgroundColor: "#fffaf0" }} aria-hidden />
       <main className="relative min-h-screen text-[#1c1c1c]">
         <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
-        <Greeting className="-mb-2" />
+        <div className="flex items-center justify-between -mb-2">
+          <Greeting />
+          <SlideOutTray />
+        </div>
 
         <hr className="border-0 border-t-2 border-dashed border-[var(--ink)]/10" />
 

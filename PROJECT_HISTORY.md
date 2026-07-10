@@ -1693,3 +1693,37 @@
 - Initial commit (`c56c388`)
 
 ---
+
+## 2026-06-22 — 积分系统 + 游客保存 + Sentry + RLS 完成
+
+- **积分系统**：`user_credits` 表 + 3 个 SECURITY DEFINER RPC + CreditPanel。AI 生成消耗积分（Results 3cr / Factors 1cr / Vectors 3cr / Questions 5cr）
+- **游客答题保存**：未登录答题 → 登录 → 自动保存（PendingSaveHandler + localStorage）
+- **Sentry**：`@sentry/nextjs` v10.58 集成，sourcemaps 生产禁用
+- **RLS 完成**：Round 1+2 覆盖全部 17 张表
+- **动画优化**：卡片 spring 动画 + 骨架屏清理 + 登录页 Suspense 修复
+- Commits: `25f3a57` `5739432` `24fe366` `9db5935` `b17553d` `7865527` `d31af04` `764f010` `28d0f7f` `82036fb`
+
+### 2026-06-21 — 热度分 + 问候语 + 生产加固 + 基础设施
+
+- **统一热度分 + 去重**：`lib/explore/sort.ts`，heat_score 降序 + 去重
+- **时间问候语**：`components/Greeting.tsx`，/explore + /profile
+- **生产加固**：admin 角色检查（`ADMIN_USER_IDS`）+ 消除静态 anon 客户端 + service_role 隔离
+- **基础设施**：限流器（`lib/rate-limit.ts`）、Vitest + Playwright（3 测试文件）、结构化日志（`lib/logger.ts`）
+- **文档**：`PRODUCTION_READINESS_AUDIT.md`、`PreLaunchChecklist.md`
+- Commits: `5ebed94` `6dc6ab5` `5350fc9` `a4a006d` `db3f9d1` `5b096e3`
+
+### 2026-06-20 — 用户名 + 动态权重
+
+- **用户名系统**：`users.username` UNIQUE + 设置/修改/重名检测
+- **动态画像权重**：Profile 权重按数据来源动态调整 + Nippon 色对齐
+- Commits: `68cf8be` `2e4bf77`
+
+### 2026-06-19 — V2 评分 + SourceBlocks + UI 刷新
+
+- **V2 评分算法**：欧几里得距离 + softmax（`SCORING_ALPHA = 10`）
+- **SourceBlocks**：数据驱动网格 + 竖排文字 + 卡片弹窗
+- **UI 刷新**：奶油色背景（`#fffaf0`）+ 雷达图纯 SVG 重构 + 词云移除 + 尖角卡片
+- **颜色管道**：`quiz_results.color` AI 生成 → DB → Profile 全链路持久化
+- Commits: `03cd627` `1b64516` `8bc8d41` `1f76b9c`
+
+---

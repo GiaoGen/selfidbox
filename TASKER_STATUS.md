@@ -1,6 +1,6 @@
 # TASKER STATUS
 
-Last updated: 2026-07-09
+Last updated: 2026-07-11
 
 ---
 
@@ -8,15 +8,13 @@ Last updated: 2026-07-09
 
 SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡片颜色系统已完成全链路统一。Quiz Studio 图片上传（sharp 压缩 + Vercel 部署）已修复。
 
-**PWA 开屏优化**：骨架屏 + Service Worker + Middleware 公开路由零开销 + SWR 数据缓存 四项全部完成。
+**探索页排序修复**：站外测评点击权重降为 0.15×，冷启动加成从 2× 降为 1.3×，站内 Quiz 排序权重有效提升约 10×。
 
-**小票风格 UI 统一**：Login 页面 + 全部导航组件（BottomAppNavbar、TopNavbar、UserMenu、SearchOverlay）已统一为小票/收据设计语言。
+**Quiz Studio UX 多项优化**（Step 2-5）：trait 输入回车自动开新框、移除废弃分享文案输入框、深度滑块左侧标签修正、因子名称不可编辑、选项标签自动重新编号。
 
-**登录页忘记密码验证码化**：从 Supabase magic link 邮件跳转改为验证码输入 + 原地改密，保留旧 magic link 路径向后兼容。UI 严格对齐小票设计（直角、虚线、穿孔条、投影）。
+**PWA 自定义图标**：替换为项目自有 logo。
 
-**Quiz Studio 步骤说明重写**：6 个步骤/区段的 "?" 帮助弹窗文本全部重写，串联 AI 生成内容的数据依赖链路（Step 1→2→3→4 + Style Controls→5）。Step 1 / Step 3 / 风格控制区补充了之前缺失的帮助图标，弹窗样式改为直角 + 虚线分割。
-
-**PWA 下载引导**：底部导航栏 Profile 弹出菜单新增"下载APP"入口，弹出小票风格弹窗，分 iOS / Chrome / Edge 三个 tab，逐步教用户将 PWA 添加到主屏幕。
+**资源加载策略分析**：已完成全链路审查，识别 Profile 无 LIMIT 查询 + 图片直连 Supabase 两大风险。
 
 **当前阻塞**：无。test-sites/[id] 顶部卡片 hydration 颜色误差待修复（根因：Framer Motion SSR 与 RelatedTestSites 组件树冲突，暂缓）。
 
@@ -24,44 +22,9 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
 
 ---
 
-## Uncommitted Changes (2026-06-24)
+## Uncommitted Changes
 
-### 性能审计修复 Batch 1（9 项零风险修复）
-
-基于 `docs/performance-audit-issues.md`（39 个问题）：
-
-1. **C-1 — 卸载 recharts**：死代码 ~165KB gzipped
-2. **H-7 — transition-all 替换**：25 文件 36 处 → 具体过渡属性（仅 TrendingCarousel 保留）
-3. **H-11 — 静态资源 Cache-Control**：`/_next/static/(.*)` → `max-age=31536000, immutable`
-4. **H-12 — touch-action: manipulation**：消除移动端 300ms 点击延迟
-5. **L-1 — 删除模板 SVG**：5 个 Next.js 样板文件
-6. **L-2 — optimizePackageImports**：`["lucide-react", "framer-motion"]`
-7. **L-4 — 首页替换**：Next.js 样板 → SelfIDBox 品牌落地页
-8. **L-5 — robots.txt**：新建，指向 sitemap
-9. **L-7 — poweredByHeader: false**
-
-### 性能审计修复 Batch 2（N+1 查询）
-
-1. **C-3 — getQuizBySlug**：`Promise.all(N 次并行查询)` → `.in()` 批量查询 + Map 分组。查询数从 N+4 → 5
-2. **C-4 — getQuizForEdit**：`for (串行 N 次查询)` → `.in()` 批量查询 + Map 分组。查询数从 2N+3 → 5
-
-验证：`npm run build` 零错误。
-
-### 字体本地化
-
-- 移除 `next/font/google` → 系统字体栈（`PingFang SC / Noto Sans SC / Microsoft YaHei / ...`）
-- 原因：中国大陆无法直连 Google Fonts
-
-### 安全审计
-
-`docs/security-audit-report.md`：24 发现（3 关键 / 8 高 / 7 中 / 6 低）
-
-### 新增文件
-
-- `CLAUDE.md` — 项目指南
-- `docs/performance-audit-issues.md` — 39 问题跟踪（已修复 11 项）
-- `docs/security-audit-report.md` — 安全审计报告
-- `public/robots.txt`
+所有近期改动已提交并推送至 `v1-release` 分支。
 
 ---
 
@@ -88,6 +51,30 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
   - 入口极简（纯文本按钮，与"数据来源"风格一致），弹窗位于 `z-50` 遮罩层
 
 - 验证：`npm run lint` 零错误，`npm run build` 零错误，`npm run test` 16/16 通过
+
+### 2026-07-11 — 探索页排序权重修复 + Quiz Studio UX 多项优化 + 资源加载策略分析
+
+- **探索页排序权重修复**（`086e2fc`）：
+  - 根因：站外点击与站内答题使用同一 `computeHeatScore` 公式，冷启动加成（2×）对新增站外内容过于激进，QUIZ_HEAT_BOOST（1.5×）远不足以反映两种行为之间的用户投入差异
+  - 修复 `lib/explore/sort.ts`：冷启动加成斜率 0.5 → 0.15（最大 2× → 1.3×）
+  - 修复 `lib/explore/mapper.ts`：站外 `popularity_score` × `TEST_SITE_CLICK_WEIGHT`（0.15）；新增常量注释
+  - 效果：相同互动次数下，站内 Quiz 排序权重约为站外的 10×（1/0.15 × 1.5）
+
+- **Quiz Studio UX 多项优化**（之前 session）：
+  - Step 2 手动添加结果卡片默认标题从 `"新结果"` 改为空白（`app/create/page.tsx:487`）
+  - Step 2 trait 输入：Enter 保持输入框打开供连续输入（`EditableChipList.tsx` — `commit(keepOpen)`)
+  - Step 2 移除废弃的分享文案输入框（`ResultCard.tsx` — 删 7 行 UI，数据管线保留）
+  - Step 2 深度滑块左侧标签 `"偏好"` → `"浅显"`（`QuizStyleControls.tsx:24`）
+  - Step 3 因子名称从 `InlineEditableInput` 改为纯文本（`FactorList.tsx` — 16 维度固定不可编辑）
+  - Step 5 添加/删除选项后自动重新编号为 A/B/C...（`QuestionEffectsCard.tsx` — `.map((opt,i) => label(i))`）
+
+- **PWA 图标替换**：`public/icons/` 下 icon-192/icon-512/maskable-512 三个文件替换为项目自定义 logo
+
+- **资源加载策略分析**（纯诊断，无代码改动）：
+  - 识别两大风险：Profile 查询无 LIMIT（重度用户 TTFB 线性增长）+ 图片直连 Supabase Storage 无 CDN/压缩
+  - 缓存/SWR/Service Worker 策略评价良好；字体零下载；公开路由 middleware 零开销
+
+- 验证：`npm run lint` 零错误，`npm run test` 16/16 通过
 
 ### 2026-07-07 — Quiz Studio Step 2 图片上传 Vercel 部署 broken image 修复（三轮定位）
 
@@ -295,39 +282,7 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
 - **robots.txt 清理**：删除 `public/robots.txt`（与 `app/robots.ts` 冲突）
 - **TASKER_STATUS 同步**：C-S1/C-S2/C-S3 状态更新
 
-### 2026-06-22 — 积分系统 + 游客保存 + Sentry + RLS 完成
-
-- **积分系统**：`user_credits` 表 + 3 个 SECURITY DEFINER RPC + CreditPanel。AI 生成消耗积分（Results 3cr / Factors 1cr / Vectors 3cr / Questions 5cr）
-- **游客答题保存**：未登录答题 → 登录 → 自动保存（PendingSaveHandler + localStorage）
-- **Sentry**：`@sentry/nextjs` v10.58 集成，sourcemaps 生产禁用
-- **RLS 完成**：Round 1+2 覆盖全部 17 张表
-- **动画优化**：卡片 spring 动画 + 骨架屏清理 + 登录页 Suspense 修复
-- Commits: `25f3a57` `5739432` `24fe366` `9db5935` `b17553d` `7865527` `d31af04` `764f010` `28d0f7f` `82036fb`
-
-### 2026-06-21 — 热度分 + 问候语 + 生产加固 + 基础设施
-
-- **统一热度分 + 去重**：`lib/explore/sort.ts`，heat_score 降序 + 去重
-- **时间问候语**：`components/Greeting.tsx`，/explore + /profile
-- **生产加固**：admin 角色检查（`ADMIN_USER_IDS`）+ 消除静态 anon 客户端 + service_role 隔离
-- **基础设施**：限流器（`lib/rate-limit.ts`）、Vitest + Playwright（3 测试文件）、结构化日志（`lib/logger.ts`）
-- **文档**：`PRODUCTION_READINESS_AUDIT.md`、`PreLaunchChecklist.md`
-- Commits: `5ebed94` `6dc6ab5` `5350fc9` `a4a006d` `db3f9d1` `5b096e3`
-
-### 2026-06-20 — 用户名 + 动态权重
-
-- **用户名系统**：`users.username` UNIQUE + 设置/修改/重名检测
-- **动态画像权重**：Profile 权重按数据来源动态调整 + Nippon 色对齐
-- Commits: `68cf8be` `2e4bf77`
-
-### 2026-06-19 — V2 评分 + SourceBlocks + UI 刷新
-
-- **V2 评分算法**：欧几里得距离 + softmax（`SCORING_ALPHA = 10`）
-- **SourceBlocks**：数据驱动网格 + 竖排文字 + 卡片弹窗
-- **UI 刷新**：奶油色背景（`#fffaf0`）+ 雷达图纯 SVG 重构 + 词云移除 + 尖角卡片
-- **颜色管道**：`quiz_results.color` AI 生成 → DB → Profile 全链路持久化
-- Commits: `03cd627` `1b64516` `8bc8d41` `1f76b9c`
-
-> 更早记录见 [`PROJECT_HISTORY.md`](./PROJECT_HISTORY.md)（2026-06-17 — 探索页重构 + 小票卡片 及更早）
+> 更早记录见 [`PROJECT_HISTORY.md`](./PROJECT_HISTORY.md)（2026-06-22 及更早）
 
 ---
 

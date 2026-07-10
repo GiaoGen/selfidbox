@@ -10,6 +10,7 @@ import { TrendingCarousel } from "./TrendingCarousel";
 import { TrendingCard } from "./TrendingCard";
 import { TestCard } from "@/app/explore/_components/test-card";
 import { Greeting } from "@/components/Greeting";
+import { SlideOutTray } from "@/components/navigation/SlideOutTray";
 
 /* ------------------------------------------------------------------ */
 /*  Filters (pure functions)                                           */
@@ -310,9 +311,12 @@ export function ExploreClient({
       </div>
 
       {/* ================================================================ */}
-      {/*  Greeting                                                          */}
+      {/*  Greeting + Menu                                                    */}
       {/* ================================================================ */}
-      <Greeting className="-mb-7" />
+      <div className="flex items-center justify-between -mb-7">
+        <Greeting />
+        <SlideOutTray />
+      </div>
 
       {/* ================================================================ */}
       {/*  Trending Carousel                                                */}
