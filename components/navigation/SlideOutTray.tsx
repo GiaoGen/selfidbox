@@ -152,7 +152,7 @@ export function SlideOutTray() {
             {/* backdrop */}
             <motion.button
               type="button"
-              className="fixed inset-0 z-40 bg-[var(--ink)]/12 backdrop-blur-sm"
+              className="fixed inset-0 z-40 bg-[var(--ink)]/25"
               onClick={closeTray}
               aria-label="关闭菜单"
               initial={{ opacity: 0 }}
