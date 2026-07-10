@@ -21,7 +21,7 @@ const SLIDERS: {
   { key: "abstractness", label: "抽象度", left: "真实", right: "抽象" },
   { key: "seriousness", label: "严肃度", left: "轻松", right: "严肃" },
   { key: "goofiness", label: "搞怪度", left: "正常", right: "搞怪" },
-  { key: "depth", label: "深度", left: "偏好", right: "深度" },
+  { key: "depth", label: "深度", left: "浅显", right: "深度" },
   { key: "poeticness", label: "文艺度", left: "直白", right: "文艺" },
   { key: "title_relevance", label: "主题相关度", left: "泛化", right: "紧扣" },
 ];

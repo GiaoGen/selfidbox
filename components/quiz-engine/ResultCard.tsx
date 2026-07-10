@@ -242,17 +242,6 @@ export function ResultCard({ result, onChange, onDelete, onTogglePin, cardColor 
         )}
       </div>
 
-      {isEditing && (
-        <div className="mt-3">
-          <InlineEditableInput
-            value={result.shareText ?? ""}
-            onChange={(v) => update({ ...result, shareText: v })}
-            placeholder="分享文案（可选）"
-            className={`w-full text-xs ${opacityClass}`}
-          />
-        </div>
-      )}
-
       {/* upload error feedback */}
       {uploadState === "error" && uploadError && (
         <p className={`mt-2 text-xs ${opacityClass}`}>{uploadError}</p>

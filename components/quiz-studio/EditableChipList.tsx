@@ -18,13 +18,13 @@ export function EditableChipList({
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState("");
 
-  function commit() {
+  function commit(keepOpen = false) {
     const v = draft.trim();
     if (v && !items.includes(v)) {
       onChange([...items, v]);
     }
     setDraft("");
-    setAdding(false);
+    if (!keepOpen) setAdding(false);
   }
 
   function remove(index: number) {
@@ -55,13 +55,13 @@ export function EditableChipList({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
+            if (e.key === "Enter") commit(true);
             if (e.key === "Escape") {
               setDraft("");
               setAdding(false);
             }
           }}
-          onBlur={commit}
+          onBlur={() => commit()}
           placeholder={placeholder}
           className="inline-flex h-7 w-24 items-center rounded-full bg-current/8 px-3 text-xs font-medium placeholder:text-current/20 focus:outline-none focus:ring-2 focus:ring-current/15"
         />

@@ -51,24 +51,25 @@ export function QuestionEffectsCard({
   }
 
   function addOption() {
-    const label = String.fromCharCode(65 + question.options.length);
     update({
       ...question,
       options: [
         ...question.options,
         {
-          label,
+          label: "",
           text: "",
           effects: Object.fromEntries(factors.map((f) => [f.id, 0])),
         },
-      ],
+      ].map((opt, i) => ({ ...opt, label: String.fromCharCode(65 + i) })),
     });
   }
 
   function deleteOption(oIndex: number) {
     update({
       ...question,
-      options: question.options.filter((_, i) => i !== oIndex),
+      options: question.options
+        .filter((_, i) => i !== oIndex)
+        .map((opt, i) => ({ ...opt, label: String.fromCharCode(65 + i) })),
     });
   }
 
