@@ -9,6 +9,10 @@ import { computeHeatScore } from "./sort";
  *  engagement-scale gap between click_count (official) and attempt_count (community). */
 const QUIZ_HEAT_BOOST = 1.5;
 
+/** External test-site clicks carry far less user investment than completing
+ *  a full quiz, so raw click_count scores are scaled down by this factor. */
+const TEST_SITE_CLICK_WEIGHT = 0.15;
+
 /** Map a TestSite to unified ExploreCard */
 export function testSiteToExploreCard(site: TestSite): ExploreCard {
   const bg = site.color || nipponColorForSlug(site.id);
@@ -22,7 +26,7 @@ export function testSiteToExploreCard(site: TestSite): ExploreCard {
     category_id: site.category, // category slug — matches tab IDs for filtering
     categoryLabel: site.categoryLabel,
     featured: site.featured ?? false,
-    popularity_score: site.popularity_score ?? 0,
+    popularity_score: (site.popularity_score ?? 0) * TEST_SITE_CLICK_WEIGHT,
     created_at: site.created_at ?? new Date().toISOString(),
     tags: site.tags ?? [],
     estimatedMinutes: site.estimatedMinutes ?? null,

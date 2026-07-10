@@ -9,7 +9,8 @@ import type { ExploreCard } from "./types";
 /*  - log(1+x):   logarithmic compression — prevents winner-take-all    */
 /*  - ^0.5:       gentle time decay (slower than HN's 1.8 on hours)     */
 /*  - +2:         prevents division by zero for brand-new items          */
-/*  - cold_start: 2× linear fade over first 48 hours                     */
+/*  - cold_start: 1.3× linear fade over first 48 hours                     */
+/*  - external sites receive 0.15× click weight (applied in mapper)       */
 /* ------------------------------------------------------------------ */
 
 export function computeHeatScore(engagement: number, createdAt: string): number {
@@ -22,8 +23,8 @@ export function computeHeatScore(engagement: number, createdAt: string): number 
   // Gentle time decay
   const timeDecay = Math.pow(ageDays + 2, 0.5);
 
-  // Cold-start boost: 2× at publish → 1.5× after 1 day → 1× after 2 days
-  const coldStartBoost = 1 + Math.max(0, (2 - ageDays) * 0.5);
+  // Cold-start boost: 1.3× at publish → 1.15× after 1 day → 1× after 2 days
+  const coldStartBoost = 1 + Math.max(0, (2 - ageDays) * 0.15);
 
   return (effectiveEngagement / timeDecay) * coldStartBoost;
 }
