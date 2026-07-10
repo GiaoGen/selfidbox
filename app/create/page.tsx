@@ -484,7 +484,7 @@ function CreatePageContent() {
         ...prev,
         results: [
           ...prev.results,
-          { id, name: "新结果", description: "", traits: [], isPinned: false, color: pickRandom(NIPPON_COLORS) },
+          { id, name: "", description: "", traits: [], isPinned: false, color: pickRandom(NIPPON_COLORS) },
         ],
         resultVectors: [
           ...prev.resultVectors,
