@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Profile — Your Personality Portrait",
+  title: "画像 — 你的人格肖像",
   description: "View your AI-generated personality profile, radar charts, and quiz result collection.",
 };
 

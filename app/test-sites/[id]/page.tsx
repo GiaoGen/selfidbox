@@ -15,10 +15,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const row = await getTestSiteBySlug(id);
-  if (!row) return { title: "Not Found" };
+  if (!row) return { title: "未找到" };
   const site = mapTestSite(row);
   return {
-    title: `${site.name} — Test Site`,
+    title: `${site.name} — 测评站点`,
     description: site.description || `查看 ${site.name} 的详细信息`,
   };
 }

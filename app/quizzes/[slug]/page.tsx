@@ -14,9 +14,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const quiz = await getQuizDetail(slug);
-  if (!quiz) return { title: "Not Found" };
+  if (!quiz) return { title: "未找到" };
   return {
-    title: `${quiz.title} — Quiz Detail`,
+    title: `${quiz.title} — 测验详情`,
     description: quiz.description || quiz.hook || `查看 ${quiz.title} 的详细信息`,
   };
 }

@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const quiz = await getQuizBySlug(slug);
   if (!quiz) return { title: "测试未找到" };
   return {
-    title: `${quiz.title} — SelfIDBox`,
+    title: quiz.title,
     description: quiz.hook || `来测测你是哪种${quiz.title}`,
   };
 }

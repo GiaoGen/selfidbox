@@ -47,7 +47,7 @@ function getTrending(cards: ExploreCard[]): ExploreCard[] {
 /* ------------------------------------------------------------------ */
 
 export const metadata: Metadata = {
-  title: "Explore — Discover Personality Quizzes",
+  title: "探索 — 发现人格测验",
   description:
     "Browse and discover AI-powered personality quizzes and test sites. Find your SelfID.",
 };

@@ -5,8 +5,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://selfidbox.com"),
   title: {
-    default: "SelfIDBox",
-    template: "%s — SelfIDBox",
+    default: "人格容器",
+    template: "%s — 人格容器",
   },
   description:
     "AI driven personality expression and quiz discovery platform. Create, share, and discover personality quizzes powered by AI.",
@@ -14,10 +14,10 @@ export const metadata: Metadata = {
   authors: [{ name: "SelfIDBox" }],
   robots: { index: true, follow: true },
   manifest: "/manifest.webmanifest",
-  applicationName: "SelfIDBox",
+  applicationName: "人格容器",
   appleWebApp: {
     capable: true,
-    title: "SelfIDBox",
+    title: "人格容器",
     statusBarStyle: "default",
   },
   icons: {
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "SelfIDBox",
-    title: "SelfIDBox — AI Personality Quiz Platform",
+    title: "人格容器 — AI 人格测验平台",
     description:
       "Create, share, and discover personality quizzes powered by AI. Find your SelfID.",
     url: "https://selfidbox.com",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary",
-    title: "SelfIDBox — AI Personality Quiz Platform",
+    title: "人格容器 — AI 人格测验平台",
     description:
       "Create, share, and discover personality quizzes powered by AI.",
   },
