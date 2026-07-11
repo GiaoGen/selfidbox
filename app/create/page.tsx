@@ -411,6 +411,42 @@ function CreatePageContent() {
   const [aiQuestionsLoading, setAiQuestionsLoading] = useState(false);
   const [aiQuestionsError, setAiQuestionsError] = useState("");
 
+  /* ---- AI error code → user-friendly message ---- */
+  const AI_ERROR_MESSAGES: Record<string, string> = {
+    API_KEY_NOT_CONFIGURED: "AI 服务未配置，请联系管理员",
+    NOT_AUTHENTICATED: "请先登录后再使用 AI 生成功能",
+    RATE_LIMITED: "操作太频繁了，请稍等片刻再试",
+    INSUFFICIENT_CREDITS: "积分不足，无法继续生成",
+    CREDIT_CHECK_FAILED: "积分查询失败，请稍后重试",
+    INVALID_JSON: "请求数据格式错误，请刷新页面后重试",
+    TITLE_REQUIRED: "请先填写测验标题",
+    INVALID_RESULT_COUNT: "结果数量需在 1–16 之间",
+    RESULTS_REQUIRED: "请先生成测验结果",
+    INVALID_FACTOR_COUNT: "因子数量需在 1–16 之间",
+    FACTORS_REQUIRED: "请先生成因子",
+    INVALID_QUESTION_COUNT: "题目数量需在 1–20 之间",
+    INVALID_OPTIONS_COUNT: "每题选项数需在 2–6 之间",
+    AI_API_ERROR: "AI 服务暂时不可用，请稍后重试",
+    AI_EMPTY_RESPONSE: "AI 返回了空内容，请重试",
+    AI_INVALID_JSON: "AI 返回格式异常，请重试",
+    AI_MISSING_RESULTS: "AI 生成结果不完整，请重试",
+    AI_RESULT_VALIDATION: "AI 生成的结果数据异常，请重试",
+    AI_MISSING_FACTORS: "AI 生成因子不完整，请重试",
+    AI_FACTOR_VALIDATION: "AI 生成的因子数据异常，请重试",
+    AI_MISSING_VECTORS: "AI 未生成向量数据，请重试",
+    AI_VECTOR_VALIDATION: "AI 生成的向量数据异常，请重试",
+    AI_MISSING_QUESTIONS: "AI 未生成题目，请重试",
+    AI_QUESTION_VALIDATION: "AI 生成的题目数据不完整，请重试",
+    INTERNAL_ERROR: "服务器异常，请稍后重试",
+  };
+
+  function aiErrorMessage(data: { code?: string; error?: string }): string {
+    if (data.code && AI_ERROR_MESSAGES[data.code]) {
+      return AI_ERROR_MESSAGES[data.code];
+    }
+    return "AI 生成失败，请重试";
+  }
+
   const [resultCount, setResultCount] = useState(6);
   const [factorCount, setFactorCount] = useState(5);
   const [questionCount, setQuestionCount] = useState(8);
@@ -669,7 +705,7 @@ function CreatePageContent() {
       const data = await res.json();
 
       if (!res.ok) {
-        setAiError(data.error ?? "AI 生成失败，请重试");
+        setAiError(aiErrorMessage(data));
         return;
       }
 
@@ -758,7 +794,7 @@ function CreatePageContent() {
       const data = await res.json();
 
       if (!res.ok) {
-        setAiFactorsError(data.error ?? "AI 生成失败，请重试");
+        setAiFactorsError(aiErrorMessage(data));
         return;
       }
 
@@ -845,7 +881,7 @@ function CreatePageContent() {
       const data = await res.json();
 
       if (!res.ok) {
-        setAiVectorsError(data.error ?? "AI 生成失败，请重试");
+        setAiVectorsError(aiErrorMessage(data));
         return;
       }
 
@@ -932,7 +968,7 @@ function CreatePageContent() {
       const data = await res.json();
 
       if (!res.ok) {
-        setAiQuestionsError(data.error ?? "AI 生成失败，请重试");
+        setAiQuestionsError(aiErrorMessage(data));
         return;
       }
 

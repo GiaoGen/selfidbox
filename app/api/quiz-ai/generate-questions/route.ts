@@ -87,7 +87,7 @@ function mergePinnedQuestion(
 export async function POST(request: NextRequest) {
   if (!DEEPSEEK_API_KEY) {
     return NextResponse.json(
-      { error: "DeepSeek API key not configured" },
+      { error: "DeepSeek API key not configured", code: "API_KEY_NOT_CONFIGURED" },
       { status: 500 },
     );
   }
@@ -95,22 +95,22 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
+    return NextResponse.json({ error: "NOT_AUTHENTICATED", code: "NOT_AUTHENTICATED" }, { status: 401 });
   }
 
   // Rate limit: 20 requests per minute per user
   if (!checkRateLimit(`ai:questions:${user.id}`, 20, 60_000)) {
-    return NextResponse.json({ error: "RATE_LIMITED" }, { status: 429 });
+    return NextResponse.json({ error: "RATE_LIMITED", code: "RATE_LIMITED" }, { status: 429 });
   }
 
   try {
     const snapshot = await getCredits(user.id);
     if (snapshot.balance.available <= 0) {
-      return NextResponse.json({ error: "INSUFFICIENT_CREDITS" }, { status: 402 });
+      return NextResponse.json({ error: "INSUFFICIENT_CREDITS", code: "INSUFFICIENT_CREDITS" }, { status: 402 });
     }
   } catch (err) {
     console.error("[quiz-ai:questions] Credit check failed:", err);
-    return NextResponse.json({ error: "Credit check failed" }, { status: 500 });
+    return NextResponse.json({ error: "Credit check failed", code: "CREDIT_CHECK_FAILED" }, { status: 500 });
   }
 
   let body: {
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body", code: "INVALID_JSON" }, { status: 400 });
   }
 
   const {
@@ -162,17 +162,17 @@ export async function POST(request: NextRequest) {
   } = body;
 
   if (!title || typeof title !== "string") {
-    return NextResponse.json({ error: "title is required" }, { status: 400 });
+    return NextResponse.json({ error: "title is required", code: "TITLE_REQUIRED" }, { status: 400 });
   }
   if (!results || !Array.isArray(results) || results.length < 2) {
     return NextResponse.json(
-      { error: "results array with at least 2 items is required" },
+      { error: "results array with at least 2 items is required", code: "RESULTS_REQUIRED" },
       { status: 400 },
     );
   }
   if (!factors || !Array.isArray(factors) || factors.length < 2) {
     return NextResponse.json(
-      { error: "factors array with at least 2 items is required" },
+      { error: "factors array with at least 2 items is required", code: "FACTORS_REQUIRED" },
       { status: 400 },
     );
   }
@@ -182,13 +182,13 @@ export async function POST(request: NextRequest) {
 
   if (qc < 1 || qc > 20) {
     return NextResponse.json(
-      { error: "question_count must be between 1 and 20" },
+      { error: "question_count must be between 1 and 20", code: "INVALID_QUESTION_COUNT" },
       { status: 400 },
     );
   }
   if (opq < 2 || opq > 6) {
     return NextResponse.json(
-      { error: "options_per_question must be between 2 and 6" },
+      { error: "options_per_question must be between 2 and 6", code: "INVALID_OPTIONS_COUNT" },
       { status: 400 },
     );
   }
@@ -304,7 +304,7 @@ export async function POST(request: NextRequest) {
         errorMessage: `DeepSeek API returned ${dsResponse.status}`,
       });
       return NextResponse.json(
-        { error: `DeepSeek API returned ${dsResponse.status}` },
+        { error: `DeepSeek API returned ${dsResponse.status}`, code: "AI_API_ERROR" },
         { status: 502 },
       );
     }
@@ -322,7 +322,7 @@ export async function POST(request: NextRequest) {
         errorMessage: "AI returned empty response",
       });
       return NextResponse.json(
-        { error: "AI returned empty response" },
+        { error: "AI returned empty response", code: "AI_EMPTY_RESPONSE" },
         { status: 502 },
       );
     }
@@ -351,14 +351,14 @@ export async function POST(request: NextRequest) {
         errorMessage: "AI returned invalid JSON",
       });
       return NextResponse.json(
-        { error: "AI returned invalid JSON" },
+        { error: "AI returned invalid JSON", code: "AI_INVALID_JSON" },
         { status: 502 },
       );
     }
 
     if (!parsed.questions || !Array.isArray(parsed.questions)) {
       return NextResponse.json(
-        { error: "AI response missing questions array" },
+        { error: "AI response missing questions array", code: "AI_MISSING_QUESTIONS" },
         { status: 502 },
       );
     }
@@ -409,20 +409,20 @@ export async function POST(request: NextRequest) {
       const q = questions[qi];
       if (!q || typeof q !== "object") {
         return NextResponse.json(
-          { error: `Question ${qi} is not an object` },
+          { error: `Question ${qi} is not an object`, code: "AI_QUESTION_VALIDATION" },
           { status: 502 },
         );
       }
       const qObj = q as Record<string, unknown>;
       if (!qObj.text || typeof qObj.text !== "string") {
         return NextResponse.json(
-          { error: `Question ${qi} missing valid text` },
+          { error: `Question ${qi} missing valid text`, code: "AI_QUESTION_VALIDATION" },
           { status: 502 },
         );
       }
       if (!Array.isArray(qObj.options)) {
         return NextResponse.json(
-          { error: `Question ${qi} missing options array` },
+          { error: `Question ${qi} missing options array`, code: "AI_QUESTION_VALIDATION" },
           { status: 502 },
         );
       }
@@ -431,26 +431,26 @@ export async function POST(request: NextRequest) {
         const opt = (qObj.options as unknown[])[oi];
         if (!opt || typeof opt !== "object") {
           return NextResponse.json(
-            { error: `Question ${qi} option ${oi} is not an object` },
+            { error: `Question ${qi} option ${oi} is not an object`, code: "AI_QUESTION_VALIDATION" },
             { status: 502 },
           );
         }
         const oObj = opt as Record<string, unknown>;
         if (!oObj.label || typeof oObj.label !== "string") {
           return NextResponse.json(
-            { error: `Question ${qi} option ${oi} missing valid label` },
+            { error: `Question ${qi} option ${oi} missing valid label`, code: "AI_QUESTION_VALIDATION" },
             { status: 502 },
           );
         }
         if (!oObj.text || typeof oObj.text !== "string") {
           return NextResponse.json(
-            { error: `Question ${qi} option ${oi} missing valid text` },
+            { error: `Question ${qi} option ${oi} missing valid text`, code: "AI_QUESTION_VALIDATION" },
             { status: 502 },
           );
         }
         if (!oObj.factor_effects || typeof oObj.factor_effects !== "object") {
           return NextResponse.json(
-            { error: `Question ${qi} option ${oi} missing valid factor_effects` },
+            { error: `Question ${qi} option ${oi} missing valid factor_effects`, code: "AI_QUESTION_VALIDATION" },
             { status: 502 },
           );
         }
@@ -461,13 +461,13 @@ export async function POST(request: NextRequest) {
         for (const [key, val] of Object.entries(effects)) {
           if (!factorKeySet.has(key)) {
             return NextResponse.json(
-              { error: `Question ${qi} option ${oi} uses unknown factor key "${key}"` },
+              { error: `Question ${qi} option ${oi} uses unknown factor key "${key}"`, code: "AI_QUESTION_VALIDATION" },
               { status: 502 },
             );
           }
           if (typeof val !== "number" || val < -3 || val > 3 || !Number.isInteger(val)) {
             return NextResponse.json(
-              { error: `Question ${qi} option ${oi} has invalid effect value for "${key}": ${val}` },
+              { error: `Question ${qi} option ${oi} has invalid effect value for "${key}": ${val}`, code: "AI_QUESTION_VALIDATION" },
               { status: 502 },
             );
           }
@@ -476,13 +476,13 @@ export async function POST(request: NextRequest) {
 
         if (effectCount === 0) {
           return NextResponse.json(
-            { error: `Question ${qi} option ${oi} has no factor_effects` },
+            { error: `Question ${qi} option ${oi} has no factor_effects`, code: "AI_QUESTION_VALIDATION" },
             { status: 502 },
           );
         }
         if (effectCount > 3) {
           return NextResponse.json(
-            { error: `Question ${qi} option ${oi} has more than 3 factor_effects` },
+            { error: `Question ${qi} option ${oi} has more than 3 factor_effects`, code: "AI_QUESTION_VALIDATION" },
             { status: 502 },
           );
         }
@@ -519,7 +519,7 @@ export async function POST(request: NextRequest) {
       errorMessage: err instanceof Error ? err.message : "Internal server error",
     });
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", code: "INTERNAL_ERROR" },
       { status: 500 },
     );
   }

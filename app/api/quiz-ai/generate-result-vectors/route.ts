@@ -16,7 +16,7 @@ const MODEL = "deepseek-chat";
 export async function POST(request: NextRequest) {
   if (!DEEPSEEK_API_KEY) {
     return NextResponse.json(
-      { error: "DeepSeek API key not configured" },
+      { error: "DeepSeek API key not configured", code: "API_KEY_NOT_CONFIGURED" },
       { status: 500 },
     );
   }
@@ -24,21 +24,21 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
+    return NextResponse.json({ error: "NOT_AUTHENTICATED", code: "NOT_AUTHENTICATED" }, { status: 401 });
   }
 
   if (!checkRateLimit(`ai:vectors:${user.id}`, 20, 60_000)) {
-    return NextResponse.json({ error: "RATE_LIMITED" }, { status: 429 });
+    return NextResponse.json({ error: "RATE_LIMITED", code: "RATE_LIMITED" }, { status: 429 });
   }
 
   try {
     const snapshot = await getCredits(user.id);
     if (snapshot.balance.available <= 0) {
-      return NextResponse.json({ error: "INSUFFICIENT_CREDITS" }, { status: 402 });
+      return NextResponse.json({ error: "INSUFFICIENT_CREDITS", code: "INSUFFICIENT_CREDITS" }, { status: 402 });
     }
   } catch (err) {
     console.error("[quiz-ai:vectors] Credit check failed:", err);
-    return NextResponse.json({ error: "Credit check failed" }, { status: 500 });
+    return NextResponse.json({ error: "Credit check failed", code: "CREDIT_CHECK_FAILED" }, { status: 500 });
   }
 
   let body: {
@@ -56,23 +56,23 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body", code: "INVALID_JSON" }, { status: 400 });
   }
 
   const { userId, title, hook, quiz_type, audience, tone, results, factors, pinned_vectors } = body;
 
   if (!title || typeof title !== "string") {
-    return NextResponse.json({ error: "title is required" }, { status: 400 });
+    return NextResponse.json({ error: "title is required", code: "TITLE_REQUIRED" }, { status: 400 });
   }
   if (!results || !Array.isArray(results) || results.length < 1) {
     return NextResponse.json(
-      { error: "results array with at least 1 item is required" },
+      { error: "results array with at least 1 item is required", code: "RESULTS_REQUIRED" },
       { status: 400 },
     );
   }
   if (!factors || !Array.isArray(factors) || factors.length < 2) {
     return NextResponse.json(
-      { error: "factors array with at least 2 items is required" },
+      { error: "factors array with at least 2 items is required", code: "FACTORS_REQUIRED" },
       { status: 400 },
     );
   }
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
         errorMessage: `DeepSeek API returned ${dsResponse.status}`,
       });
       return NextResponse.json(
-        { error: `DeepSeek API returned ${dsResponse.status}` },
+        { error: `DeepSeek API returned ${dsResponse.status}`, code: "AI_API_ERROR" },
         { status: 502 },
       );
     }
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
         errorMessage: "AI returned empty response",
       });
       return NextResponse.json(
-        { error: "AI returned empty response" },
+        { error: "AI returned empty response", code: "AI_EMPTY_RESPONSE" },
         { status: 502 },
       );
     }
@@ -177,14 +177,14 @@ export async function POST(request: NextRequest) {
         errorMessage: "AI returned invalid JSON",
       });
       return NextResponse.json(
-        { error: "AI returned invalid JSON" },
+        { error: "AI returned invalid JSON", code: "AI_INVALID_JSON" },
         { status: 502 },
       );
     }
 
     if (!parsed.result_vectors || typeof parsed.result_vectors !== "object") {
       return NextResponse.json(
-        { error: "AI response missing result_vectors object" },
+        { error: "AI response missing result_vectors object", code: "AI_MISSING_VECTORS" },
         { status: 502 },
       );
     }
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
       const vec = vectors[rk];
       if (!vec || typeof vec !== "object") {
         return NextResponse.json(
-          { error: `Missing or invalid vector for result "${rk}"` },
+          { error: `Missing or invalid vector for result "${rk}"`, code: "AI_VECTOR_VALIDATION" },
           { status: 502 },
         );
       }
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
         const v = vals[fk];
         if (typeof v !== "number" || v < 0 || v > 100) {
           return NextResponse.json(
-            { error: `Invalid value for result "${rk}" factor "${fk}": ${v}` },
+            { error: `Invalid value for result "${rk}" factor "${fk}": ${v}`, code: "AI_VECTOR_VALIDATION" },
             { status: 502 },
           );
         }
@@ -265,7 +265,7 @@ export async function POST(request: NextRequest) {
       errorMessage: err instanceof Error ? err.message : "Internal server error",
     });
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", code: "INTERNAL_ERROR" },
       { status: 500 },
     );
   }
