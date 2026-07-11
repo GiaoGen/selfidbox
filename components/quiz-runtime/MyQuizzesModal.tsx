@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Library, EyeOff, Play, Send, Trash2, Pencil } from "lucide-react";
+import { X, Library, EyeOff, Play, Send, Trash2, Pencil, Share2 } from "lucide-react";
 import type { CreatorQuizRow } from "@/lib/quizzes-db";
 import { MAX_SANDBOX_ATTEMPTS } from "@/lib/quiz-runtime";
 import { QuizSwipeActionRow, type ActionButton } from "./QuizSwipeActionRow";
@@ -14,10 +14,10 @@ interface Props {
 }
 
 function statusLabel(s: string): string {
-  if (s === "published") return "Published";
-  if (s === "sandbox") return "Sandbox";
+  if (s === "published") return "已发布";
+  if (s === "sandbox") return "沙盒";
   if (s === "submitted") return "已提交";
-  return "Draft";
+  return "草稿";
 }
 
 function statusBadgeClass(s: string): string {
@@ -36,6 +36,7 @@ export function MyQuizzesModal({ open, onClose }: Props) {
   const [error, setError] = useState("");
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState("");
+  const [copyMsg, setCopyMsg] = useState("");
 
   /* ---- Fetch ---- */
   const fetchQuizzes = useCallback(async () => {
@@ -112,12 +113,25 @@ export function MyQuizzesModal({ open, onClose }: Props) {
 
   /* ---- Build action buttons per quiz status ---- */
   function buildButtons(quiz: CreatorQuizRow): ActionButton[] {
-    // published / archived not in scope — no swipe actions
-    if (quiz.status === "published" || quiz.status === "archived") {
-      return [];
-    }
+    // archived not in scope — no swipe actions
+    if (quiz.status === "archived") return [];
 
     const all: ActionButton[] = [];
+
+    // 分享 (sandbox / submitted / published — draft excluded)
+    if (quiz.status !== "draft") {
+      all.push({
+        key: "share",
+        label: "分享",
+        icon: <Share2 size={BTN_ICON_SIZE} />,
+        bgClass: "bg-emerald-100 text-emerald-600",
+        hoverClass: "hover:bg-emerald-200",
+        onClick: () => handleShare(quiz),
+      });
+    }
+
+    // published only gets share — no edit / delete
+    if (quiz.status === "published") return all;
 
     // 编辑 (draft / sandbox / submitted)
     all.push({
@@ -183,6 +197,18 @@ export function MyQuizzesModal({ open, onClose }: Props) {
     return all;
   }
 
+  /* ---- Share (copy link) ---- */
+  async function handleShare(quiz: CreatorQuizRow) {
+    const url = `${window.location.origin}/quiz/${quiz.slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopyMsg("链接已复制到剪贴板！");
+      setTimeout(() => setCopyMsg(""), 2000);
+    } catch {
+      setActionMsg("复制失败，请重试");
+    }
+  }
+
   function handleNavigate(quiz: CreatorQuizRow) {
     if (!quiz.slug) {
       setActionMsg("该测试缺少 slug，无法跳转");
@@ -237,6 +263,13 @@ export function MyQuizzesModal({ open, onClose }: Props) {
               <div className="mx-6 mt-3 sm:mx-8">
                 <p className="rounded-xl bg-[#fef2f2] px-4 py-2 text-[13px] font-medium text-[#dc2626]">
                   {actionMsg}
+                </p>
+              </div>
+            )}
+            {copyMsg && (
+              <div className="mx-6 mt-3 sm:mx-8">
+                <p className="rounded-xl bg-[#f0fdf4] px-4 py-2 text-[13px] font-medium text-[#16a34a]">
+                  {copyMsg}
                 </p>
               </div>
             )}
