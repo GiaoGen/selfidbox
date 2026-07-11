@@ -6,17 +6,17 @@ Last updated: 2026-07-11
 
 ## Current State
 
-SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡片颜色系统已完成全链路统一。Quiz Studio 图片上传（sharp 压缩 + Vercel 部署）已修复。
+SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。
+
+**导航系统重构**：底部 navbar 已完全移除，替换为顶部 Greeting 右侧 ≡ 按钮 + 右侧滑出托盘（SlideOutTray）。托盘内集中了全部导航项（主页/创作/个人/搜索）+ 用户功能（邮箱/数据来源/下载APP/登录退出），遵循小票设计语言（直角矩形、米白色、虚线分割、穿孔条）。`/create` 页面新增顶部 Greeting。
+
+**Profile share card 下载**：RotatingCardModal 新增可选下载按钮，SourceBlocks / CoverFlowSources 均已接入。
 
 **探索页排序修复**：站外测评点击权重降为 0.15×，冷启动加成从 2× 降为 1.3×，站内 Quiz 排序权重有效提升约 10×。
 
-**Quiz Studio UX 多项优化**（Step 2-5）：trait 输入回车自动开新框、移除废弃分享文案输入框、深度滑块左侧标签修正、因子名称不可编辑、选项标签自动重新编号。
+**Quiz Studio UX 多项优化**：trait 回车保持输入框、废弃分享文案移除、深度滑块标签修正、因子名称不可编辑、选项自动重编号、默认结果名空白。
 
-**PWA 自定义图标**：替换为项目自有 logo。
-
-**资源加载策略分析**：已完成全链路审查，识别 Profile 无 LIMIT 查询 + 图片直连 Supabase 两大风险。
-
-**当前阻塞**：无。test-sites/[id] 顶部卡片 hydration 颜色误差待修复（根因：Framer Motion SSR 与 RelatedTestSites 组件树冲突，暂缓）。
+**当前阻塞**：无。
 
 **下一步**：lint 错误清理 → 生产上线。
 
@@ -75,6 +75,33 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
   - 缓存/SWR/Service Worker 策略评价良好；字体零下载；公开路由 middleware 零开销
 
 - 验证：`npm run lint` 零错误，`npm run test` 16/16 通过
+
+### 2026-07-11 — 导航系统重构：底部 navbar 移除 + 右侧滑出托盘 + Profile share card 下载
+
+- **SlideOutTray 组件**（`53e1710`、`15ad1c7`）：
+  - 新建 `components/navigation/SlideOutTray.tsx`（~260 行），完全自包含
+  - ≡ 汉堡按钮位于 Greeting 右侧，点击后托盘从右侧滑入（280px / max 75vw）
+  - 托盘内集中全部功能：4 个导航项（主页/创作/个人/搜索）+ 用户区域（未登录显示"登录"按钮，已登录显示用户名+数据来源+下载APP+退出登录）
+  - 所有弹窗内聚在组件中（SearchOverlay、DataSourceModal、PwaDownloadModal）
+  - 完整小票设计：直角矩形、`bg-[var(--surface-card)]` 米白底、虚线分割、顶部/底部穿孔条
+  - 遮罩优化：`backdrop-blur-sm` → 纯暗色透明 `bg-[var(--ink)]/25`（省 GPU 性能）
+
+- **底部 navbar 完全移除**（`15ad1c7`）：
+  - 删除 `components/navigation/BottomAppNavbar.tsx`（~322 行）
+  - `NavbarLayout.tsx` 精简：移除 BottomAppNavbar 导入/渲染/spacer，保留 PageTransition 逻辑
+  - 无外部依赖——仅 NavbarLayout 引用 BottomAppNavbar，安全删除
+
+- **页面集成**：
+  - `/explore`（ExploreClient）、`/profile`（page.tsx）：Greeting + ≡ 按钮水平排列
+  - `/create`（page.tsx）：顶部新增 Greeting + ≡ 按钮行（之前没有问候语）
+  - 三个页面均已接入 SlideOutTray
+
+- **Profile share card 下载按钮**（`9cd9f6a`）：
+  - `RotatingCardModal` 新增可选 `cardRef` prop + 下载按钮（`html-to-image` toPng 导出 PNG）
+  - 按钮位于卡片下方右对齐（`self-end`），不重叠卡片主体
+  - `SourceBlocks.tsx`、`CoverFlowSources.tsx` 均接入：创建 ref → 传 QuizResultShareCard + RotatingCardModal
+
+- 验证：`npm run lint` 零错误，`npm run build` 零错误，`npm run test` 16/16 通过
 
 ### 2026-07-07 — Quiz Studio Step 2 图片上传 Vercel 部署 broken image 修复（三轮定位）
 
@@ -263,26 +290,7 @@ SelfIDBox 处于**上线前收尾阶段**。核心用户流程全链路通。卡
 - **移除动态背景模糊**：删除 `ResultBackgroundManager` 组件，`QuizPlayer` 移除 `intermediateRanking` useMemo 及关联导入。做题过程不再有背景模糊。
 - **Commits**: `6a4e4db` `43cfa9b` `ba0081e` `359ad4e` `a6db968` `fe441c1` `6df6531` `5e1cd8d`
 
-### 2026-06-25 — 站外测试录入梳理 + 封面图修复 + 上线任务收尾
-
-- **站外测试录入系统梳理**：产出 `docs/external-test-site-data-spec.md`，完整记录 test_sites / test_categories 29 个字段的类型、必填、用途、展示影响、数据流。发现 7 个已知问题（1 已修复、6 待处理）。
-- **封面图修复**：`lib/explore/mapper.ts` — `testSiteToExploreCard()` 的 `image` 从硬编码 `""` 改为 `site.coverImageUrl ?? ""`，站外测试卡片现在显示封面图。
-- **法律页面路由**：`app/privacy/page.tsx`、`app/terms/page.tsx`、`app/disclaimer/page.tsx` 确认已存在，标记完成。
-- **Migration 016**：标记已手动执行。
-- **Lint 现状**：65 problems（20 errors / 45 warnings），34 文件。Errors 全部来自 React Compiler 插件。待评估修复优先级。
-
-### 2026-06-24 — 安全修复 + 法律文档 + 上线准备
-
-- **C-S1 修复**：`app/api/quiz-studio/save/route.ts` 添加所有权验证（复用 sandbox 路由模式）
-- **H-S2 修复**：8 个 API 路由 / 11 处 `error.message` 泄露替换为通用错误
-- **H-S4 修复**：新增 migration 016，quizzes INSERT RLS 限制 `status = 'draft'`
-- **法律文档**：`docs/terms-of-service.md`、`docs/privacy-policy.md`、`docs/content-disclaimer.md`
-- **LegalModal**：`components/legal/LegalModal.tsx`，小票风格弹窗，集成到 `/login`
-- **SearchOverlay 修复**：搜索框移动端适配 + 结果区滚动 + 空白区点击关闭 + 结果卡片直角纯色
-- **robots.txt 清理**：删除 `public/robots.txt`（与 `app/robots.ts` 冲突）
-- **TASKER_STATUS 同步**：C-S1/C-S2/C-S3 状态更新
-
-> 更早记录见 [`PROJECT_HISTORY.md`](./PROJECT_HISTORY.md)（2026-06-22 及更早）
+> 更早记录见 [`PROJECT_HISTORY.md`](./PROJECT_HISTORY.md)（2026-06-25 及更早）
 
 ---
 

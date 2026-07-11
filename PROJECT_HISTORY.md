@@ -1726,4 +1726,23 @@
 - **颜色管道**：`quiz_results.color` AI 生成 → DB → Profile 全链路持久化
 - Commits: `03cd627` `1b64516` `8bc8d41` `1f76b9c`
 
+## 2026-06-25 — 站外测试录入梳理 + 封面图修复 + 上线任务收尾
+
+- **站外测试录入系统梳理**：产出 `docs/external-test-site-data-spec.md`，完整记录 test_sites / test_categories 29 个字段的类型、必填、用途、展示影响、数据流。发现 7 个已知问题（1 已修复、6 待处理）。
+- **封面图修复**：`lib/explore/mapper.ts` — `testSiteToExploreCard()` 的 `image` 从硬编码 `""` 改为 `site.coverImageUrl ?? ""`，站外测试卡片现在显示封面图。
+- **法律页面路由**：`app/privacy/page.tsx`、`app/terms/page.tsx`、`app/disclaimer/page.tsx` 确认已存在，标记完成。
+- **Migration 016**：标记已手动执行。
+- **Lint 现状**：65 problems（20 errors / 45 warnings），34 文件。Errors 全部来自 React Compiler 插件。待评估修复优先级。
+
+### 2026-06-24 — 安全修复 + 法律文档 + 上线准备
+
+- **C-S1 修复**：`app/api/quiz-studio/save/route.ts` 添加所有权验证（复用 sandbox 路由模式）
+- **H-S2 修复**：8 个 API 路由 / 11 处 `error.message` 泄露替换为通用错误
+- **H-S4 修复**：新增 migration 016，quizzes INSERT RLS 限制 `status = 'draft'`
+- **法律文档**：`docs/terms-of-service.md`、`docs/privacy-policy.md`、`docs/content-disclaimer.md`
+- **LegalModal**：`components/legal/LegalModal.tsx`，小票风格弹窗，集成到 `/login`
+- **SearchOverlay 修复**：搜索框移动端适配 + 结果区滚动 + 空白区点击关闭 + 结果卡片直角纯色
+- **robots.txt 清理**：删除 `public/robots.txt`（与 `app/robots.ts` 冲突）
+- **TASKER_STATUS 同步**：C-S1/C-S2/C-S3 状态更新
+
 ---
