@@ -4,6 +4,17 @@ Last updated: 2026-11-02
 
 ---
 
+### 2026-11-02 — Explore 默认时间范围改为全部时间
+
+- `app/explore/page.tsx` 的默认时间范围改为 `all`；`components/explore/ExploreClient.tsx` 同步调整 URL 默认值，手动选择 `7d` / `30d` 时保留参数，刷新后保持筛选。
+- 验证：两个修改文件 ESLint 通过；直接执行源码中的范围解析和 URL 同步函数，确认默认/显式/无效参数处理及三种范围的 URL 刷新回读正确。无新增文件或架构变更，未部署。
+
+### 2026-11-02 — 确认线上用量未更新的部署版本差异
+
+- 用户确认实际在 `selfidbox.com` 生成内容。通过 Vercel 部署检查核对：正式域名当前对应 READY 部署 `dpl_5PuYVW8bC1tFECfSZca7dqwz9QZZ`，提交为 `51ac074`；AI Usage 修复提交为本地 `v1-release` 的 `d950e54`，尚未包含在当前正式版本中。
+- 本地 `localhost:6001` 运行该仓库的 Next dev；本地 anon/service_role key 角色与正式 Supabase 项目匹配。本次服务端客户端真实只读查询成功（200、89 条），线上 SQL 也确认仍无新记录；前次直连失败本次未复现。
+- 结论：本地可验证日志功能，同项目数据库允许本地/线上读取同一批记录；线上生成请求仍执行旧代码，需要部署包含修复的提交后再验收。仅更新排查记录，未继续修改业务代码、未写入线上数据库、未部署。
+
 ### 2026-11-02 — 修复 AI Usage 漏记与重复侧边栏
 
 - `lib/ai/track-ai-usage.ts` 复用现有 service_role 客户端写日志，检查 Supabase 返回的 error、记录写入异常并返回可等待的 Promise；写入失败仍不改变 AI 业务响应。

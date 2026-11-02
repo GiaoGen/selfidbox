@@ -21,7 +21,7 @@ type Range = "7d" | "30d" | "all";
 
 function parseRange(raw: string | undefined): Range {
   if (raw === "7d" || raw === "30d") return raw;
-  return "30d"; // default: one month
+  return "all"; // default: all time
 }
 
 function getTrending(cards: ExploreCard[]): ExploreCard[] {
