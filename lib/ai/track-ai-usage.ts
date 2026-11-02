@@ -1,5 +1,4 @@
-import { supabase as defaultSupabase } from "@/lib/supabase";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createServiceClient } from "@/lib/supabase/service";
 import { estimateCost } from "./model-pricing";
 
 /* ------------------------------------------------------------------ */
@@ -16,14 +15,12 @@ export interface TrackAICallInput {
   success?: boolean;
   errorMessage?: string | null;
   metadata?: Record<string, unknown>;
-  /** Optional SSR client for RLS user context. Falls back to static anon client. */
-  client?: SupabaseClient;
 }
 
-/** Fire-and-forget: logs usage without blocking or throwing. */
+/** Await the write, but never let logging failures break the caller. */
 async function logUsage(input: TrackAICallInput): Promise<void> {
   try {
-    const db = input.client ?? defaultSupabase;
+    const db = createServiceClient();
     const total =
       input.totalTokens ??
       (input.promptTokens ?? 0) + (input.completionTokens ?? 0);
@@ -34,7 +31,7 @@ async function logUsage(input: TrackAICallInput): Promise<void> {
       input.completionTokens ?? 0,
     );
 
-    await db.from("ai_usage_logs").insert({
+    const { error } = await db.from("ai_usage_logs").insert({
       user_id: input.userId ?? null,
       feature: input.feature,
       model: input.model ?? null,
@@ -46,8 +43,11 @@ async function logUsage(input: TrackAICallInput): Promise<void> {
       error_message: input.errorMessage ?? null,
       metadata: input.metadata ?? {},
     });
-  } catch {
-    // Silent — never let logging break the caller
+    if (error) {
+      console.error("[ai-usage] Insert failed:", error.message);
+    }
+  } catch (error) {
+    console.error("[ai-usage] Insert failed:", error instanceof Error ? error.message : "Unknown error");
   }
 }
 
@@ -59,15 +59,14 @@ async function logUsage(input: TrackAICallInput): Promise<void> {
  * Track a successful AI call. Pass token counts from the API response.
  */
 export function trackAISuccess(input: Omit<TrackAICallInput, "success">) {
-  // Fire and forget (don't await)
-  logUsage({ ...input, success: true });
+  return logUsage({ ...input, success: true });
 }
 
 /**
  * Track a failed AI call.
  */
 export function trackAIError(input: Omit<TrackAICallInput, "success">) {
-  logUsage({ ...input, success: false });
+  return logUsage({ ...input, success: false });
 }
 
 /**

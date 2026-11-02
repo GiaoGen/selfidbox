@@ -114,7 +114,6 @@ export async function POST(request: NextRequest) {
   }
 
   let body: {
-    userId?: string;
     title?: string;
     hook?: string;
     quiz_type?: string;
@@ -141,7 +140,6 @@ export async function POST(request: NextRequest) {
   }
 
   const {
-    userId,
     title,
     hook,
     quiz_type,
@@ -275,6 +273,15 @@ export async function POST(request: NextRequest) {
     existing_questions,
   });
 
+  let tokens = extractTokens({});
+  const trackError = (errorMessage: string) => trackAIError({
+    userId: user.id,
+    feature: "quiz_generate_questions",
+    model: MODEL,
+    ...tokens,
+    errorMessage,
+  });
+
   try {
     const dsResponse = await fetch(DEEPSEEK_CHAT_URL, {
       method: "POST",
@@ -296,13 +303,7 @@ export async function POST(request: NextRequest) {
     if (!dsResponse.ok) {
       const errText = await dsResponse.text().catch(() => "");
       console.error("[quiz-ai:questions] DeepSeek API error", dsResponse.status, errText);
-      trackAIError({
-        client: supabase,
-        userId,
-        feature: "quiz_generate_questions",
-        model: MODEL,
-        errorMessage: `DeepSeek API returned ${dsResponse.status}`,
-      });
+      await trackError(`DeepSeek API returned ${dsResponse.status}`);
       return NextResponse.json(
         { error: `DeepSeek API returned ${dsResponse.status}`, code: "AI_API_ERROR" },
         { status: 502 },
@@ -310,17 +311,12 @@ export async function POST(request: NextRequest) {
     }
 
     const dsData = await dsResponse.json();
+    tokens = extractTokens(dsData);
     const rawContent: string = dsData?.choices?.[0]?.message?.content ?? "";
 
     if (!rawContent) {
       console.error("[quiz-ai:questions] Empty response", dsData);
-      trackAIError({
-        client: supabase,
-        userId,
-        feature: "quiz_generate_questions",
-        model: MODEL,
-        errorMessage: "AI returned empty response",
-      });
+      await trackError("AI returned empty response");
       return NextResponse.json(
         { error: "AI returned empty response", code: "AI_EMPTY_RESPONSE" },
         { status: 502 },
@@ -342,14 +338,7 @@ export async function POST(request: NextRequest) {
       parsed = JSON.parse(jsonStr);
     } catch {
       console.error("[quiz-ai:questions] Failed to parse JSON", jsonStr.slice(0, 500));
-      trackAIError({
-        client: supabase,
-        userId,
-        feature: "quiz_generate_questions",
-        model: MODEL,
-        ...extractTokens(dsData),
-        errorMessage: "AI returned invalid JSON",
-      });
+      await trackError("AI returned invalid JSON");
       return NextResponse.json(
         { error: "AI returned invalid JSON", code: "AI_INVALID_JSON" },
         { status: 502 },
@@ -357,6 +346,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!parsed.questions || !Array.isArray(parsed.questions)) {
+      await trackError("AI response missing questions array");
       return NextResponse.json(
         { error: "AI response missing questions array", code: "AI_MISSING_QUESTIONS" },
         { status: 502 },
@@ -408,6 +398,7 @@ export async function POST(request: NextRequest) {
     for (let qi = 0; qi < questions.length; qi++) {
       const q = questions[qi];
       if (!q || typeof q !== "object") {
+        await trackError(`Question ${qi} is not an object`);
         return NextResponse.json(
           { error: `Question ${qi} is not an object`, code: "AI_QUESTION_VALIDATION" },
           { status: 502 },
@@ -415,12 +406,14 @@ export async function POST(request: NextRequest) {
       }
       const qObj = q as Record<string, unknown>;
       if (!qObj.text || typeof qObj.text !== "string") {
+        await trackError(`Question ${qi} missing valid text`);
         return NextResponse.json(
           { error: `Question ${qi} missing valid text`, code: "AI_QUESTION_VALIDATION" },
           { status: 502 },
         );
       }
       if (!Array.isArray(qObj.options)) {
+        await trackError(`Question ${qi} missing options array`);
         return NextResponse.json(
           { error: `Question ${qi} missing options array`, code: "AI_QUESTION_VALIDATION" },
           { status: 502 },
@@ -430,6 +423,7 @@ export async function POST(request: NextRequest) {
       for (let oi = 0; oi < (qObj.options as unknown[]).length; oi++) {
         const opt = (qObj.options as unknown[])[oi];
         if (!opt || typeof opt !== "object") {
+          await trackError(`Question ${qi} option ${oi} is not an object`);
           return NextResponse.json(
             { error: `Question ${qi} option ${oi} is not an object`, code: "AI_QUESTION_VALIDATION" },
             { status: 502 },
@@ -437,18 +431,21 @@ export async function POST(request: NextRequest) {
         }
         const oObj = opt as Record<string, unknown>;
         if (!oObj.label || typeof oObj.label !== "string") {
+          await trackError(`Question ${qi} option ${oi} missing valid label`);
           return NextResponse.json(
             { error: `Question ${qi} option ${oi} missing valid label`, code: "AI_QUESTION_VALIDATION" },
             { status: 502 },
           );
         }
         if (!oObj.text || typeof oObj.text !== "string") {
+          await trackError(`Question ${qi} option ${oi} missing valid text`);
           return NextResponse.json(
             { error: `Question ${qi} option ${oi} missing valid text`, code: "AI_QUESTION_VALIDATION" },
             { status: 502 },
           );
         }
         if (!oObj.factor_effects || typeof oObj.factor_effects !== "object") {
+          await trackError(`Question ${qi} option ${oi} missing valid factor_effects`);
           return NextResponse.json(
             { error: `Question ${qi} option ${oi} missing valid factor_effects`, code: "AI_QUESTION_VALIDATION" },
             { status: 502 },
@@ -460,12 +457,14 @@ export async function POST(request: NextRequest) {
 
         for (const [key, val] of Object.entries(effects)) {
           if (!factorKeySet.has(key)) {
+            await trackError(`Question ${qi} option ${oi} uses unknown factor key "${key}"`);
             return NextResponse.json(
               { error: `Question ${qi} option ${oi} uses unknown factor key "${key}"`, code: "AI_QUESTION_VALIDATION" },
               { status: 502 },
             );
           }
           if (typeof val !== "number" || val < -3 || val > 3 || !Number.isInteger(val)) {
+            await trackError(`Question ${qi} option ${oi} has invalid effect value for "${key}": ${val}`);
             return NextResponse.json(
               { error: `Question ${qi} option ${oi} has invalid effect value for "${key}": ${val}`, code: "AI_QUESTION_VALIDATION" },
               { status: 502 },
@@ -475,12 +474,14 @@ export async function POST(request: NextRequest) {
         }
 
         if (effectCount === 0) {
+          await trackError(`Question ${qi} option ${oi} has no factor_effects`);
           return NextResponse.json(
             { error: `Question ${qi} option ${oi} has no factor_effects`, code: "AI_QUESTION_VALIDATION" },
             { status: 502 },
           );
         }
         if (effectCount > 3) {
+          await trackError(`Question ${qi} option ${oi} has more than 3 factor_effects`);
           return NextResponse.json(
             { error: `Question ${qi} option ${oi} has more than 3 factor_effects`, code: "AI_QUESTION_VALIDATION" },
             { status: 502 },
@@ -496,12 +497,11 @@ export async function POST(request: NextRequest) {
       console.error("[quiz-ai:questions] spendCredit failed:", err);
     }
 
-    trackAISuccess({
-        client: supabase,
-        userId,
+    await trackAISuccess({
+      userId: user.id,
       feature: "quiz_generate_questions",
       model: MODEL,
-      ...extractTokens(dsData),
+      ...tokens,
       metadata: { question_count: questions.length },
     });
 
@@ -511,13 +511,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("[quiz-ai:questions] Unexpected error", err);
-    trackAIError({
-        client: supabase,
-        userId,
-      feature: "quiz_generate_questions",
-      model: MODEL,
-      errorMessage: err instanceof Error ? err.message : "Internal server error",
-    });
+    await trackError(err instanceof Error ? err.message : "Internal server error");
     return NextResponse.json(
       { error: "Internal server error", code: "INTERNAL_ERROR" },
       { status: 500 },

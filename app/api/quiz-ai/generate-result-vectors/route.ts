@@ -42,7 +42,6 @@ export async function POST(request: NextRequest) {
   }
 
   let body: {
-    userId?: string;
     title?: string;
     hook?: string;
     quiz_type?: string;
@@ -59,7 +58,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body", code: "INVALID_JSON" }, { status: 400 });
   }
 
-  const { userId, title, hook, quiz_type, audience, tone, results, factors, pinned_vectors } = body;
+  const { title, hook, quiz_type, audience, tone, results, factors, pinned_vectors } = body;
 
   if (!title || typeof title !== "string") {
     return NextResponse.json({ error: "title is required", code: "TITLE_REQUIRED" }, { status: 400 });
@@ -101,6 +100,15 @@ export async function POST(request: NextRequest) {
     pinned_vectors,
   });
 
+  let tokens = extractTokens({});
+  const trackError = (errorMessage: string) => trackAIError({
+    userId: user.id,
+    feature: "quiz_generate_result_vectors",
+    model: MODEL,
+    ...tokens,
+    errorMessage,
+  });
+
   try {
     const dsResponse = await fetch(DEEPSEEK_CHAT_URL, {
       method: "POST",
@@ -122,13 +130,7 @@ export async function POST(request: NextRequest) {
     if (!dsResponse.ok) {
       const errText = await dsResponse.text().catch(() => "");
       console.error("[quiz-ai:vectors] DeepSeek API error", dsResponse.status, errText);
-      trackAIError({
-        client: supabase,
-        userId,
-        feature: "quiz_generate_result_vectors",
-        model: MODEL,
-        errorMessage: `DeepSeek API returned ${dsResponse.status}`,
-      });
+      await trackError(`DeepSeek API returned ${dsResponse.status}`);
       return NextResponse.json(
         { error: `DeepSeek API returned ${dsResponse.status}`, code: "AI_API_ERROR" },
         { status: 502 },
@@ -136,17 +138,12 @@ export async function POST(request: NextRequest) {
     }
 
     const dsData = await dsResponse.json();
+    tokens = extractTokens(dsData);
     const rawContent: string = dsData?.choices?.[0]?.message?.content ?? "";
 
     if (!rawContent) {
       console.error("[quiz-ai:vectors] Empty response from DeepSeek", dsData);
-      trackAIError({
-        client: supabase,
-        userId,
-        feature: "quiz_generate_result_vectors",
-        model: MODEL,
-        errorMessage: "AI returned empty response",
-      });
+      await trackError("AI returned empty response");
       return NextResponse.json(
         { error: "AI returned empty response", code: "AI_EMPTY_RESPONSE" },
         { status: 502 },
@@ -168,14 +165,7 @@ export async function POST(request: NextRequest) {
       parsed = JSON.parse(jsonStr);
     } catch {
       console.error("[quiz-ai:vectors] Failed to parse AI JSON", jsonStr.slice(0, 500));
-      trackAIError({
-        client: supabase,
-        userId,
-        feature: "quiz_generate_result_vectors",
-        model: MODEL,
-        ...extractTokens(dsData),
-        errorMessage: "AI returned invalid JSON",
-      });
+      await trackError("AI returned invalid JSON");
       return NextResponse.json(
         { error: "AI returned invalid JSON", code: "AI_INVALID_JSON" },
         { status: 502 },
@@ -183,6 +173,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!parsed.result_vectors || typeof parsed.result_vectors !== "object") {
+      await trackError("AI response missing result_vectors object");
       return NextResponse.json(
         { error: "AI response missing result_vectors object", code: "AI_MISSING_VECTORS" },
         { status: 502 },
@@ -196,6 +187,7 @@ export async function POST(request: NextRequest) {
     for (const rk of resultKeys) {
       const vec = vectors[rk];
       if (!vec || typeof vec !== "object") {
+        await trackError(`Missing or invalid vector for result "${rk}"`);
         return NextResponse.json(
           { error: `Missing or invalid vector for result "${rk}"`, code: "AI_VECTOR_VALIDATION" },
           { status: 502 },
@@ -205,6 +197,7 @@ export async function POST(request: NextRequest) {
       for (const fk of factorKeys) {
         const v = vals[fk];
         if (typeof v !== "number" || v < 0 || v > 100) {
+          await trackError(`Invalid value for result "${rk}" factor "${fk}": ${v}`);
           return NextResponse.json(
             { error: `Invalid value for result "${rk}" factor "${fk}": ${v}`, code: "AI_VECTOR_VALIDATION" },
             { status: 502 },
@@ -242,12 +235,11 @@ export async function POST(request: NextRequest) {
       console.error("[quiz-ai:vectors] spendCredit failed:", err);
     }
 
-    trackAISuccess({
-        client: supabase,
-        userId,
+    await trackAISuccess({
+      userId: user.id,
       feature: "quiz_generate_result_vectors",
       model: MODEL,
-      ...extractTokens(dsData),
+      ...tokens,
       metadata: { result_count: resultCount, normalizer_changes: normalized.changes.length },
     });
 
@@ -257,13 +249,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("[quiz-ai:vectors] Unexpected error", err);
-    trackAIError({
-        client: supabase,
-        userId,
-      feature: "quiz_generate_result_vectors",
-      model: MODEL,
-      errorMessage: err instanceof Error ? err.message : "Internal server error",
-    });
+    await trackError(err instanceof Error ? err.message : "Internal server error");
     return NextResponse.json(
       { error: "Internal server error", code: "INTERNAL_ERROR" },
       { status: 500 },
