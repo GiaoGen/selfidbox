@@ -81,12 +81,10 @@ interface RowProps {
   width: number;
   ticketWidth: number;
   ticketHeight: number;
-  trackWidth: number;
-  edge: number;
   onOpen: (entry: ProfileSourceEntry) => void;
 }
 
-function ReceiptRow({ entries, index, width, ticketWidth, ticketHeight, trackWidth, edge, onOpen }: RowProps) {
+function ReceiptRow({ entries, index, width, ticketWidth, ticketHeight, onOpen }: RowProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     pointerId: number;
@@ -96,6 +94,9 @@ function ReceiptRow({ entries, index, width, ticketWidth, ticketHeight, trackWid
   } | null>(null);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sag = SAG;
+  const contentWidth = entries.length * ticketWidth + (entries.length - 1) * GAP;
+  const edge = Math.max(20, (width - contentWidth) / 2);
+  const scrollable = contentWidth + 40 > width + 1;
 
   const syncPins = useCallback(() => {
     const track = trackRef.current;
@@ -160,7 +161,7 @@ function ReceiptRow({ entries, index, width, ticketWidth, ticketHeight, trackWid
         "--rope-angle": `${[-0.45, 0.3, -0.25, 0.45][index]}deg`,
         "--ticket-width": `${ticketWidth}px`,
         "--ticket-height": `${ticketHeight}px`,
-        "--track-width": `${trackWidth}px`,
+        "--track-edge": `${edge}px`,
       } as CSSProperties}
     >
       <div className={styles.rope} aria-hidden="true" />
@@ -168,7 +169,7 @@ function ReceiptRow({ entries, index, width, ticketWidth, ticketHeight, trackWid
       <span className={`${styles.anchor} ${styles.right}`} aria-hidden="true" />
       <div
         ref={trackRef}
-        className={`${styles.track} ${entries.length > 3 ? styles.scrollable : ""}`}
+        className={`${styles.track} ${scrollable ? styles.scrollable : ""}`}
         role="list"
         aria-label={`第${index + 1}排小票`}
         onScroll={syncPins}
@@ -216,7 +217,7 @@ export function HangingReceipts({ sources, showCount = true }: { sources: Profil
   const cardRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState({ width: 360, height: 640 });
   const { cardOpen, cardLoading, cardData, cardType, openCard, closeCard } = useSourceCardOpen();
-  const rowCount = Math.min(3, Math.ceil(sources.length / 3));
+  const referenceRowCount = Math.min(3, Math.ceil(sources.length / 3));
 
   useEffect(() => {
     if (!cardOpen) return;
@@ -231,7 +232,11 @@ export function HangingReceipts({ sources, showCount = true }: { sources: Profil
     const board = boardRef.current;
     if (!board) return;
     const scroll = board.closest<HTMLElement>(".app-scroll");
+    const viewport = board.closest<HTMLElement>(".app-viewport");
     const measure = () => {
+      if (viewport && board.parentElement) {
+        board.style.marginLeft = `${viewport.getBoundingClientRect().left - board.parentElement.getBoundingClientRect().left}px`;
+      }
       const top = board.getBoundingClientRect().top - (scroll?.getBoundingClientRect().top ?? 0)
         + (scroll?.scrollTop ?? window.scrollY);
       const safeBottom = scroll ? parseFloat(getComputedStyle(scroll).paddingBottom) : 0;
@@ -250,22 +255,25 @@ export function HangingReceipts({ sources, showCount = true }: { sources: Profil
       observer.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [rowCount]);
+  }, [referenceRowCount]);
 
   if (sources.length === 0) return null;
 
-  const rows: ProfileSourceEntry[][] = Array.from({ length: rowCount }, () => []);
-  sources.forEach((entry, index) => {
-    rows[index < 9 ? Math.floor(index / 3) : (index - 9) % 3].push(entry);
-  });
   const slots = Math.min(3, sources.length);
-  const rowLimit = (layout.height - 20 - (rowCount - 1) * GAP) / rowCount;
+  const rowLimit = (layout.height - 20 - (referenceRowCount - 1) * GAP) / referenceRowCount;
   const ticketWidth = Math.max(24, Math.min(
-    (layout.width - 40 - (slots - 1) * GAP) / slots,
+    (Math.min(layout.width, 430) - 40 - (slots - 1) * GAP) / slots,
     (rowLimit - ROW_SPACE) / 1.5,
   ));
   const ticketHeight = ticketWidth * 1.5;
-  const edge = Math.max(20, (layout.width - (slots * ticketWidth + (slots - 1) * GAP)) / 2);
+  const capacity = Math.max(1, Math.floor((layout.width - 40 + GAP + 0.5) / (ticketWidth + GAP)));
+  const rowCount = Math.min(3, Math.ceil(sources.length / capacity));
+  const initialCount = capacity * rowCount;
+  const rows: ProfileSourceEntry[][] = Array.from({ length: rowCount }, () => []);
+  sources.forEach((entry, index) => {
+    const row = index < initialCount ? Math.floor(index / capacity) : (index - initialCount) % rowCount;
+    rows[row].push(entry);
+  });
   const quiz = cardType === "quiz" ? cardData as QuizDetailData | null : null;
   const report = cardType === "report" ? cardData as ReportDetailData | null : null;
 
@@ -282,8 +290,6 @@ export function HangingReceipts({ sources, showCount = true }: { sources: Profil
               width={layout.width}
               ticketWidth={ticketWidth}
               ticketHeight={ticketHeight}
-              trackWidth={slots * ticketWidth + (slots - 1) * GAP + 40}
-              edge={edge}
               onOpen={openCard}
             />
           ))}

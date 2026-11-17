@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Download } from "lucide-react";
-import { toPng } from "html-to-image";
-import { isSafari } from "@/lib/browser-detect";
+import { shareCardToPng } from "@/lib/share-card-image";
 import { ReceiptPrint } from "./ReceiptPrint";
 
 /* ================================================================== */
@@ -84,11 +83,7 @@ export function RotatingCardModal({ open, loading = false, onClose, children, ma
     if (!card) return;
     setSaving(true);
     try {
-      if (isSafari() && card.querySelector("img")) {
-        // Prime WebKit's SVG image cache before exporting the final PNG.
-        await toPng(card, { pixelRatio: 2, cacheBust: true });
-      }
-      const dataUrl = await toPng(card, { pixelRatio: 2, cacheBust: true });
+      const dataUrl = await shareCardToPng(card);
       const link = document.createElement("a");
       link.download = "selfidbox-share-card.png";
       link.href = dataUrl;

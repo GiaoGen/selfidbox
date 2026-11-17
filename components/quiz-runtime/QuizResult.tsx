@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { toPng } from "html-to-image";
+import { shareCardToPng } from "@/lib/share-card-image";
 import { X } from "lucide-react";
 import { isSafari } from "@/lib/browser-detect";
 import type { RankedRuntimeResult } from "@/lib/quiz-runtime";
@@ -50,14 +50,7 @@ export function QuizResult({ ranking, quizTitle, quizSlug, syncStatus, syncError
     if (!card) return;
     setSaving(true);
     try {
-      if (isSafari() && card.querySelector("img")) {
-        // Prime WebKit's SVG image cache before exporting the final PNG.
-        await toPng(card, { pixelRatio: 2, cacheBust: true });
-      }
-      const dataUrl = await toPng(card, {
-        pixelRatio: 2,
-        cacheBust: true,
-      });
+      const dataUrl = await shareCardToPng(card);
       const link = document.createElement("a");
       link.download = "selfidbox-quiz-result.png";
       link.href = dataUrl;

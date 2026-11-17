@@ -80,11 +80,22 @@
   letter-spacing: -0.02em;
 }
 
+.textOnly .mixedTitle {
+  max-width: 100%;
+}
+
 .titleWord {
   display: inline-block;
   max-width: 100%;
   vertical-align: top;
   white-space: pre-wrap;
+}
+
+.latinWord {
+  max-width: none;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .image {

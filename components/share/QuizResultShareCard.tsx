@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useState } from "react";
+import { forwardRef, useLayoutEffect, useRef, useState } from "react";
 import receiptStyles from "@/components/quiz-runtime/quiz-runtime.module.css";
 import styles from "./quiz-result-share-card.module.css";
 
@@ -41,9 +41,34 @@ export const QuizResultShareCard = forwardRef<HTMLDivElement, Props>(
     ref,
   ) {
     const [failedImage, setFailedImage] = useState<string | null>(null);
+    const traitsRef = useRef<HTMLDivElement>(null);
     const hasImage = Boolean(resultImageUrl && resultImageUrl !== failedImage);
     const createdDate = new Date(createdAt ?? "");
     const formattedCreatedAt = Number.isNaN(createdDate.getTime()) ? "" : createdAtFormatter.format(createdDate);
+
+    useLayoutEffect(() => {
+      const container = traitsRef.current;
+      if (!container) return;
+      const fitTraits = () => {
+        const tags = Array.from(container.querySelectorAll("span"));
+        tags.forEach((tag) => tag.style.whiteSpace = "nowrap");
+        const overflow = tags.map((tag) => tag.scrollWidth > tag.clientWidth);
+        tags.forEach((tag, index) => {
+          if (overflow[index]) tag.style.whiteSpace = "normal";
+        });
+      };
+      fitTraits();
+      let frameId = 0;
+      const observer = new ResizeObserver(() => {
+        cancelAnimationFrame(frameId);
+        frameId = requestAnimationFrame(fitTraits);
+      });
+      observer.observe(container);
+      return () => {
+        observer.disconnect();
+        cancelAnimationFrame(frameId);
+      };
+    }, [traits]);
 
     return (
       <div ref={ref} className={styles.card}>
@@ -91,7 +116,7 @@ export const QuizResultShareCard = forwardRef<HTMLDivElement, Props>(
           {resultDescription && <p className={styles.description}>{resultDescription}</p>}
 
           {traits.length > 0 && (
-            <div className={styles.traits}>
+            <div ref={traitsRef} className={styles.traits}>
               {traits.slice(0, 4).map((trait, index) => (
                 <span key={`${trait}-${index}`}>{trait}</span>
               ))}
