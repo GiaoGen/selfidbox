@@ -41,8 +41,8 @@ function StepLabel({ num, label, light, description }: {
           </button>
           {helpOpen && (
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setHelpOpen(false)} />
-              <div className="fixed bottom-6 left-4 right-4 z-50 mx-auto max-w-sm bg-[var(--surface-card)] p-5 shadow-[0_12px_50px_rgba(10,10,10,0.15)] ring-1 ring-[var(--ink)]/6">
+              <div data-app-overlay className="fixed inset-0 z-40" onClick={() => setHelpOpen(false)} />
+              <div data-app-overlay className="fixed bottom-6 left-4 right-4 z-50 mx-auto max-w-sm bg-[var(--surface-card)] p-5 shadow-[0_12px_50px_rgba(10,10,10,0.15)] ring-1 ring-[var(--ink)]/6">
                 <div className="border-t-2 border-dashed border-[var(--ink)]/10 pt-4">
                   <p className="text-sm leading-6 text-[var(--body)]">{description}</p>
                 </div>

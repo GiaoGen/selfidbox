@@ -118,7 +118,7 @@ export function PwaDownloadModal({ open, onClose }: PwaDownloadModalProps) {
     <AnimatePresence>
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-black/80"
+          data-app-overlay className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-black/80"
           onClick={onClose}
         >
           <motion.div
@@ -162,7 +162,7 @@ export function PwaDownloadModal({ open, onClose }: PwaDownloadModalProps) {
             <div
               className="px-2.5 py-3 text-[12px] leading-[1.7] text-[var(--body)]"
               style={{
-                height: 420,
+                height: "min(420px, calc(100cqh - 160px))",
                 overflowY: "scroll",
                 WebkitOverflowScrolling: "touch",
               }}

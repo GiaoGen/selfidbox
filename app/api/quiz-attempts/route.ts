@@ -95,7 +95,7 @@ export async function POST(request: Request) {
       included_in_profile: true,
       profile_weight: profileWeight,
     })
-    .select("id")
+    .select("id, created_at")
     .single();
 
   if (attemptError) {
@@ -177,5 +177,6 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     attemptId: attempt.id,
+    createdAt: attempt.created_at,
   });
 }

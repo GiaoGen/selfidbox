@@ -1,7 +1,7 @@
 export default function Loading() {
   return (
     <main className="min-h-screen bg-[var(--canvas)]">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pt-2 pb-6 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full flex-col gap-6 px-4 pt-2 pb-6">
         {/* Greeting placeholder */}
         <div className="space-y-2">
           <div className="h-6 w-48 animate-pulse rounded-full bg-[var(--ink)]/5" />
@@ -31,7 +31,7 @@ export default function Loading() {
         </div>
 
         {/* Card grid placeholder */}
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3">
           {Array.from({ length: 9 }).map((_, i) => (
             <div
               key={i}

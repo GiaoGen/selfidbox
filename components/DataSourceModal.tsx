@@ -153,13 +153,13 @@ export function DataSourceModal({
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0a0a]/30 backdrop-blur-sm"
+      data-app-overlay className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0a0a]/30 backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
     >
       <div
-        className="flex h-full w-full flex-col bg-[#fffaf0] text-[#0a0a0a] md:h-auto md:max-h-[80vh] md:w-[720px] md:rounded-[32px] md:shadow-[0_24px_64px_rgba(10,10,10,0.18)]"
+        className="flex h-full w-full flex-col bg-[#fffaf0] text-[#0a0a0a] md:h-auto md:max-h-[80cqh] md:w-[720px] md:rounded-[32px] md:shadow-[0_24px_64px_rgba(10,10,10,0.18)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ---- Header ---- */}
@@ -306,7 +306,7 @@ export function DataSourceModal({
 
       {/* ── Quiz Result Share Card ── */}
       {cardType === "quiz" && (
-        <RotatingCardModal open={cardOpen} onClose={closeCard}>
+        <RotatingCardModal open={cardOpen} loading={cardLoading} onClose={closeCard}>
           {cardLoading && (
             <div className="flex items-center justify-center py-16">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -321,6 +321,7 @@ export function DataSourceModal({
               resultImageUrl={(cardData as QuizDetailData).result_image_url ?? undefined}
               traits={(cardData as QuizDetailData).result_traits}
               cardColor={(cardData as QuizDetailData).result_color || "#DAC9A6"}
+              createdAt={(cardData as QuizDetailData).created_at}
             />
           )}
         </RotatingCardModal>
@@ -328,7 +329,7 @@ export function DataSourceModal({
 
       {/* ── OCR Screenshot Card ── */}
       {cardType === "report" && (
-        <RotatingCardModal open={cardOpen} onClose={closeCard}>
+        <RotatingCardModal open={cardOpen} loading={cardLoading} onClose={closeCard}>
           {cardLoading && (
             <div className="flex items-center justify-center py-16">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -340,7 +341,7 @@ export function DataSourceModal({
               src={(cardData as ReportDetailData).image_url!}
               alt="OCR 截图"
               className="w-full select-none"
-              style={{ objectFit: "contain", maxHeight: "80vh" }}
+              style={{ objectFit: "contain", maxHeight: "80cqh" }}
             />
           ) : null}
           {!cardLoading && cardData && !(cardData as ReportDetailData).image_url ? (

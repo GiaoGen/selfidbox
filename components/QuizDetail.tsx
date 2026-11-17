@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { StampCard } from "@/components/StampCard";
-import { TestCard } from "@/app/explore/_components/test-card";
+import { MasonryTestList } from "@/components/explore/MasonryTestList";
 import type { QuizDetailRow } from "@/lib/quizzes-db";
 import type { ExploreCard } from "@/lib/explore/types";
 
@@ -124,29 +124,15 @@ export function QuizDetail({
 
         {/* ---- 相关社区测试 ---- */}
         {relatedCards.length > 0 && (
-          <motion.section
-            className="space-y-3"
-            variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
-            initial="hidden"
-            animate="visible"
-          >
+          <section className="mx-auto w-full space-y-3">
             <div>
               <h2 className="text-3xl font-semibold tracking-[-0.03em]">
                 相似测试
               </h2>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              {relatedCards.map((card) => (
-                <motion.div
-                  key={card.id}
-                  variants={{ hidden: { opacity: 0, scale: 0.90 }, visible: { opacity: 1, scale: 1 } }}
-                >
-                  <TestCard site={card} />
-                </motion.div>
-              ))}
-            </div>
-          </motion.section>
+            <MasonryTestList cards={relatedCards} />
+          </section>
         )}
       </div>
     </main>

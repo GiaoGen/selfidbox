@@ -1,0 +1,59 @@
+.frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+}
+
+.feeding {
+  overflow: visible;
+}
+
+.paper {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.enter {
+  animation: receipt-feed 0.9s linear both;
+}
+
+.controls {
+  display: flex;
+  width: 100%;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  opacity: 1;
+  transition: opacity 0.15s;
+}
+
+.feeding .controls {
+  opacity: 0;
+}
+
+@keyframes receipt-feed {
+  0% {
+    transform: translateY(var(--feed-start, calc(-100% - 100cqh)));
+  }
+
+  28%,
+  38% {
+    transform: translateY(calc(var(--feed-start, -100cqh) * 0.65));
+  }
+
+  66%,
+  76% {
+    transform: translateY(calc(var(--feed-start, -100cqh) * 0.2));
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter {
+    animation: none;
+  }
+}

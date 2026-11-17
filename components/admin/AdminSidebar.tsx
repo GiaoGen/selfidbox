@@ -6,40 +6,42 @@ const linkStyle =
 
 export function AdminSidebar() {
   return (
-    <aside className="hidden w-[240px] shrink-0 flex-col gap-1 rounded-[28px] bg-[var(--surface-card)] p-4 shadow-[0_18px_50px_rgba(10,10,10,0.06)] lg:flex">
-      <div className="px-4 py-3">
-        <Link href="/admin" className="text-lg font-bold tracking-[-0.02em]">
+    <aside className="w-full shrink-0 rounded-[28px] bg-[var(--surface-card)] p-4 shadow-[0_18px_50px_rgba(10,10,10,0.06)]">
+      <details>
+        <summary className="cursor-pointer px-4 py-3 text-lg font-bold tracking-[-0.02em]">
           SelfID <span className="text-[var(--muted)]">Admin</span>
-        </Link>
-      </div>
+          <span className="ml-2 text-xs text-[var(--muted)]">管理导航</span>
+        </summary>
+        <nav aria-label="管理后台" className="flex flex-col gap-1">
+          <NavSection label="概览">
+            <NavItem href="/admin">Dashboard</NavItem>
+          </NavSection>
 
-      <NavSection label="概览">
-        <NavItem href="/admin">Dashboard</NavItem>
-      </NavSection>
+          <NavSection label="内容管理">
+            <NavItem href="/admin/test-sites">Test Sites</NavItem>
+            <NavItem href="/admin/categories">Categories</NavItem>
+            <NavItem href="/admin/quizzes">Quizzes</NavItem>
+          </NavSection>
 
-      <NavSection label="内容管理">
-        <NavItem href="/admin/test-sites">Test Sites</NavItem>
-        <NavItem href="/admin/categories">Categories</NavItem>
-        <NavItem href="/admin/quizzes">Quizzes</NavItem>
-      </NavSection>
+          <NavSection label="系统">
+            <NavItem href="/admin/ai-usage">AI Usage</NavItem>
+          </NavSection>
 
-      <NavSection label="系统">
-        <NavItem href="/admin/ai-usage">AI Usage</NavItem>
-      </NavSection>
+          <NavSection label="快捷操作">
+            <NavItem href="/admin/test-sites/new">+ 新增测试</NavItem>
+            <NavItem href="/admin/categories/new">+ 新增分类</NavItem>
+          </NavSection>
 
-      <NavSection label="快捷操作">
-        <NavItem href="/admin/test-sites/new">+ 新增测试</NavItem>
-        <NavItem href="/admin/categories/new">+ 新增分类</NavItem>
-      </NavSection>
-
-      <div className="mt-auto px-4 py-3">
-        <Link
-          href="/explore"
-          className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)]"
-        >
-          ← 返回前台
-        </Link>
-      </div>
+          <div className="mt-auto px-4 py-3">
+            <Link
+              href="/explore"
+              className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)]"
+            >
+              ← 返回前台
+            </Link>
+          </div>
+        </nav>
+      </details>
     </aside>
   );
 }

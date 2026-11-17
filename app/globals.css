@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Responsive utilities follow the app viewport, including on desktop. */
+@custom-variant sm (@container phone (width >= 40rem));
+@custom-variant md (@container phone (width >= 48rem));
+@custom-variant lg (@container phone (width >= 64rem));
+@custom-variant xl (@container phone (width >= 80rem));
+@custom-variant 2xl (@container phone (width >= 96rem));
+
 :root {
   --background: #fffaf0;
   --foreground: #0a0a0a;
@@ -21,17 +28,77 @@
 }
 
 html {
-  background: var(--background);
+  background: #242628;
 }
 
 body {
-  background: var(--background);
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  overflow: hidden;
+  background: #242628;
   color: var(--foreground);
   font-family: var(--font-sans);
+}
+
+.app-viewport {
+  position: relative;
+  width: 100%;
+  max-width: 430px;
+  height: 100dvh;
+  max-height: 932px;
+  contain: layout paint;
+  container: phone / size;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 20px;
+  background: var(--canvas);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 8%), 0 20px 80px rgb(0 0 0 / 30%);
+}
+
+.app-scroll {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+}
+
+.app-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.app-scroll:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+/* Presence also covers nested dialogs and their exit animations. */
+.app-scroll:has([data-app-overlay]) {
+  overflow-y: hidden;
+}
+
+/* Touch devices, including tablets with a mouse, use the available screen. */
+@media (width <= 600px), (any-pointer: coarse) {
+  html,
+  body {
+    background: var(--canvas);
+  }
+
+  .app-viewport {
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+@utility min-h-screen {
+  min-height: 100cqh;
 }
 
 *, *::before, *::after {
@@ -54,11 +121,4 @@ a {
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;
-}
-
-/* ── Safari/iOS Safari: 100vh includes address bar, so use dvh ── */
-@supports (-webkit-touch-callout: none) {
-  .min-h-screen {
-    min-height: 100dvh;
-  }
 }

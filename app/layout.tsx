@@ -71,8 +71,10 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col font-sans">
-        <NavbarLayout>{children}</NavbarLayout>
+      <body className="font-sans">
+        <div className="app-viewport">
+          <NavbarLayout>{children}</NavbarLayout>
+        </div>
       </body>
     </html>
   );

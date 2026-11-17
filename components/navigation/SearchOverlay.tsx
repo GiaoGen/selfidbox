@@ -104,7 +104,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex flex-col"
+          data-app-overlay className="fixed inset-0 z-50 flex flex-col"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

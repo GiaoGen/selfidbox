@@ -9,6 +9,7 @@ import { useNipponTheme } from "./useNipponTheme";
 import { QuizProgress } from "./QuizProgress";
 import { QuestionCard } from "./QuestionCard";
 import { QuizResult } from "./QuizResult";
+import styles from "./quiz-runtime.module.css";
 
 type Phase = "quiz" | "result";
 type SyncStatus = "idle" | "syncing" | "synced" | "not-authenticated" | "error";
@@ -29,6 +30,7 @@ export function QuizPlayer({ quiz }: Props) {
   const [userVector, setUserVector] = useState<Record<string, number> | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [syncError, setSyncError] = useState<string>("");
+  const [createdAt, setCreatedAt] = useState<string>();
   const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Preload result images during quiz phase so the share card renders instantly
@@ -74,6 +76,7 @@ export function QuizPlayer({ quiz }: Props) {
       }
       setUserVector(vector);
       setRanking(ranked);
+      setCreatedAt(new Date().toISOString());
       setPhase("result");
 
       // Attempt to save via API route if authenticated
@@ -103,6 +106,8 @@ export function QuizPlayer({ quiz }: Props) {
         });
 
         if (res.ok) {
+          const saved = await res.json().catch(() => null);
+          if (typeof saved?.createdAt === "string") setCreatedAt(saved.createdAt);
           setSyncStatus("synced");
         } else {
           const errBody = await res.json().catch(() => ({}));
@@ -155,8 +160,8 @@ export function QuizPlayer({ quiz }: Props) {
 
   if (attemptLimitReached) {
     return (
-      <div className="mx-auto w-full max-w-[560px] py-20 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--ink)]/8">
+      <div className={`${styles.receipt} mx-auto w-full max-w-[560px] px-5 py-12 text-center sm:px-8`}>
+        <div className="mx-auto flex h-12 w-12 items-center justify-center border border-dashed border-[var(--ink)]/20">
           <svg
             width="24"
             height="24"
@@ -191,6 +196,7 @@ export function QuizPlayer({ quiz }: Props) {
         syncStatus={syncStatus}
         syncError={syncError}
         accentColor={ranking[0]?.result.color || theme.accent}
+        createdAt={createdAt}
       />
     );
   }
@@ -200,24 +206,25 @@ export function QuizPlayer({ quiz }: Props) {
 
   return (
     <>
-      <div className="relative z-10 mx-auto w-full max-w-[560px]">
+      <div className={`${styles.receipt} relative z-10 mx-auto w-full max-w-[560px] px-5 py-8 sm:px-8 sm:py-10`}>
       {/* Header */}
-      <div className="mb-10">
-        <p className="text-sm font-medium text-[var(--muted)]">
-          {quiz.quiz_type === "personality" ? "人格测试" : quiz.quiz_type === "fun" ? "趣味测试" : "测试"}
-        </p>
-        <h1 className="mt-1 text-xl font-semibold tracking-[-0.02em] text-[var(--ink)]">
+      <div className="mb-6 border-b-2 border-dashed border-[var(--ink)]/15 pb-6">
+        <div className="flex items-center justify-between gap-3 text-xs font-medium text-[var(--muted)]">
+          <span className="font-mono tracking-wider">SelfIDBox</span>
+          <span>{quiz.quiz_type === "personality" ? "人格测试" : quiz.quiz_type === "fun" ? "趣味测试" : "测试"}</span>
+        </div>
+        <h1 className="mt-4 text-[26px] font-bold leading-snug tracking-[-0.02em] text-[var(--ink)] sm:text-[30px]">
           {quiz.title}
         </h1>
         {quiz.hook && (
-          <p className="mt-1 text-[15px] leading-relaxed text-[var(--body)]">
+          <p className="mt-3 text-[14px] leading-relaxed text-[var(--body)]">
             {quiz.hook}
           </p>
         )}
       </div>
 
       {/* Progress */}
-      <div className="mb-10">
+      <div className="mb-6">
         <QuizProgress current={currentIndex + 1} total={total} />
       </div>
 
@@ -231,12 +238,12 @@ export function QuizPlayer({ quiz }: Props) {
       />
 
       {/* Back button */}
-      <div className="mt-8 flex items-center justify-center">
+      <div className="mt-6 flex items-center justify-between border-t-2 border-dashed border-[var(--ink)]/15 pt-5">
         <button
           type="button"
           onClick={handleBack}
           disabled={currentIndex === 0}
-          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium text-[var(--muted)] transition-colors hover:text-[var(--ink)] disabled:opacity-30 disabled:hover:text-[var(--muted)]"
+          className="inline-flex min-h-11 items-center gap-1.5 border border-[var(--ink)]/15 px-4 py-2 text-sm font-medium text-[var(--body)] transition-colors hover:bg-[var(--ink)]/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)] disabled:opacity-30"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path

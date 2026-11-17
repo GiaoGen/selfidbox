@@ -362,7 +362,7 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
 
     {/* ── Quiz Result Share Card ── */}
     {cardType === "quiz" && (
-      <RotatingCardModal open={cardOpen} onClose={closeCard} cardRef={cardRef}>
+      <RotatingCardModal open={cardOpen} loading={cardLoading} onClose={closeCard} cardRef={cardRef}>
         {cardLoading && (
           <div className="flex items-center justify-center py-16">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -378,6 +378,7 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
             resultImageUrl={(cardData as QuizDetailData).result_image_url ?? undefined}
             traits={(cardData as QuizDetailData).result_traits}
             cardColor={(cardData as QuizDetailData).result_color || "#DAC9A6"}
+            createdAt={(cardData as QuizDetailData).created_at}
           />
         )}
       </RotatingCardModal>
@@ -385,7 +386,7 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
 
     {/* ── OCR Screenshot Card ── */}
     {cardType === "report" && (
-      <RotatingCardModal open={cardOpen} onClose={closeCard}>
+      <RotatingCardModal open={cardOpen} loading={cardLoading} onClose={closeCard}>
         {cardLoading && (
           <div className="flex items-center justify-center py-16">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -397,7 +398,7 @@ export function SourceBlocks({ sources }: { sources: ProfileSourceEntry[] }) {
             src={(cardData as ReportDetailData).image_url!}
             alt="OCR 截图"
             className="w-full select-none"
-            style={{ objectFit: "contain", maxHeight: "80vh" }}
+            style={{ objectFit: "contain", maxHeight: "80cqh" }}
           />
         ) : null}
         {!cardLoading && cardData && !(cardData as ReportDetailData).image_url ? (

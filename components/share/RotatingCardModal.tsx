@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Download } from "lucide-react";
 import { toPng } from "html-to-image";
-import { useSafariScrollLock } from "@/lib/use-safari-scroll-lock";
+import { isSafari } from "@/lib/browser-detect";
+import { ReceiptPrint } from "./ReceiptPrint";
 
 /* ================================================================== */
 /*  RotatingCardModal                                                   */
 /*                                                                     */
-/*  Reusable full-screen modal with rotateY flip-in animation.          */
+/*  Reusable full-screen modal with receipt-feed animation.            */
 /*  Click backdrop to close. Card interior clicks do not close.         */
 /*                                                                     */
 /*  Used by:                                                            */
@@ -20,24 +21,74 @@ import { useSafariScrollLock } from "@/lib/use-safari-scroll-lock";
 
 interface Props {
   open: boolean;
+  loading?: boolean;
   onClose: () => void;
   children: ReactNode;
-  /** Max width of the card wrapper. Defaults to "calc(100vw - 48px)". */
+  /** Max width of the card wrapper. Defaults to "calc(100cqw - 48px)". */
   maxWidth?: string;
   /** Ref to the card DOM element for PNG export. When provided, a download button is shown. */
   cardRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-export function RotatingCardModal({ open, onClose, children, maxWidth, cardRef }: Props) {
-  // Safari: lock body scroll when modal is open
-  useSafariScrollLock(open);
+export function RotatingCardModal({ open, loading = false, onClose, children, maxWidth, cardRef }: Props) {
   const [saving, setSaving] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    if (!open || !overlay) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const isTopOverlay = () => {
+      const overlays = document.querySelectorAll("[data-app-overlay]");
+      return overlays[overlays.length - 1] === overlay;
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isTopOverlay()) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
+      }
+      if (event.key !== "Tab") return;
+      const controls = Array.from(overlay.querySelectorAll<HTMLElement>("button, a[href], input, select, textarea, [tabindex]"))
+        .filter((element) => element.tabIndex >= 0 && !element.matches(":disabled") && !element.closest("[inert]") && element.getClientRects().length > 0);
+      const current = document.activeElement;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!first || current === overlay || !overlay.contains(current)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first)?.focus();
+      } else if (event.shiftKey && current === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && current === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    const onFocus = (event: FocusEvent) => {
+      if (isTopOverlay() && !overlay.contains(event.target as Node)) overlay.focus({ preventScroll: true });
+    };
+    overlay.focus({ preventScroll: true });
+    document.addEventListener("keydown", onKeyDown, true);
+    document.addEventListener("focusin", onFocus, true);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown, true);
+      document.removeEventListener("focusin", onFocus, true);
+      if (previousFocus?.isConnected && overlay.contains(document.activeElement)) previousFocus.focus({ preventScroll: true });
+    };
+  }, [open, onClose]);
 
   async function handleDownload() {
-    if (!cardRef?.current) return;
+    const card = cardRef?.current;
+    if (!card) return;
     setSaving(true);
     try {
-      const dataUrl = await toPng(cardRef.current, { pixelRatio: 2, cacheBust: true });
+      if (isSafari() && card.querySelector("img")) {
+        // Prime WebKit's SVG image cache before exporting the final PNG.
+        await toPng(card, { pixelRatio: 2, cacheBust: true });
+      }
+      const dataUrl = await toPng(card, { pixelRatio: 2, cacheBust: true });
       const link = document.createElement("a");
       link.download = "selfidbox-share-card.png";
       link.href = dataUrl;
@@ -53,8 +104,12 @@ export function RotatingCardModal({ open, onClose, children, maxWidth, cardRef }
     <AnimatePresence>
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ perspective: "1200px" }}
+          ref={overlayRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="完整小票"
+          tabIndex={-1}
+          data-app-overlay className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden"
         >
           {/* backdrop — click to close */}
           <motion.div
@@ -65,17 +120,12 @@ export function RotatingCardModal({ open, onClose, children, maxWidth, cardRef }
             className="absolute inset-0 bg-black/80"
           />
 
-          {/* card — rotateY flip-in, simple fade-out */}
-          <motion.div
-            initial={{ rotateY: -720, scale: 0.9, opacity: 0 }}
-            animate={{ rotateY: 0, scale: 1, opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.2 } }}
-            transition={{ duration: 1.1, ease: [0.25, 0.1, 0.25, 1] as const }}
-            className="relative z-10 flex w-full flex-col items-center"
-            style={{ maxWidth: maxWidth ?? "calc(100vw - 48px)" }}
-          >
-            {children}
-            {cardRef && (
+          {/* Feed the receipt after its content is ready. */}
+          <ReceiptPrint
+            loading={loading}
+            className="relative z-10 max-h-[calc(100cqh-48px)] w-full"
+            style={{ maxWidth: maxWidth ?? "calc(100cqw - 48px)" }}
+            controls={cardRef && (
               <button
                 type="button"
                 onClick={handleDownload}
@@ -86,7 +136,9 @@ export function RotatingCardModal({ open, onClose, children, maxWidth, cardRef }
                 <Download size={14} />
               </button>
             )}
-          </motion.div>
+          >
+            {children}
+          </ReceiptPrint>
         </div>
       )}
     </AnimatePresence>

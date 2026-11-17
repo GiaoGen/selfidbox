@@ -18,23 +18,29 @@ export function OptionButton({ option, state, onClick }: Props) {
       type="button"
       onClick={onClick}
       disabled={isDimmed}
+      aria-pressed={isSelected}
       whileTap={{ scale: isDimmed ? 1 : 0.985 }}
-      className={`w-full rounded-2xl px-5 py-4 text-left transition-colors transition-shadow duration-150 ${
+      className={`flex min-h-14 w-full items-start gap-3 border-b border-dashed border-[var(--ink)]/15 px-3 py-4 text-left transition-colors duration-150 last:border-b-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)] ${
         isSelected
-          ? "bg-[var(--ink)]/6 text-[var(--ink)] shadow-md"
-          : "bg-white text-[var(--ink)] shadow-sm hover:bg-[var(--ink)]/3 hover:shadow-md"
+          ? "bg-[var(--ink)] text-white"
+          : "text-[var(--ink)] hover:bg-[var(--ink)]/5"
       } ${isDimmed ? "pointer-events-none opacity-40" : "cursor-pointer"}`}
     >
       <span
-        className={`mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+        className={`shrink-0 pt-0.5 font-mono text-sm font-semibold ${
           isSelected
-            ? "bg-[var(--ink)]/12 text-[var(--ink)]"
-            : "bg-[var(--ink)]/6 text-[var(--muted)]"
+            ? "text-white/70"
+            : "text-[var(--muted)]"
         }`}
       >
         {option.label}
       </span>
-      <span className="text-[15px] font-medium leading-snug">{option.text}</span>
+      <span className="min-w-0 flex-1 break-words text-[15px] font-medium leading-relaxed">{option.text}</span>
+      {isSelected && (
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0">
+          <path d="m5 12 4 4L19 6" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      )}
     </motion.button>
   );
 }

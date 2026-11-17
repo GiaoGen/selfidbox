@@ -72,7 +72,7 @@ export function SourceDetailModal({ open, onClose, sourceType, sourceId }: Props
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-50 flex flex-col bg-[#fffaf0]"
+        data-app-overlay className="fixed inset-0 z-50 flex flex-col bg-[#fffaf0]"
       >
         {/* Header */}
         <div className="flex shrink-0 items-center gap-3 px-5 py-4 sm:px-6 border-b border-[#0a0a0a]/8">

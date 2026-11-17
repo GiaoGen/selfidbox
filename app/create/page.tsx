@@ -227,8 +227,8 @@ function StepLabel({ num, label, inverted, description }: {
           </button>
           {helpOpen && (
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setHelpOpen(false)} />
-              <div className="fixed bottom-6 left-4 right-4 z-50 mx-auto max-w-sm bg-[var(--surface-card)] p-5 shadow-[0_12px_50px_rgba(10,10,10,0.15)] ring-1 ring-[var(--ink)]/6">
+              <div data-app-overlay className="fixed inset-0 z-40" onClick={() => setHelpOpen(false)} />
+              <div data-app-overlay className="fixed bottom-6 left-4 right-4 z-50 mx-auto max-w-sm bg-[var(--surface-card)] p-5 shadow-[0_12px_50px_rgba(10,10,10,0.15)] ring-1 ring-[var(--ink)]/6">
                 <div className="border-t-2 border-dashed border-[var(--ink)]/10 pt-4">
                   <p className="text-sm leading-6 text-[var(--body)]">{description}</p>
                 </div>
@@ -1472,12 +1472,12 @@ function CreatePageContent() {
       </div>
       {/* ── Discrimination Modal ── */}
       {discriminationOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div data-app-overlay className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/30" onClick={() => setDiscriminationOpen(false)} />
 
           {/* Sheet */}
-          <div className="relative z-10 w-full max-w-lg max-h-[75vh] overflow-y-auto rounded-t-[28px] sm:rounded-[28px] bg-[var(--surface-card)] p-6 shadow-[0_-8px_40px_rgba(10,10,10,0.12)] sm:m-4">
+          <div className="relative z-10 w-full max-w-lg max-h-[75cqh] overflow-y-auto rounded-t-[28px] sm:rounded-[28px] bg-[var(--surface-card)] p-6 shadow-[0_-8px_40px_rgba(10,10,10,0.12)] sm:m-4">
             {/* Close handle */}
             <div className="flex justify-center mb-4 sm:hidden">
               <div className="w-10 h-1 rounded-full bg-[var(--ink)]/15" />
@@ -1551,10 +1551,10 @@ function CreatePageContent() {
 
       {/* ── Coverage Modal ── */}
       {coverageOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div data-app-overlay className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setCoverageOpen(false)} />
 
-          <div className="relative z-10 w-full max-w-lg max-h-[75vh] overflow-y-auto rounded-t-[28px] sm:rounded-[28px] bg-[var(--surface-card)] p-6 shadow-[0_-8px_40px_rgba(10,10,10,0.12)] sm:m-4">
+          <div className="relative z-10 w-full max-w-lg max-h-[75cqh] overflow-y-auto rounded-t-[28px] sm:rounded-[28px] bg-[var(--surface-card)] p-6 shadow-[0_-8px_40px_rgba(10,10,10,0.12)] sm:m-4">
             <div className="flex justify-center mb-4 sm:hidden">
               <div className="w-10 h-1 rounded-full bg-[var(--ink)]/15" />
             </div>
@@ -1636,10 +1636,10 @@ function CreatePageContent() {
         };
 
         return (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div data-app-overlay className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
             <div className="absolute inset-0 bg-black/30" onClick={() => setOptionVectorEditor(null)} />
 
-            <div className="relative z-10 w-full max-w-lg max-h-[75vh] overflow-y-auto rounded-t-[28px] sm:rounded-[28px] bg-[var(--surface-card)] p-6 shadow-[0_-8px_40px_rgba(10,10,10,0.12)] sm:m-4">
+            <div className="relative z-10 w-full max-w-lg max-h-[75cqh] overflow-y-auto rounded-t-[28px] sm:rounded-[28px] bg-[var(--surface-card)] p-6 shadow-[0_-8px_40px_rgba(10,10,10,0.12)] sm:m-4">
               <div className="flex justify-center mb-4 sm:hidden">
                 <div className="w-10 h-1 rounded-full bg-[var(--ink)]/15" />
               </div>

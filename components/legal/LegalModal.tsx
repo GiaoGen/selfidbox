@@ -162,7 +162,7 @@ export function LegalModal({ open, onClose, initialTab = "terms" }: LegalModalPr
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-black/80"
+        <div data-app-overlay className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-black/80"
              onClick={onClose}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -200,7 +200,7 @@ export function LegalModal({ open, onClose, initialTab = "terms" }: LegalModalPr
 
             {/* content — only scrollable element */}
             <div className="px-2.5 py-3 text-[12px] leading-[1.7] text-[var(--body)]"
-                 style={{ height: 520, overflowY: "scroll", WebkitOverflowScrolling: "touch" }}>
+                 style={{ height: "min(520px, calc(100cqh - 130px))", overflowY: "scroll", WebkitOverflowScrolling: "touch" }}>
               <LegalContent tab={tab} />
             </div>
 

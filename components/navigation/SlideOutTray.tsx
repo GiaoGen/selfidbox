@@ -152,7 +152,7 @@ export function SlideOutTray() {
             {/* backdrop */}
             <motion.button
               type="button"
-              className="fixed inset-0 z-40 bg-[var(--ink)]/25"
+              data-app-overlay className="fixed inset-0 z-40 bg-[var(--ink)]/25"
               onClick={closeTray}
               aria-label="关闭菜单"
               initial={{ opacity: 0 }}
@@ -163,7 +163,7 @@ export function SlideOutTray() {
 
             {/* tray sheet — slides from right */}
             <motion.div
-              className="fixed right-0 top-0 bottom-0 z-50 flex w-[280px] max-w-[75vw] flex-col bg-[var(--surface-card)] shadow-[0_0_50px_rgba(10,10,10,0.15)] overflow-y-auto"
+              data-app-overlay className="fixed right-0 top-0 bottom-0 z-50 flex w-[280px] max-w-[75cqw] flex-col bg-[var(--surface-card)] shadow-[0_0_50px_rgba(10,10,10,0.15)] overflow-y-auto"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}

@@ -220,7 +220,7 @@ export function MyQuizzesModal({ open, onClose }: Props) {
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+        <div data-app-overlay className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
           {/* backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -236,7 +236,7 @@ export function MyQuizzesModal({ open, onClose }: Props) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
             transition={{ duration: 0.25, ease: [0, 0, 0.2, 1] as const }}
-            className="relative z-10 flex max-h-[85vh] w-full flex-col rounded-t-[32px] bg-[var(--canvas)] shadow-[0_-12px_48px_rgba(10,10,10,0.12)] sm:max-h-[80vh] sm:w-[560px] sm:rounded-[28px] sm:shadow-[0_18px_60px_rgba(10,10,10,0.15)]"
+            className="relative z-10 flex max-h-[85cqh] w-full flex-col rounded-t-[32px] bg-[var(--canvas)] shadow-[0_-12px_48px_rgba(10,10,10,0.12)] sm:max-h-[80cqh] sm:w-[560px] sm:rounded-[28px] sm:shadow-[0_18px_60px_rgba(10,10,10,0.15)]"
           >
             {/* header */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4 sm:px-8 sm:pt-7">

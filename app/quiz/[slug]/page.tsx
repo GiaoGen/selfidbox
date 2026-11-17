@@ -28,10 +28,10 @@ export default async function QuizPage({ params }: Props) {
 
   return (
     <main className="min-h-screen bg-[var(--canvas)]">
-      <div className="mx-auto w-full max-w-[640px] px-5 py-10 sm:px-6 sm:py-16">
+      <div className="mx-auto w-full max-w-[640px] px-4 py-6 sm:px-6 sm:py-12">
         <QuizPlayer quiz={quiz} />
 
-        <footer className="mt-20 border-t border-[var(--ink)]/6 pt-6 text-center">
+        <footer className="mt-6 border-t border-dashed border-[var(--ink)]/15 pt-5 text-center">
           <p className="text-xs text-[var(--muted)]">
             Powered by{" "}
             <Link href="/" className="font-medium text-[var(--ink)] hover:underline">

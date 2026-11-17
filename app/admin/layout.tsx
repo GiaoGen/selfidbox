@@ -32,17 +32,7 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
-      {/* Mobile nav bar */}
-      <div className="flex items-center gap-3 border-b border-[var(--hairline)] bg-[var(--surface-card)] px-4 py-3 lg:hidden">
-        <span className="text-lg font-bold tracking-[-0.02em]">
-          SelfID <span className="text-[var(--muted)]">Admin</span>
-        </span>
-        <span className="ml-auto text-xs text-[var(--muted)]">
-          请在桌面端访问以获得完整体验
-        </span>
-      </div>
-
-      <div className="mx-auto flex w-full max-w-[1280px] gap-6 px-4 py-6 sm:px-6">
+      <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 px-4 py-6 sm:px-6">
         <AdminSidebar />
         <main className="min-w-0 flex-1">{children}</main>
       </div>

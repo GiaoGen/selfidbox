@@ -37,7 +37,7 @@ export function DeleteConfirm({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+        <div data-app-overlay className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
           <div className="w-full max-w-sm rounded-[28px] bg-white p-6 shadow-[0_18px_50px_rgba(10,10,10,0.15)]">
             <h3 className="text-xl font-semibold">{title}</h3>
             <p className="mt-2 text-sm leading-6 text-[var(--body)]">{message}</p>

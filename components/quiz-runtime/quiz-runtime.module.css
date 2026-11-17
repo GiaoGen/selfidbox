@@ -1,0 +1,26 @@
+.receipt {
+  position: relative;
+  background-color: var(--surface-card);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 12%);
+}
+
+.receipt::before,
+.receipt::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 6px;
+  background-image: radial-gradient(circle at 4px 3px, var(--canvas) 2.5px, transparent 2.5px);
+  background-size: 8px 6px;
+  background-repeat: repeat-x;
+  pointer-events: none;
+}
+
+.receipt::before {
+  top: 0;
+}
+
+.receipt::after {
+  bottom: 0;
+}

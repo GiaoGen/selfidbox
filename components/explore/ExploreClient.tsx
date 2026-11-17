@@ -8,7 +8,7 @@ import { sortExploreCards } from "@/lib/explore/sort";
 import { nipponColorForSlug, textColorForNipponBg } from "@/lib/nippon-colors";
 import { TrendingCarousel } from "./TrendingCarousel";
 import { TrendingCard } from "./TrendingCard";
-import { TestCard } from "@/app/explore/_components/test-card";
+import { MasonryTestList } from "./MasonryTestList";
 import { Greeting } from "@/components/Greeting";
 import { SlideOutTray } from "@/components/navigation/SlideOutTray";
 
@@ -265,7 +265,7 @@ export function ExploreClient({
       <div className="relative">
         {/* ---- Search dropdown ---- */}
         {showDropdown && (
-          <div className="absolute left-0 right-0 top-full z-30 mt-2 max-h-[60vh] overflow-y-auto rounded-[24px] border border-[var(--hairline)] bg-white shadow-[0_18px_50px_rgba(10,10,10,0.12)]">
+          <div className="absolute left-0 right-0 top-full z-30 mt-2 max-h-[60cqh] overflow-y-auto rounded-[24px] border border-[var(--hairline)] bg-white shadow-[0_18px_50px_rgba(10,10,10,0.12)]">
             {searchResults.length === 0 ? (
               <div className="px-5 py-8 text-center">
                 <p className="text-sm font-semibold text-[var(--ink)]">没有找到相关测评</p>
@@ -313,8 +313,8 @@ export function ExploreClient({
       {/* ================================================================ */}
       {/*  Greeting + Menu                                                    */}
       {/* ================================================================ */}
-      <div className="flex items-center justify-between -mb-7">
-        <Greeting />
+      <div className="flex items-center justify-between gap-3 -mb-7">
+        <Greeting className="min-w-0 flex-1 break-words" />
         <SlideOutTray />
       </div>
 
@@ -459,7 +459,7 @@ export function ExploreClient({
       </div>
 
       {/* ================================================================ */}
-      {/*  Results grid (instant filtering, no loading flash)               */}
+      {/*  Results masonry (instant filtering, no loading flash)            */}
       {/* ================================================================ */}
       {filtered.length === 0 ? (
         <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-[28px] bg-[var(--surface-card)] p-8 text-center">
@@ -468,13 +468,7 @@ export function ExploreClient({
           <p className="text-sm text-[var(--muted)]">换个分类或时间范围看看。</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((card) => (
-            <div key={card.id}>
-              <TestCard site={card} />
-            </div>
-          ))}
-        </div>
+        <MasonryTestList cards={filtered} />
       )}
 
       {/* ---- Random mode: refresh button ---- */}

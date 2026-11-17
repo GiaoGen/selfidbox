@@ -14,7 +14,7 @@ import type { QuizDetailData } from "@/lib/source-detail-db";
 /*  Stable scroll-snap carousel + center-depth effect + edge fades.      */
 /*                                                                     */
 /*  TUNING (lines 25–30):                                               */
-/*    CARD_WIDTH     — card width (vw)                                  */
+/*    CARD_WIDTH     — card width (cqw)                                  */
 /*    CARD_MAX_W     — max width (px)                                   */
 /*    CARD_MIN_W     — min width (px)                                   */
 /*    SIDE_PAD_VW    — side padding so edges reach center               */
@@ -23,7 +23,7 @@ import type { QuizDetailData } from "@/lib/source-detail-db";
 /*    GAP            — gap between cards (px)                           */
 /* ================================================================== */
 
-const CARD_WIDTH = "50vw";
+const CARD_WIDTH = "50cqw";
 const CARD_MAX_W = 180;
 const CARD_MIN_W = 150;
 const SIDE_PAD_VW = 28;
@@ -145,7 +145,7 @@ export function CoverFlowSources({
   /* ---- Empty ---- */
   if (loading || cards.length === 0) return null;
 
-  const sidePad = `${SIDE_PAD_VW}vw`;
+  const sidePad = `${SIDE_PAD_VW}cqw`;
   const showModal = cardOpen && cardData;
 
   return (
@@ -154,8 +154,8 @@ export function CoverFlowSources({
       <div
         className="relative z-0"
         style={{
-          marginLeft: "calc(50% - 50vw)",
-          marginRight: "calc(50% - 50vw)",
+          marginLeft: "calc(50% - 50cqw)",
+          marginRight: "calc(50% - 50cqw)",
         }}
       >
         {/* Top edge fade */}
@@ -241,7 +241,7 @@ export function CoverFlowSources({
 
       {/* ── Card Modal (full-size, unchanged) ── */}
       {showModal && (
-        <RotatingCardModal open={cardOpen} onClose={closeCard} cardRef={cardRef}>
+        <RotatingCardModal open={cardOpen} loading={cardLoading} onClose={closeCard} cardRef={cardRef}>
           {cardLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -256,6 +256,7 @@ export function CoverFlowSources({
               resultImageUrl={(cardData as QuizDetailData).result_image_url ?? undefined}
               traits={(cardData as QuizDetailData).result_traits}
               cardColor={(cardData as QuizDetailData).result_color || "#DAC9A6"}
+              createdAt={(cardData as QuizDetailData).created_at}
             />
           )}
         </RotatingCardModal>

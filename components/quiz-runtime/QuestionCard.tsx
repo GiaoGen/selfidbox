@@ -30,11 +30,11 @@ export function QuestionCard({
           exit={{ opacity: 0, y: direction > 0 ? -16 : 16 }}
           transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] as const }}
         >
-          <h2 className="mb-8 text-[22px] font-semibold leading-[1.35] tracking-[-0.01em] text-[var(--ink)] sm:text-[26px]">
+          <h2 className="mb-6 text-[21px] font-semibold leading-[1.5] tracking-[-0.01em] text-[var(--ink)] sm:text-[24px]">
             {question.text}
           </h2>
 
-          <div className="space-y-3">
+          <div className="border-y border-dashed border-[var(--ink)]/20">
             {question.options.map((opt) => {
               let state: "idle" | "selected" | "dimmed";
               if (locked) {

@@ -34,8 +34,10 @@ export function useSourceCardOpen() {
   });
 
   const detailCache = useRef(new Map<string, ReportDetailData | QuizDetailData>());
+  const requestVersion = useRef(0);
 
   const openCard = useCallback(async (entry: ProfileSourceEntry) => {
+    const version = ++requestVersion.current;
     const cacheKey = `${entry.source_type}:${entry.id}`;
 
     /* 1. Source entry already has card-ready fields → instant open */
@@ -99,7 +101,8 @@ export function useSourceCardOpen() {
         `/api/profile/source-detail?source_type=${entry.source_type}&id=${entry.id}`,
       );
       const data = await res.json();
-      if (data.ok) {
+      if (version !== requestVersion.current) return;
+      if (res.ok && data.ok) {
         detailCache.current.set(cacheKey, data.detail);
         setState({
           cardOpen: true,
@@ -111,11 +114,13 @@ export function useSourceCardOpen() {
         setState({ cardOpen: false, cardLoading: false, cardData: null, cardType: null });
       }
     } catch {
+      if (version !== requestVersion.current) return;
       setState({ cardOpen: false, cardLoading: false, cardData: null, cardType: null });
     }
   }, []);
 
   const closeCard = useCallback(() => {
+    requestVersion.current++;
     setState((prev) => ({ ...prev, cardOpen: false }));
   }, []);
 

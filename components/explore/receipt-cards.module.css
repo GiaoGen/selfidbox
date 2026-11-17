@@ -1,0 +1,112 @@
+.masonry {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.item {
+  min-width: 0;
+}
+
+.masonry[data-ready="true"] {
+  display: block;
+}
+
+.masonry[data-ready="true"] > .item {
+  position: absolute;
+  width: calc((100% - 12px) / 2);
+}
+
+.card {
+  position: relative;
+  display: block;
+  padding: 16px 12px;
+  overflow-wrap: anywhere;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 14%);
+  transition: box-shadow 150ms, transform 150ms;
+}
+
+.card:hover {
+  box-shadow: 0 6px 20px rgb(0 0 0 / 22%);
+}
+
+.card:active {
+  transform: scale(0.98);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.card::before,
+.card::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 6px;
+  background-image: radial-gradient(circle at 4px 3px, var(--canvas) 2.5px, transparent 2.5px);
+  background-size: 8px 6px;
+  background-repeat: repeat-x;
+  pointer-events: none;
+}
+
+.card::before {
+  top: 0;
+}
+
+.card::after {
+  bottom: 0;
+}
+
+.title {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.textOnly .title {
+  max-width: 4em;
+  max-height: 5em;
+  -webkit-line-clamp: 4;
+  font-size: clamp(24px, 7cqw, 28px);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.titleWord {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
+  white-space: pre-wrap;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 10px;
+}
+
+.divider {
+  margin: 10px 0 8px;
+  border: 0;
+  border-top: 1px dashed currentColor;
+  opacity: 0.3;
+}
+
+.description {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 12px;
+  line-height: 1.6;
+  opacity: 0.8;
+}
